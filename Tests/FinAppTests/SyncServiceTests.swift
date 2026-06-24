@@ -49,6 +49,33 @@ final class SyncServiceTests: XCTestCase {
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).first?.transactions.count, 2)
     }
 
+    func testBankOfAmericaCheckingSwapsBalanceAndAvailable() throws {
+        let ctx = makeContext()
+        let dto = AccountDTO(
+            id: "boa", org: "Bank of America", name: "Bank of America Checking", currency: "USD",
+            balance: Decimal(string: "10.00")!, availableBalance: Decimal(string: "1234.00")!,
+            balanceDate: Date(), transactions: []
+        )
+        SyncService.sync(accounts: [dto], into: ctx)
+        SyncService.sync(accounts: [dto], into: ctx) // idempotent
+
+        let acct = try ctx.fetch(FetchDescriptor<Account>()).first
+        XCTAssertEqual(acct?.balance, Decimal(string: "1234.00"), "Balance should show the available value")
+        XCTAssertEqual(acct?.availableBalance, Decimal(string: "10.00"))
+    }
+
+    func testOtherAccountsAreNotSwapped() throws {
+        let ctx = makeContext()
+        let dto = AccountDTO(
+            id: "c1", org: "Chase", name: "Checking", currency: "USD",
+            balance: Decimal(string: "10.00")!, availableBalance: Decimal(string: "1234.00")!,
+            balanceDate: Date(), transactions: []
+        )
+        SyncService.sync(accounts: [dto], into: ctx)
+        let acct = try ctx.fetch(FetchDescriptor<Account>()).first
+        XCTAssertEqual(acct?.balance, Decimal(string: "10.00"))
+    }
+
     func testReSyncIsIdempotent() throws {
         let ctx = makeContext()
         let dto = account(txns: [tx(id: "t1", amount: "-10.00")])
