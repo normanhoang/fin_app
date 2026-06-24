@@ -42,6 +42,18 @@ final class AnalyticsTests: XCTestCase {
         XCTAssertEqual(Analytics.netWorth(accounts), Decimal(string: "24684.85"))
     }
 
+    func testNetWorthSubtractsDebtsRegardlessOfSign() {
+        let cash = account("5000.00")
+        cash.accountType = .cash
+        let cardNegative = account("-600.00")  // credit card reported negative
+        cardNegative.accountType = .creditCard
+        let loanPositive = account("1500.00")   // loan entered as a positive owed amount
+        loanPositive.accountType = .loan
+        let accounts = try! ctx.fetch(FetchDescriptor<Account>())
+        // 5000 − 600 − 1500
+        XCTAssertEqual(Analytics.netWorth(accounts), Decimal(string: "2900.00"))
+    }
+
     func testMonthlyIncomeSumsIncomeCategoryInMonth() {
         let income = cat("Income", income: true)
         txn("2000.00", date(2026, 6, 5), category: income)

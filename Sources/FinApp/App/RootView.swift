@@ -1,7 +1,10 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(SyncCoordinator.self) private var coordinator
     @State private var router = AppRouter(selectedTab: Self.initialTab)
+
+    static let tabCount = 6
 
     private static var initialTab: Int {
         #if DEBUG
@@ -11,24 +14,46 @@ struct RootView: View {
         #endif
     }
 
+    /// Drives the paging ScrollView and the custom bar from the same source.
+    /// Reading it updates the bar as the user swipes; writing it (tab tap or a
+    /// Dashboard deep-link) scrolls to that page.
+    private var page: Binding<Int?> {
+        Binding(get: { router.selectedTab }, set: { if let new = $0 { router.selectedTab = new } })
+    }
+
     var body: some View {
-        TabView(selection: $router.selectedTab) {
-            DashboardView().tag(0)
-            AccountsView().tag(1)
-            TransactionsView().tag(2)
-            BudgetsView().tag(3)
-            RecurringView().tag(4)
-            SettingsView().tag(5)
+        // A horizontal paging ScrollView restores swipe-between-tabs WITHOUT the
+        // UIPageViewController that made `TabView(.page)` crash on swipe, and with
+        // no system tab bar to peek out from under the custom bar.
+        ScrollView(.horizontal) {
+            HStack(spacing: 0) {
+                pageView(DashboardView(), 0)
+                pageView(AccountsView(), 1)
+                pageView(TransactionsView(), 2)
+                pageView(BudgetsView(), 3)
+                pageView(RecurringView(), 4)
+                pageView(SettingsView(), 5)
+            }
+            .scrollTargetLayout()
         }
-        // NOTE: no `.tabViewStyle(.page)` — page-swiping between tabs, each its
-        // own NavigationStack, triggers a UINavigationBar layout assertion
-        // (SIGABRT) mid-swipe. Tabs switch via the custom bar instead. The
-        // system tab bar is hidden so only our custom bar shows.
-        .toolbar(.hidden, for: .tabBar)
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: page)
+        .scrollIndicators(.hidden)
+        .ignoresSafeArea(edges: .horizontal)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             CustomTabBar(selection: $router.selectedTab)
         }
         .environment(router)
+        .task {
+            // Auto-sync when the app opens (throttled; skipped if not connected).
+            if coordinator.isConnected { await coordinator.sync() }
+        }
+    }
+
+    private func pageView(_ view: some View, _ tag: Int) -> some View {
+        view
+            .containerRelativeFrame(.horizontal)
+            .id(tag)
     }
 }
 

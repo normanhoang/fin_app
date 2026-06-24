@@ -48,7 +48,11 @@ struct FinAppApp: App {
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background { lock.lock() }
+            if phase == .background {
+                lock.lock()
+            } else if phase == .active, coordinator.isConnected {
+                Task { await coordinator.sync() }
+            }
         }
     }
 }

@@ -148,10 +148,16 @@ final class FinAppUITests: XCTestCase {
 
     // 7. Swiping across the app must not crash (regression for the page-style
     //    TabView + NavigationStack UINavigationBar layout assertion).
-    func testSwipingDoesNotCrash() {
+    func testSwipingChangesPageAndDoesNotCrash() {
         let app = launch(tab: 0)
         XCTAssertTrue(app.staticTexts["Dashboard"].waitForExistence(timeout: 8))
-        for _ in 0..<8 {
+
+        // Swiping left pages from Dashboard to Accounts ("Assets" header).
+        app.swipeLeft()
+        XCTAssertTrue(app.staticTexts["Assets"].waitForExistence(timeout: 5),
+                      "Swipe did not page to the Accounts tab")
+
+        for _ in 0..<6 {
             app.swipeLeft()
             app.swipeRight()
         }
