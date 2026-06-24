@@ -8,6 +8,9 @@ struct FinAppApp: App {
     @State private var lock = AppLock()
     @State private var showSplash = true
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("appearanceMode") private var appearanceRaw = AppearanceMode.system.rawValue
+
+    private var appearance: AppearanceMode { AppearanceMode(rawValue: appearanceRaw) ?? .system }
 
     init() {
         #if DEBUG
@@ -46,6 +49,7 @@ struct FinAppApp: App {
                 }
             }
             .tint(.brand)
+            .preferredColorScheme(appearance.colorScheme)
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in

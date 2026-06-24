@@ -89,13 +89,13 @@ private struct CustomTabBar: View {
         HStack(spacing: 0) {
             ForEach(Array(Self.items.enumerated()), id: \.offset) { index, item in
                 Button {
-                    Haptics.tap()
                     // Tapping the Transactions tab resets any active filter and pops
                     // to the list root, so the bar is a "show everything" entry point.
+                    // No animation: switch straight to the page rather than sliding it in.
                     if index == 2 {
                         router.showTransactions(.all)
                     } else {
-                        withAnimation(.easeInOut(duration: 0.25)) { selection = index }
+                        selection = index
                     }
                 } label: {
                     VStack(spacing: 4) {

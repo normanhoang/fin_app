@@ -153,7 +153,7 @@ struct AccountDetailView: View {
                     ForEach(transactions) { txn in
                         TransactionRow(transaction: txn)
                             .contentShape(Rectangle())
-                            .onTapGesture { Haptics.tap(); router.openTransaction(id: txn.id) }
+                            .onTapGesture { router.openTransaction(id: txn.id) }
                             .accessibilityIdentifier("acctTxnRow-\(txn.id)")
                     }
                 }

@@ -14,16 +14,6 @@ extension View {
     }
 }
 
-// MARK: - Haptics
-
-enum Haptics {
-    static func tap() {
-        #if canImport(UIKit)
-        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-        #endif
-    }
-}
-
 // MARK: - Chip
 
 /// Small rounded label used for account types, cadences, and subtotals.

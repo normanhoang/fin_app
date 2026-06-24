@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppLock.self) private var lock
     @Environment(\.modelContext) private var context
+    @AppStorage("appearanceMode") private var appearanceRaw = AppearanceMode.system.rawValue
     @State private var setupToken = ""
 
     var body: some View {
@@ -32,6 +33,16 @@ struct SettingsView: View {
                     }
                     .listRowBackground(Color.surface)
                 }
+
+                Section("Appearance") {
+                    Picker("Theme", selection: $appearanceRaw) {
+                        ForEach(AppearanceMode.allCases) { mode in
+                            Text(mode.label).tag(mode.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                .listRowBackground(Color.surface)
 
                 Section("Security") {
                     @Bindable var lock = lock

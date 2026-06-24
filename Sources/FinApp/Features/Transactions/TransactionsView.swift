@@ -186,7 +186,6 @@ struct TransactionDetailView: View {
                         }
                     }
                     Button {
-                        Haptics.tap()
                         setRecurring()
                     } label: {
                         Label("Set as Recurring", systemImage: "arrow.clockwise")
