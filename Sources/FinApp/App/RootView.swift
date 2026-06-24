@@ -110,54 +110,57 @@ private struct CustomTabBar: View {
     ]
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 0) {
             ForEach(Array(Self.items.enumerated()), id: \.offset) { index, item in
-                Button {
-                    // Tapping the Transactions tab resets any active filter and pops
-                    // to the list root, so the bar is a "show everything" entry point.
-                    if index == 2 {
-                        router.showTransactions(.all)
-                    } else {
-                        selection = index
-                    }
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: item.icon)
-                            .font(.system(size: 17))
-                            .frame(height: 20)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 5)
-                            .background {
-                                if selection == index {
-                                    // The active pill slides + bounces between tabs.
-                                    Capsule().fill(Color.brand.opacity(0.18))
-                                        .matchedGeometryEffect(id: "activePill", in: pill)
-                                }
-                            }
-                        Text(item.title)
-                            .font(.system(size: 9, weight: selection == index ? .semibold : .regular))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                            .frame(height: 12)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .foregroundStyle(selection == index ? Color.brand : Color.textSecondary)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("tab-\(item.title)")
+                tab(index, item)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        // A floating Liquid Glass pill (iOS 26), with a translucent-material fallback.
-        // No opaque background, so page content shows through underneath.
+        .padding(.horizontal, 6)
+        .padding(.vertical, 7)
+        // A floating Liquid Glass pill (iOS 26 interactive glass), with a
+        // translucent-material fallback. No opaque background, so page content
+        // shows through underneath.
         .glassTabBar()
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .shadow(color: .black.opacity(0.20), radius: 14, y: 5)
         .padding(.horizontal, 18)
         .padding(.top, 6)
-        .padding(.bottom, 4)
+        .padding(.bottom, 6)
         .animation(.spring(response: 0.34, dampingFraction: 0.68), value: selection)
+    }
+
+    private func tab(_ index: Int, _ item: (title: String, icon: String)) -> some View {
+        Button {
+            // Tapping the Transactions tab resets any active filter and pops to the
+            // list root, so the bar is a "show everything" entry point.
+            if index == 2 {
+                router.showTransactions(.all)
+            } else {
+                selection = index
+            }
+        } label: {
+            VStack(spacing: 4) {
+                // Fixed-size box so the active pill never shifts layout — keeps every
+                // icon and label on the same baseline.
+                ZStack {
+                    if selection == index {
+                        Capsule().fill(Color.brand.opacity(0.18))
+                            .matchedGeometryEffect(id: "activePill", in: pill)
+                    }
+                    Image(systemName: item.icon)
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .frame(width: 52, height: 30)
+                Text(item.title)
+                    .font(.system(size: 9, weight: selection == index ? .semibold : .medium))
+                    .lineLimit(1)
+                    .frame(height: 12)
+            }
+            .frame(maxWidth: .infinity)
+            .foregroundStyle(selection == index ? Color.brand : Color.textSecondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("tab-\(item.title)")
     }
 }
 
@@ -166,10 +169,16 @@ private extension View {
     @ViewBuilder
     func glassTabBar() -> some View {
         if #available(iOS 26.0, *) {
-            glassEffect(.regular, in: Capsule())
+            glassEffect(.regular.interactive(), in: Capsule())
         } else {
             background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+                .overlay(
+                    Capsule().strokeBorder(
+                        .linearGradient(colors: [.white.opacity(0.22), .white.opacity(0.04)],
+                                        startPoint: .top, endPoint: .bottom),
+                        lineWidth: 1
+                    )
+                )
         }
     }
 }
