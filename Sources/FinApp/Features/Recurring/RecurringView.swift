@@ -133,27 +133,6 @@ struct RecurringDetailView: View {
                 LabeledContent("Typical amount") {
                     MoneyText(value: bill.expectedAmount, color: .textSecondary)
                 }
-            }
-            .listRowBackground(Color.surface)
-
-            if matched.isEmpty {
-                Section("Past charges") {
-                    Text("No past charges found for this merchant.")
-                        .foregroundStyle(Color.textSecondary)
-                }
-                .listRowBackground(Color.surface)
-            } else {
-                ForEach(monthGroups, id: \.month) { group in
-                    Section {
-                        ForEach(group.txns) { TransactionRow(transaction: $0) }
-                    } header: {
-                        Text(group.month.formatted(.dateTime.month(.wide).year()))
-                    }
-                    .listRowBackground(Color.surface)
-                }
-            }
-
-            Section {
                 if !bill.confirmed {
                     Button {
                         bill.confirmed = true
@@ -173,6 +152,23 @@ struct RecurringDetailView: View {
                 .accessibilityIdentifier("deleteRecurringButton")
             }
             .listRowBackground(Color.surface)
+
+            if matched.isEmpty {
+                Section("Past charges") {
+                    Text("No past charges found for this merchant.")
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .listRowBackground(Color.surface)
+            } else {
+                ForEach(monthGroups, id: \.month) { group in
+                    Section {
+                        ForEach(group.txns) { TransactionRow(transaction: $0) }
+                    } header: {
+                        Text(group.month.formatted(.dateTime.month(.wide).year()))
+                    }
+                    .listRowBackground(Color.surface)
+                }
+            }
         }
         .listRowSeparatorTint(Color.hairline)
         .screenBackground()

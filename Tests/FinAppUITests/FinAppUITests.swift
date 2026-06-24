@@ -230,6 +230,24 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(app.buttons["tab-Dashboard"].exists, "App crashed during swiping")
     }
 
+    // 10. Tapping a trend bar shows the value popup; scrolling the page dismisses it.
+    func testTrendPopupOpensAndScrollDismisses() {
+        let app = launch(tab: 2)
+        let chart = app.descendants(matching: .any).matching(identifier: "trendChart").firstMatch
+        XCTAssertTrue(chart.waitForExistence(timeout: 8), "Trend chart not found")
+        // The trend card is below the fold — scroll it into view before tapping.
+        while !chart.isHittable { app.swipeUp() }
+        // Tap a bar to open the popup.
+        chart.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+
+        let popup = app.descendants(matching: .any).matching(identifier: "trendPopup").firstMatch
+        XCTAssertTrue(popup.waitForExistence(timeout: 5), "Trend popup did not open")
+        snap(app, "trend-popup-open")
+
+        app.swipeUp()   // scrolling the page should close the popup
+        XCTAssertFalse(popup.waitForExistence(timeout: 2), "Scrolling should dismiss the trend popup")
+    }
+
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
     func testRecurringRowOpensDetail() {
         let app = launch(tab: 3) // Recurring

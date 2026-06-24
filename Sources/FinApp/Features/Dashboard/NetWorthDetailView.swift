@@ -54,26 +54,24 @@ struct NetWorthDetailView: View {
     }
 
     private var rangePicker: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                ForEach(NWRange.allCases) { option in
-                    Button {
-                        range = option
-                    } label: {
-                        Text(option.rawValue)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(range == option ? Color.brand : Color.textSecondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background((range == option ? Color.brand.opacity(0.16) : Color.surfaceElevated),
-                                        in: Capsule())
-                    }
-                    .buttonStyle(.plain)
+        HStack(spacing: 8) {
+            ForEach(NWRange.allCases) { option in
+                Button {
+                    range = option
+                } label: {
+                    Text(option.rawValue)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(range == option ? Color.brand : Color.textSecondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background((range == option ? Color.brand.opacity(0.16) : Color.surfaceElevated),
+                                    in: Capsule())
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.vertical, 2)
         }
-        .scrollIndicators(.hidden)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 2)
     }
 
     @ViewBuilder

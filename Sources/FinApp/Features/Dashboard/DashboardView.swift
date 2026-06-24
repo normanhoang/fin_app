@@ -16,13 +16,6 @@ private struct TrendPlotKey: PreferenceKey {
     }
 }
 
-/// The dashboard scroll content's vertical offset (in "dash" space); a change
-/// means the user scrolled, which dismisses the trend popup.
-private struct ScrollOffsetKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
-}
-
 struct DashboardView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
@@ -55,23 +48,22 @@ struct DashboardView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                         .padding(.bottom, 24)
-                        .background(GeometryReader { g in
-                            Color.clear.preference(key: ScrollOffsetKey.self,
-                                                   value: g.frame(in: .named("dash")).minY)
-                        })
                     }
                     .contentMargins(.bottom, bottomBarInset * 0.7, for: .scrollContent)
                     .scrollIndicators(.hidden)
+                    // A scroll drag closes the trend popup. Runs simultaneously so
+                    // it never blocks scrolling; the small minimum distance lets a
+                    // bar tap through to toggle the popup instead.
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 8).onChanged { _ in
+                            if selectedTrendMonth != nil { selectedTrendMonth = nil }
+                        }
+                    )
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
             .coordinateSpace(name: "dash")
             .onPreferenceChange(TrendPlotKey.self) { trendPlot = $0 }
-            // Scrolling the page closes the trend popup (the popup never blocks
-            // the scroll itself — it's hit-testing-disabled).
-            .onPreferenceChange(ScrollOffsetKey.self) { _ in
-                if selectedTrendMonth != nil { selectedTrendMonth = nil }
-            }
             .overlay { trendPopupOverlay }
             .navigationTitle("Dashboard")
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
@@ -298,6 +290,7 @@ struct DashboardView: View {
                 }
             }
             .frame(height: 170)
+            .accessibilityIdentifier("trendChart")
         }
         .cardStyle()
     }
@@ -313,6 +306,8 @@ struct DashboardView: View {
         .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
         .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+        .accessibilityElement(children: .ignore)
+        .accessibilityIdentifier("trendPopup")
     }
 
     private func popupRow(_ label: String, _ value: Decimal, _ color: Color) -> some View {
