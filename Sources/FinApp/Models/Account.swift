@@ -16,6 +16,10 @@ final class Account {
     var typeRaw: String = AccountType.cash.rawValue
     /// True for accounts the user created locally (not synced from SimpleFin).
     var isManual: Bool = false
+    /// User-chosen display name. Overrides the bank-provided `name`, which sync
+    /// keeps overwriting — so a rename survives re-syncs. Defaulted nil for
+    /// lightweight migration.
+    var customName: String? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \Transaction.account)
     var transactions: [Transaction]
@@ -24,6 +28,9 @@ final class Account {
         get { AccountType(rawValue: typeRaw) ?? .cash }
         set { typeRaw = newValue.rawValue }
     }
+
+    /// Name shown in the UI: the user's override if set, else the bank name.
+    var displayName: String { customName ?? name }
 
     init(
         id: String,

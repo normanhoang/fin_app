@@ -108,4 +108,40 @@ final class FinAppUITests: XCTestCase {
                       "Filter chip not shown on Transactions")
         snap(app, "filtered-housing")
     }
+
+    // 6. Renaming an account updates the list (and persists via customName).
+    func testRenameAccountUpdatesList() {
+        let app = launch(tab: 1)
+        let row = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'accountRow-'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "No account rows")
+        row.tap()
+
+        let field = app.textFields["accountNameField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5), "Name field missing")
+        field.tap()
+        if let current = field.value as? String, !current.isEmpty {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
+        }
+        let newName = "My Renamed Account"
+        field.typeText(newName)
+        snap(app, "account-rename")
+
+        app.navigationBars.buttons.element(boundBy: 0).tap() // back to list
+        XCTAssertTrue(app.staticTexts[newName].waitForExistence(timeout: 5),
+                      "Renamed account not shown in list")
+    }
+
+    // 7. Swiping across the app must not crash (regression for the page-style
+    //    TabView + NavigationStack UINavigationBar layout assertion).
+    func testSwipingDoesNotCrash() {
+        let app = launch(tab: 0)
+        XCTAssertTrue(app.staticTexts["Dashboard"].waitForExistence(timeout: 8))
+        for _ in 0..<8 {
+            app.swipeLeft()
+            app.swipeRight()
+        }
+        // App still alive and responsive if the tab bar is still queryable.
+        XCTAssertTrue(app.buttons["tab-Dashboard"].exists, "App crashed during swiping")
+    }
 }

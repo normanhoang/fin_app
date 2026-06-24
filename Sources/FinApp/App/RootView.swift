@@ -20,7 +20,11 @@ struct RootView: View {
             RecurringView().tag(4)
             SettingsView().tag(5)
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
+        // NOTE: no `.tabViewStyle(.page)` — page-swiping between tabs, each its
+        // own NavigationStack, triggers a UINavigationBar layout assertion
+        // (SIGABRT) mid-swipe. Tabs switch via the custom bar instead. The
+        // system tab bar is hidden so only our custom bar shows.
+        .toolbar(.hidden, for: .tabBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             CustomTabBar(selection: $router.selectedTab)
         }

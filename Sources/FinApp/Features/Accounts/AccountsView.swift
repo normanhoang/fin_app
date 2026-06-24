@@ -62,6 +62,7 @@ struct AccountsView: View {
                         } label: {
                             row(account)
                         }
+                        .accessibilityIdentifier("accountRow-\(account.id)")
                     }
                 }
             } header: {
@@ -81,7 +82,7 @@ struct AccountsView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 26)
             VStack(alignment: .leading, spacing: 2) {
-                Text(account.name)
+                Text(account.displayName)
                 Text(account.accountType.displayName)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -96,6 +97,7 @@ struct AccountsView: View {
 struct AccountDetailView: View {
     @Environment(\.modelContext) private var context
     @Bindable var account: Account
+    @State private var editedName = ""
 
     private var transactions: [Transaction] {
         account.transactions.sorted { $0.posted > $1.posted }
@@ -103,6 +105,10 @@ struct AccountDetailView: View {
 
     var body: some View {
         List {
+            Section("Name") {
+                TextField("Account name", text: $editedName)
+                    .accessibilityIdentifier("accountNameField")
+            }
             Section {
                 LabeledContent("Balance", value: Money.string(account.balance, code: account.currency))
                 if let avail = account.availableBalance {
@@ -122,8 +128,18 @@ struct AccountDetailView: View {
                 }
             }
         }
-        .navigationTitle(account.name)
+        .navigationTitle(account.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { editedName = account.displayName }
+        .onChange(of: editedName) { applyRename() }
         .onChange(of: account.typeRaw) { try? context.save() }
+    }
+
+    /// Persist the edited name as a `customName` override (cleared when it's
+    /// blank or matches the bank-provided name), so it survives re-syncs.
+    private func applyRename() {
+        let trimmed = editedName.trimmingCharacters(in: .whitespaces)
+        account.customName = (trimmed.isEmpty || trimmed == account.name) ? nil : trimmed
+        try? context.save()
     }
 }
