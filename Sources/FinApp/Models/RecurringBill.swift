@@ -31,6 +31,9 @@ final class RecurringBill {
     var nextDue: Date?
     /// false = a candidate awaiting user confirmation; true = confirmed bill.
     var confirmed: Bool
+    /// User dismissed this detected candidate; kept (not deleted) so re-detection
+    /// on the next sync doesn't resurface it. Defaulted for lightweight migration.
+    var dismissed: Bool = false
     @Relationship(deleteRule: .nullify) var category: Category?
 
     var cadence: Cadence {
@@ -46,6 +49,7 @@ final class RecurringBill {
         lastSeen: Date,
         nextDue: Date? = nil,
         confirmed: Bool = false,
+        dismissed: Bool = false,
         category: Category? = nil
     ) {
         self.id = id
@@ -55,6 +59,7 @@ final class RecurringBill {
         self.lastSeen = lastSeen
         self.nextDue = nextDue
         self.confirmed = confirmed
+        self.dismissed = dismissed
         self.category = category
     }
 }

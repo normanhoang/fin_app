@@ -5,12 +5,12 @@ struct RecurringView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \RecurringBill.nextDue) private var bills: [RecurringBill]
 
-    private var confirmed: [RecurringBill] { bills.filter(\.confirmed) }
-    private var candidates: [RecurringBill] { bills.filter { !$0.confirmed } }
+    private var confirmed: [RecurringBill] { bills.filter { $0.confirmed && !$0.dismissed } }
+    private var candidates: [RecurringBill] { bills.filter { !$0.confirmed && !$0.dismissed } }
 
     var body: some View {
         NavigationStack {
-            if bills.isEmpty {
+            if confirmed.isEmpty && candidates.isEmpty {
                 ContentUnavailableView(
                     "No Recurring Bills",
                     systemImage: "arrow.clockwise",
@@ -55,7 +55,7 @@ struct RecurringView: View {
     }
 
     private func dismiss(_ bill: RecurringBill) {
-        context.delete(bill)
+        bill.dismissed = true
         try? context.save()
     }
 }

@@ -69,4 +69,20 @@ final class RecurringDetectorTests: XCTestCase {
         series(merchant: "Payroll", amount: "2600.00", count: 5, gapDays: 14)
         XCTAssertTrue(RecurringDetector.detectCandidates(from: allTxns).isEmpty)
     }
+
+    func testRefreshDoesNotResurrectDismissedBill() {
+        // A merchant that detection will find...
+        series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30)
+        // ...but the user already dismissed it (merchant stored normalized).
+        ctx.insert(RecurringBill(merchantName: "netflix", expectedAmount: Decimal(string: "15.49")!,
+                                 cadence: .monthly, lastSeen: Date(), dismissed: true))
+        try? ctx.save()
+
+        RecurringDetector.refresh(in: ctx, calendar: cal)
+
+        let bills = (try? ctx.fetch(FetchDescriptor<RecurringBill>())) ?? []
+        let netflix = bills.filter { $0.merchantName == "netflix" }
+        XCTAssertEqual(netflix.count, 1, "Dismissed merchant must not be re-inserted")
+        XCTAssertTrue(netflix.first?.dismissed == true, "Dismissal must persist across refresh")
+    }
 }

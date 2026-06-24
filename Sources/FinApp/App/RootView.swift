@@ -34,6 +34,7 @@ struct RootView: View {
 
 private struct CustomTabBar: View {
     @Binding var selection: Int
+    @Environment(AppRouter.self) private var router
 
     private static let items: [(title: String, icon: String)] = [
         ("Dashboard", "chart.pie.fill"),
@@ -48,6 +49,9 @@ private struct CustomTabBar: View {
         HStack(spacing: 0) {
             ForEach(Array(Self.items.enumerated()), id: \.offset) { index, item in
                 Button {
+                    // Tapping the Transactions tab resets any active filter so the
+                    // bar acts as a "show everything" entry point.
+                    if index == 2 { router.txnFilter = .all }
                     withAnimation(.easeInOut(duration: 0.25)) { selection = index }
                 } label: {
                     VStack(spacing: 3) {

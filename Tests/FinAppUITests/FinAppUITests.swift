@@ -132,6 +132,20 @@ final class FinAppUITests: XCTestCase {
                       "Renamed account not shown in list")
     }
 
+    // 6b. Tapping the Transactions tab clears an active filter from the Dashboard.
+    func testTransactionsTabClearsFilter() {
+        let app = launch(tab: 0)
+        let housing = app.buttons["category-Housing"]
+        XCTAssertTrue(housing.waitForExistence(timeout: 8))
+        housing.tap()
+        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5))
+
+        app.buttons["tab-Transactions"].tap()
+        XCTAssertFalse(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 2),
+                       "Filter chip should clear when tapping the Transactions tab")
+        snap(app, "filter-cleared")
+    }
+
     // 7. Swiping across the app must not crash (regression for the page-style
     //    TabView + NavigationStack UINavigationBar layout assertion).
     func testSwipingDoesNotCrash() {
