@@ -248,6 +248,34 @@ final class FinAppUITests: XCTestCase {
         XCTAssertFalse(popup.waitForExistence(timeout: 2), "Scrolling should dismiss the trend popup")
     }
 
+    // 11. A manual account can be created, edited, and deleted.
+    func testManualAccountCreateEditDelete() {
+        let app = launch(tab: 0)
+        XCTAssertTrue(app.buttons["addAccountButton"].waitForExistence(timeout: 8))
+        app.buttons["addAccountButton"].tap()
+
+        let name = "Test Manual"
+        let nameField = app.textFields["Name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "Add Account form missing")
+        nameField.tap(); nameField.typeText(name)
+        let balanceField = app.textFields["0.00"]
+        balanceField.tap(); balanceField.typeText("1234.56")
+        app.buttons["Save"].tap()
+
+        // The new account shows in the list; open it.
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5), "Manual account not added")
+        app.staticTexts[name].tap()
+
+        // Detail exposes an editable balance and a delete button (manual only).
+        XCTAssertTrue(app.textFields["accountBalanceField"].waitForExistence(timeout: 5),
+                      "Manual balance not editable")
+        let deleteBtn = app.buttons["deleteAccountButton"]
+        XCTAssertTrue(deleteBtn.waitForExistence(timeout: 5), "Delete button missing")
+        deleteBtn.tap()
+
+        XCTAssertFalse(app.staticTexts[name].waitForExistence(timeout: 3), "Account not deleted")
+    }
+
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
     func testRecurringRowOpensDetail() {
         let app = launch(tab: 3) // Recurring

@@ -17,13 +17,10 @@ enum Analytics {
         var net: Decimal { income - spending }
     }
 
-    /// Net worth = assets − debts. Debt accounts (credit cards, loans) reduce net
-    /// worth by the amount owed regardless of how the balance is signed, so a
-    /// debt entered as a positive balance still subtracts.
+    /// Net worth = Assets + Debts. Debt balances are stored negative, so a plain
+    /// sum of every account balance already nets the debts out.
     static func netWorth(_ accounts: [Account]) -> Decimal {
-        accounts.reduce(Decimal(0)) { total, account in
-            account.accountType.isDebt ? total - abs(account.balance) : total + account.balance
-        }
+        accounts.reduce(Decimal(0)) { $0 + $1.balance }
     }
 
     static func inMonth(_ txns: [Transaction], of date: Date, calendar: Calendar) -> [Transaction] {

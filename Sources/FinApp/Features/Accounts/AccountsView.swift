@@ -59,6 +59,7 @@ struct AccountsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingAdd = true } label: { Image(systemName: "plus") }
+                        .accessibilityIdentifier("addAccountButton")
                 }
             }
             .sheet(isPresented: $showingAdd) { AddAccountView() }
@@ -126,9 +127,12 @@ struct AccountsView: View {
 
 struct AccountDetailView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @Environment(AppRouter.self) private var router
     @Bindable var account: Account
     @State private var editedName = ""
+    @State private var balanceText = ""
+    @State private var pendingDelete = false
 
     private var transactions: [Transaction] {
         account.transactions.sorted { $0.posted > $1.posted }
@@ -150,17 +154,45 @@ struct AccountDetailView: View {
             }
             .listRowBackground(Color.surface)
             Section {
-                LabeledContent("Balance") {
-                    MoneyText(value: account.balance, code: account.currency,
-                              color: account.balance < 0 ? .negative : .textPrimary)
+                if account.isManual {
+                    // Manual accounts are user-maintained, so the balance is editable.
+                    LabeledContent("Balance") {
+                        TextField("0.00", text: $balanceText)
+                            .keyboardType(.numbersAndPunctuation)
+                            .multilineTextAlignment(.trailing)
+                            .accessibilityIdentifier("accountBalanceField")
+                    }
+                } else {
+                    LabeledContent("Balance") {
+                        MoneyText(value: account.balance, code: account.currency,
+                                  color: account.balance < 0 ? .negative : .textPrimary)
+                    }
                 }
                 Picker("Type", selection: $account.accountType) {
                     ForEach(AccountType.allCases) { type in
                         Text(type.displayName).tag(type)
                     }
                 }
+                if account.isManual && account.accountType.isDebt {
+                    Text("Debts are stored as negative balances (e.g. -1500).")
+                        .font(.caption).foregroundStyle(Color.textSecondary)
+                }
             }
             .listRowBackground(Color.surface)
+            if account.isManual {
+                Section {
+                    Button(role: .destructive) {
+                        // Pop first, then delete once the view is gone, so the
+                        // detail never re-renders against a deleted model.
+                        pendingDelete = true
+                        dismiss()
+                    } label: {
+                        Label("Delete Account", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier("deleteAccountButton")
+                }
+                .listRowBackground(Color.surface)
+            }
             if transactions.isEmpty {
                 Section("Transactions") {
                     Text("No transactions in the synced window.").foregroundStyle(Color.textSecondary)
@@ -186,9 +218,26 @@ struct AccountDetailView: View {
         .screenBackground()
         .navigationTitle(account.displayName)
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { editedName = account.displayName }
+        .onAppear {
+            editedName = account.displayName
+            balanceText = NSDecimalNumber(decimal: account.balance).stringValue
+        }
         .onChange(of: editedName) { applyRename() }
+        .onChange(of: balanceText) { applyBalance() }
         .onChange(of: account.typeRaw) { try? context.save() }
+        .onDisappear {
+            if pendingDelete {
+                context.delete(account)
+                try? context.save()
+            }
+        }
+    }
+
+    /// Persist an edited balance for a manual account (ignores unparseable input).
+    private func applyBalance() {
+        guard account.isManual, let value = Decimal(string: balanceText, locale: .current) else { return }
+        account.balance = value
+        try? context.save()
     }
 
     /// Persist the edited name as a `customName` override (cleared when it's

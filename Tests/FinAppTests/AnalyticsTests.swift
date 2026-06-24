@@ -42,15 +42,15 @@ final class AnalyticsTests: XCTestCase {
         XCTAssertEqual(Analytics.netWorth(accounts), Decimal(string: "24684.85"))
     }
 
-    func testNetWorthSubtractsDebtsRegardlessOfSign() {
+    func testNetWorthAddsDebtsStoredNegative() {
         let cash = account("5000.00")
         cash.accountType = .cash
-        let cardNegative = account("-600.00")  // credit card reported negative
-        cardNegative.accountType = .creditCard
-        let loanPositive = account("1500.00")   // loan entered as a positive owed amount
-        loanPositive.accountType = .loan
+        let card = account("-600.00")   // credit card stored negative
+        card.accountType = .creditCard
+        let loan = account("-1500.00")  // loan stored negative
+        loan.accountType = .loan
         let accounts = try! ctx.fetch(FetchDescriptor<Account>())
-        // 5000 − 600 − 1500
+        // Assets + Debts: 5000 + (−600) + (−1500)
         XCTAssertEqual(Analytics.netWorth(accounts), Decimal(string: "2900.00"))
     }
 
