@@ -115,10 +115,7 @@ struct AccountsView: View {
 
     private func row(_ account: Account) -> some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(account.displayName).foregroundStyle(Color.textPrimary)
-                Chip(account.accountType.displayName, color: .textSecondary)
-            }
+            Text(account.displayName).foregroundStyle(Color.textPrimary)
             Spacer()
             MoneyText(value: account.balance, code: account.currency, size: 17, weight: .semibold,
                       color: account.balance < 0 ? .negative : .textPrimary)

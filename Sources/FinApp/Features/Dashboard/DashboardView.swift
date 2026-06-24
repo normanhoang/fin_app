@@ -16,6 +16,13 @@ private struct TrendPlotKey: PreferenceKey {
     }
 }
 
+/// The dashboard scroll content's vertical offset (in "dash" space); a change
+/// means the user scrolled, which dismisses the trend popup.
+private struct ScrollOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
 struct DashboardView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
@@ -48,6 +55,10 @@ struct DashboardView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                         .padding(.bottom, 24)
+                        .background(GeometryReader { g in
+                            Color.clear.preference(key: ScrollOffsetKey.self,
+                                                   value: g.frame(in: .named("dash")).minY)
+                        })
                     }
                     .contentMargins(.bottom, bottomBarInset * 0.7, for: .scrollContent)
                     .scrollIndicators(.hidden)
@@ -56,6 +67,11 @@ struct DashboardView: View {
             .background(Color.appBackground.ignoresSafeArea())
             .coordinateSpace(name: "dash")
             .onPreferenceChange(TrendPlotKey.self) { trendPlot = $0 }
+            // Scrolling the page closes the trend popup (the popup never blocks
+            // the scroll itself — it's hit-testing-disabled).
+            .onPreferenceChange(ScrollOffsetKey.self) { _ in
+                if selectedTrendMonth != nil { selectedTrendMonth = nil }
+            }
             .overlay { trendPopupOverlay }
             .navigationTitle("Dashboard")
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
@@ -331,29 +347,17 @@ struct DashboardView: View {
         }
     }
 
-    /// Floats the value popup above all chart elements, with a full-screen tap
-    /// catcher: a tap on another bar switches the popup, a tap anywhere else
-    /// closes it.
+    /// Floats the value popup above all chart elements. It never intercepts
+    /// touches (so the page still scrolls); tapping a bar switches/closes it and
+    /// scrolling closes it (see the scroll-offset handler on the scroll view).
     @ViewBuilder
     private var trendPopupOverlay: some View {
         if let point = selectedPoint, trendPlot != .zero {
-            ZStack(alignment: .topLeading) {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture(coordinateSpace: .named("dash")) { handlePopupTap($0) }
-                trendPopup(point)
-                    .fixedSize()
-                    .position(popupPosition(for: point))
-                    .allowsHitTesting(false)
-            }
+            trendPopup(point)
+                .fixedSize()
+                .position(popupPosition(for: point))
+                .allowsHitTesting(false)
         }
-    }
-
-    private func handlePopupTap(_ loc: CGPoint) {
-        guard trendPlot.contains(loc) else { selectedTrendMonth = nil; return }
-        let frac = (loc.x - trendPlot.minX) / trendPlot.width
-        let idx = min(max(Int(frac * CGFloat(trend.count)), 0), trend.count - 1)
-        toggleTrendMonth(trend[idx].month)
     }
 
     private func popupPosition(for point: Analytics.MonthPoint) -> CGPoint {

@@ -5,7 +5,7 @@ import Charts
 /// Selectable time window for the net-worth chart.
 enum NWRange: String, CaseIterable, Identifiable {
     case oneMonth = "1M", threeMonths = "3M", sixMonths = "6M"
-    case ytd = "YTD", oneYear = "1Y", fiveYears = "5Y", all = "All"
+    case ytd = "YTD", oneYear = "1Y", all = "All"
     var id: String { rawValue }
 
     /// Earliest day to include; nil means no lower bound (All).
@@ -16,7 +16,6 @@ enum NWRange: String, CaseIterable, Identifiable {
         case .sixMonths: calendar.date(byAdding: .month, value: -6, to: now)
         case .ytd: calendar.date(from: calendar.dateComponents([.year], from: now))
         case .oneYear: calendar.date(byAdding: .year, value: -1, to: now)
-        case .fiveYears: calendar.date(byAdding: .year, value: -5, to: now)
         case .all: nil
         }
     }

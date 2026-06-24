@@ -8,6 +8,7 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
+            VStack(spacing: 0) {
             List {
                 if coordinator.isConnected {
                     connectedSection
@@ -65,10 +66,11 @@ struct SettingsView: View {
             }
             .listRowSeparatorTint(Color.hairline)
             .screenBackground()
+            }
+            // Wrapping the List in a VStack gives the large title its proper
+            // leading inset without needing a pull-to-refresh on this page.
+            .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Settings")
-            // Pull-to-refresh also gives the List a proper large-title leading
-            // inset (a bare List as the nav root loses it without .refreshable).
-            .refreshable { await coordinator.sync() }
         }
     }
 
