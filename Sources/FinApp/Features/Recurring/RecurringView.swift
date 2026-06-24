@@ -108,10 +108,10 @@ struct RecurringDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(AppRouter.self) private var router
+    @Query(sort: \Category.name) private var categories: [Category]
     @Query(sort: \Transaction.posted, order: .reverse) private var allTransactions: [Transaction]
     @Bindable var bill: RecurringBill
     @State private var amountText = ""
-    @State private var showingCategoryPicker = false
 
     private var matched: [Transaction] {
         allTransactions.filter {
@@ -201,7 +201,16 @@ struct RecurringDetailView: View {
     }
 
     private var categoryMenu: some View {
-        Button { showingCategoryPicker = true } label: {
+        Menu {
+            ForEach(categories) { category in
+                Button {
+                    setCategory(category)
+                } label: {
+                    Label(category.name, systemImage: category.systemIcon)
+                    if bill.category == category { Image(systemName: "checkmark") }
+                }
+            }
+        } label: {
             HStack {
                 Label {
                     Text(bill.category?.name ?? "Uncategorized").foregroundStyle(.primary)
@@ -213,13 +222,7 @@ struct RecurringDetailView: View {
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
             }
         }
-        .buttonStyle(.plain)
         .accessibilityIdentifier("recurringCategoryMenu")
-        .sheet(isPresented: $showingCategoryPicker) {
-            CategoryPicker(current: bill.category) { selected in
-                if let selected { setCategory(selected) }
-            }
-        }
     }
 
     /// Set the bill's category and apply it to this merchant's transactions, learning

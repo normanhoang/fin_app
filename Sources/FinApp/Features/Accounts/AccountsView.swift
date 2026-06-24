@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import Charts
 
 struct AccountsView: View {
     @Environment(AppRouter.self) private var router
@@ -157,26 +156,6 @@ struct AccountDetailView: View {
         return grouped.map { (month: $0.key, txns: $0.value) }.sorted { $0.month > $1.month }
     }
 
-    /// Account value over time, reconstructed from transactions: start from the
-    /// balance before the earliest charge, then apply each transaction in order.
-    private var balanceHistory: [BalancePoint] {
-        let txns = account.transactions.sorted { $0.posted < $1.posted }
-        guard !txns.isEmpty else { return [] }
-        let totalDelta = txns.reduce(Decimal(0)) { $0 + $1.amount }
-        var running = account.balance - totalDelta
-        var points: [BalancePoint] = []
-        for txn in txns {
-            running += txn.amount
-            points.append(BalancePoint(date: txn.posted, value: running))
-        }
-        points.append(BalancePoint(date: Date(), value: account.balance))
-        return points
-    }
-
-    private var showsValueChart: Bool {
-        !account.accountType.isDebt && balanceHistory.count >= 2
-    }
-
     var body: some View {
         List {
             Section("Name") {
@@ -210,12 +189,6 @@ struct AccountDetailView: View {
                 }
             }
             .listRowBackground(Color.surface)
-            if showsValueChart {
-                Section("Value over time") {
-                    valueChart
-                }
-                .listRowBackground(Color.surface)
-            }
             if account.isManual {
                 Section {
                     Button(role: .destructive) {
@@ -270,38 +243,6 @@ struct AccountDetailView: View {
         }
     }
 
-    private var valueChart: some View {
-        Chart(balanceHistory) { point in
-            LineMark(x: .value("Date", point.date), y: .value("Value", point.doubleValue))
-                .interpolationMethod(.monotone)
-                .foregroundStyle(Color.brand)
-                .lineStyle(StrokeStyle(lineWidth: 2.5))
-            AreaMark(x: .value("Date", point.date), y: .value("Value", point.doubleValue))
-                .interpolationMethod(.monotone)
-                .foregroundStyle(.linearGradient(colors: [.brand.opacity(0.30), .brand.opacity(0.02)],
-                                                 startPoint: .top, endPoint: .bottom))
-        }
-        .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 4)) { value in
-                AxisGridLine().foregroundStyle(Color.hairline)
-                AxisValueLabel(anchor: .topTrailing) {
-                    if let day = value.as(Date.self) {
-                        Text(day, format: .dateTime.month(.abbreviated).day())
-                            .font(.caption2).fixedSize()
-                            .rotationEffect(.degrees(-35))
-                            .foregroundStyle(Color.textSecondary)
-                    }
-                }
-            }
-        }
-        .chartYAxis { AxisMarks { _ in
-            AxisGridLine().foregroundStyle(Color.hairline)
-            AxisValueLabel().foregroundStyle(Color.textSecondary)
-        } }
-        .frame(height: 200)
-        .padding(.vertical, 8)
-    }
-
     /// Persist an edited balance for a manual account (ignores unparseable input).
     private func applyBalance() {
         guard account.isManual, let value = Decimal(string: balanceText, locale: .current) else { return }
@@ -316,12 +257,4 @@ struct AccountDetailView: View {
         account.customName = (trimmed.isEmpty || trimmed == account.name) ? nil : trimmed
         try? context.save()
     }
-}
-
-/// One point on an account's reconstructed value-over-time line.
-struct BalancePoint: Identifiable {
-    let date: Date
-    let value: Decimal
-    var id: Date { date }
-    var doubleValue: Double { (value as NSDecimalNumber).doubleValue }
 }

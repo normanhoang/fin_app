@@ -12,8 +12,7 @@ enum SampleData {
         let checking = Account(id: "s-checking", org: "Sample Bank", name: "Checking", currency: "USD",
                                balance: Decimal(string: "4250.18")!, availableBalance: Decimal(string: "4250.18")!, balanceDate: Date())
         let card = Account(id: "s-card", org: "Sample Bank", name: "Rewards Card", currency: "USD",
-                           balance: Decimal(string: "-612.44")!, balanceDate: Date(),
-                           typeRaw: AccountType.creditCard.rawValue)
+                           balance: Decimal(string: "-612.44")!, balanceDate: Date())
         let invest = Account(id: "s-invest", org: "Sample Brokerage", name: "Brokerage", currency: "USD",
                              balance: Decimal(string: "31980.05")!, availableBalance: Decimal(string: "120.00")!, balanceDate: Date())
         [checking, card, invest].forEach(context.insert)

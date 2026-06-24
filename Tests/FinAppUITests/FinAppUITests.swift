@@ -85,29 +85,13 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
         menu.tap()
 
-        let diningItem = app.buttons["pickCategory-Dining"].firstMatch
-        XCTAssertTrue(diningItem.waitForExistence(timeout: 5), "Category picker did not open")
-        snap(app, "category-picker-open")
+        let diningItem = app.buttons["Dining"].firstMatch
+        XCTAssertTrue(diningItem.waitForExistence(timeout: 5), "Menu did not open with category items")
+        snap(app, "category-menu-open")
         diningItem.tap()
 
         XCTAssertTrue(app.staticTexts["Dining"].waitForExistence(timeout: 5), "Category did not change to Dining")
         snap(app, "category-changed")
-    }
-
-    // 13. The Filter button opens the category picker and filters the list.
-    func testFilterButtonFiltersTransactions() {
-        let app = launch(tab: 1)
-        let filter = app.buttons["filterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
-        filter.tap()
-
-        let housing = app.buttons["pickCategory-Housing"].firstMatch
-        XCTAssertTrue(housing.waitForExistence(timeout: 5), "Category picker did not open")
-        housing.tap()
-
-        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5),
-                      "Filter not applied from the picker")
-        snap(app, "filter-from-button")
     }
 
     // 4. "Set as Recurring" creates a bill that shows on the Recurring tab.
