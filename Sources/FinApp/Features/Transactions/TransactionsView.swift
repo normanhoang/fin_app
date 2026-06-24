@@ -6,6 +6,7 @@ struct TransactionsView: View {
     @Environment(AppRouter.self) private var router
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
     @State private var search = ""
+    @State private var path: [Transaction] = []
 
     private var filtered: [Transaction] {
         var result = transactions.filter { matches(router.txnFilter, $0) }
@@ -24,6 +25,7 @@ struct TransactionsView: View {
         case .all: true
         case .income: txn.category?.isIncome == true && txn.amount > 0
         case .spending: txn.amount < 0 && txn.category?.isIncome != true
+        case .uncategorized: txn.category == nil
         case .category(let name): txn.category?.name == name
         }
     }
@@ -33,12 +35,13 @@ struct TransactionsView: View {
         case .all: nil
         case .income: "Income"
         case .spending: "Spending"
+        case .uncategorized: "Uncategorized"
         case .category(let name): name
         }
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             if transactions.isEmpty {
                 ContentUnavailableView(
                     "No Transactions",
@@ -54,9 +57,7 @@ struct TransactionsView: View {
                     }
                     List {
                         ForEach(filtered) { txn in
-                            NavigationLink {
-                                TransactionDetailView(transaction: txn)
-                            } label: {
+                            NavigationLink(value: txn) {
                                 TransactionRow(transaction: txn)
                             }
                             .accessibilityIdentifier("txnRow-\(txn.id)")
@@ -64,9 +65,23 @@ struct TransactionsView: View {
                     }
                 }
                 .navigationTitle("Transactions")
+                .navigationDestination(for: Transaction.self) { txn in
+                    TransactionDetailView(transaction: txn)
+                }
                 .refreshable { await coordinator.sync() }
             }
         }
+        .onChange(of: router.resetToken) { path = [] }
+        .onChange(of: router.pendingTxnID) { openPendingTransaction() }
+        .onAppear { openPendingTransaction() }
+    }
+
+    /// Honor a request (from Dashboard/Accounts) to open a specific transaction.
+    private func openPendingTransaction() {
+        guard let id = router.pendingTxnID,
+              let txn = transactions.first(where: { $0.id == id }) else { return }
+        path = [txn]
+        router.pendingTxnID = nil
     }
 
     private var searchBar: some View {
@@ -111,9 +126,18 @@ struct TransactionsView: View {
 struct TransactionDetailView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \Category.name) private var categories: [Category]
+    @Query private var recurringBills: [RecurringBill]
     let transaction: Transaction
 
     @State private var recurringCadence: Cadence = .monthly
+
+    private var merchant: String {
+        CategorizationEngine.normalizeMerchant(transaction.payee ?? transaction.detail)
+    }
+
+    private var alreadyRecurring: Bool {
+        recurringBills.contains { $0.merchantName == merchant && $0.confirmed && !$0.dismissed }
+    }
 
     var body: some View {
         List {
@@ -132,15 +156,21 @@ struct TransactionDetailView: View {
                 }
             }
             Section("Recurring") {
-                Picker("Cadence", selection: $recurringCadence) {
-                    ForEach(Cadence.allCases, id: \.self) { cadence in
-                        Text(cadence.rawValue.capitalized).tag(cadence)
+                if alreadyRecurring {
+                    Label("Added to Recurring", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .accessibilityIdentifier("recurringAddedIndicator")
+                } else {
+                    Picker("Cadence", selection: $recurringCadence) {
+                        ForEach(Cadence.allCases, id: \.self) { cadence in
+                            Text(cadence.rawValue.capitalized).tag(cadence)
+                        }
                     }
-                }
-                Button {
-                    setRecurring()
-                } label: {
-                    Label("Set as Recurring", systemImage: "arrow.clockwise")
+                    Button {
+                        setRecurring()
+                    } label: {
+                        Label("Set as Recurring", systemImage: "arrow.clockwise")
+                    }
                 }
             }
         }
@@ -176,19 +206,13 @@ struct TransactionDetailView: View {
     }
 
     private func setRecurring() {
-        let calendar = Calendar.current
-        let merchant = CategorizationEngine.normalizeMerchant(transaction.payee ?? transaction.detail)
-        let nextDue = calendar.date(byAdding: .day, value: recurringCadence.days, to: transaction.posted)
-        let bill = RecurringBill(
-            merchantName: merchant,
-            expectedAmount: abs(transaction.amount),
+        RecurringStore.setRecurring(
+            merchant: merchant,
+            amount: abs(transaction.amount),
             cadence: recurringCadence,
             lastSeen: transaction.posted,
-            nextDue: nextDue,
-            confirmed: true,
-            category: transaction.category
+            category: transaction.category,
+            in: context
         )
-        context.insert(bill)
-        try? context.save()
     }
 }

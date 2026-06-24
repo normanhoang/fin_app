@@ -20,8 +20,19 @@ struct RecurringView: View {
             } else {
                 List {
                     if !confirmed.isEmpty {
-                        Section("Upcoming") {
-                            ForEach(confirmed) { RecurringRow(bill: $0) }
+                        Section {
+                            ForEach(confirmed) { bill in
+                                RecurringRow(bill: bill)
+                                    .contextMenu {
+                                        Button(role: .destructive) { dismiss(bill) } label: {
+                                            Label("Remove", systemImage: "trash")
+                                        }
+                                    }
+                            }
+                        } header: {
+                            Text("Upcoming")
+                        } footer: {
+                            Text("Press and hold a bill to remove it.")
                         }
                     }
                     if !candidates.isEmpty {

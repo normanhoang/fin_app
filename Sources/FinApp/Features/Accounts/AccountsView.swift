@@ -96,6 +96,7 @@ struct AccountsView: View {
 
 struct AccountDetailView: View {
     @Environment(\.modelContext) private var context
+    @Environment(AppRouter.self) private var router
     @Bindable var account: Account
     @State private var editedName = ""
 
@@ -124,7 +125,12 @@ struct AccountDetailView: View {
                 if transactions.isEmpty {
                     Text("No transactions in the synced window.").foregroundStyle(.secondary)
                 } else {
-                    ForEach(transactions) { TransactionRow(transaction: $0) }
+                    ForEach(transactions) { txn in
+                        TransactionRow(transaction: txn)
+                            .contentShape(Rectangle())
+                            .onTapGesture { router.openTransaction(id: txn.id) }
+                            .accessibilityIdentifier("acctTxnRow-\(txn.id)")
+                    }
                 }
             }
         }

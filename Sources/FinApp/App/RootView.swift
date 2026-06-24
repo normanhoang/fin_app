@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(SyncCoordinator.self) private var coordinator
+    @Environment(\.modelContext) private var context
     @State private var router = AppRouter(selectedTab: Self.initialTab)
 
     static let tabCount = 6
@@ -25,27 +26,38 @@ struct RootView: View {
         // A horizontal paging ScrollView restores swipe-between-tabs WITHOUT the
         // UIPageViewController that made `TabView(.page)` crash on swipe, and with
         // no system tab bar to peek out from under the custom bar.
-        ScrollView(.horizontal) {
-            HStack(spacing: 0) {
-                pageView(DashboardView(), 0)
-                pageView(AccountsView(), 1)
-                pageView(TransactionsView(), 2)
-                pageView(BudgetsView(), 3)
-                pageView(RecurringView(), 4)
-                pageView(SettingsView(), 5)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 0) {
+                    pageView(DashboardView(), 0)
+                    pageView(AccountsView(), 1)
+                    pageView(TransactionsView(), 2)
+                    pageView(BudgetsView(), 3)
+                    pageView(RecurringView(), 4)
+                    pageView(SettingsView(), 5)
+                }
+                .scrollTargetLayout()
             }
-            .scrollTargetLayout()
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: page)
+            .scrollIndicators(.hidden)
+            .ignoresSafeArea(edges: .horizontal)
+            // scrollPosition handles swipe→tab updates; this drives programmatic
+            // tab changes (tab bar, Dashboard/Accounts deep-links) reliably even
+            // when a detail is pushed on the current page.
+            .onChange(of: router.selectedTab) { _, tab in
+                withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(tab, anchor: .center) }
+            }
         }
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: page)
-        .scrollIndicators(.hidden)
-        .ignoresSafeArea(edges: .horizontal)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             CustomTabBar(selection: $router.selectedTab)
         }
         .environment(router)
+        .background(KeyboardDismisser())
         .task {
-            // Auto-sync when the app opens (throttled; skipped if not connected).
+            // Collapse any pre-existing duplicate recurring bills, then auto-sync
+            // on open (throttled; skipped if not connected).
+            RecurringStore.dedupe(in: context)
             if coordinator.isConnected { await coordinator.sync() }
         }
     }
@@ -74,10 +86,13 @@ private struct CustomTabBar: View {
         HStack(spacing: 0) {
             ForEach(Array(Self.items.enumerated()), id: \.offset) { index, item in
                 Button {
-                    // Tapping the Transactions tab resets any active filter so the
-                    // bar acts as a "show everything" entry point.
-                    if index == 2 { router.txnFilter = .all }
-                    withAnimation(.easeInOut(duration: 0.25)) { selection = index }
+                    // Tapping the Transactions tab resets any active filter and pops
+                    // to the list root, so the bar is a "show everything" entry point.
+                    if index == 2 {
+                        router.showTransactions(.all)
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.25)) { selection = index }
+                    }
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: item.icon)

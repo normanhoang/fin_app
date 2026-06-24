@@ -146,6 +146,40 @@ final class FinAppUITests: XCTestCase {
         snap(app, "filter-cleared")
     }
 
+    // 8. Re-filtering from the Dashboard pops any open transaction back to the
+    //    filtered list (not stuck on the single detail).
+    func testReFilterPopsOpenTransaction() {
+        let app = launch(tab: 2)
+        let row = firstTxnRow(app)
+        XCTAssertTrue(row.waitForExistence(timeout: 8))
+        row.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch
+            .waitForExistence(timeout: 5), "Detail did not open")
+
+        app.buttons["tab-Dashboard"].tap()
+        app.buttons["category-Housing"].tap()
+
+        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch.exists,
+                       "Should show the filtered list, not the previously opened transaction")
+        snap(app, "refilter-pops-detail")
+    }
+
+    // 9. Tapping a transaction inside an account opens it in the Transactions tab.
+    func testAccountTransactionOpensInTransactions() {
+        let app = launch(tab: 1)
+        let account = app.descendants(matching: .any).matching(identifier: "accountRow-s-card").firstMatch
+        XCTAssertTrue(account.waitForExistence(timeout: 8), "Account row not found")
+        account.tap()
+
+        let txn = app.descendants(matching: .any).matching(identifier: "acctTxnRow-s-tx-1").firstMatch
+        XCTAssertTrue(txn.waitForExistence(timeout: 5), "No account transactions")
+        txn.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch
+            .waitForExistence(timeout: 5), "Transaction detail did not open in the Transactions tab")
+    }
+
     // 7. Swiping across the app must not crash (regression for the page-style
     //    TabView + NavigationStack UINavigationBar layout assertion).
     func testSwipingChangesPageAndDoesNotCrash() {

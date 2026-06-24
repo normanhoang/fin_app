@@ -54,14 +54,14 @@ struct DashboardView: View {
         Section("This Month") {
             HStack {
                 Button {
-                    show(.income)
+                    router.showTransactions(.income)
                 } label: {
                     stat("Income", Analytics.monthlyIncome(transactions, inMonthOf: now, calendar: calendar), .green)
                 }
                 .buttonStyle(.plain)
                 Divider()
                 Button {
-                    show(.spending)
+                    router.showTransactions(.spending)
                 } label: {
                     stat("Spending", Analytics.monthlySpending(transactions, inMonthOf: now, calendar: calendar), .red)
                 }
@@ -87,7 +87,11 @@ struct DashboardView: View {
         Section("Spending by Category") {
             ForEach(topCategories) { item in
                 Button {
-                    if let name = item.category?.name { show(.category(name)) }
+                    if let name = item.category?.name {
+                        router.showTransactions(.category(name))
+                    } else {
+                        router.showTransactions(.uncategorized)
+                    }
                 } label: {
                     HStack {
                         Image(systemName: item.category?.systemIcon ?? "questionmark.circle")
@@ -129,10 +133,5 @@ struct DashboardView: View {
             .frame(height: 160)
             .padding(.vertical, 4)
         }
-    }
-
-    private func show(_ filter: TransactionFilter) {
-        router.txnFilter = filter
-        router.selectedTab = 2
     }
 }

@@ -91,5 +91,6 @@ enum RecurringDetector {
             }
         }
         try? context.save()
+        RecurringStore.dedupe(in: context)
     }
 }
