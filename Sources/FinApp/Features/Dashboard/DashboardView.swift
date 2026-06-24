@@ -2,6 +2,10 @@ import SwiftUI
 import SwiftData
 import Charts
 
+/// Navigation value for the Net Worth detail page (so the Dashboard stack is
+/// path-bound and can be reset on tab switch).
+struct NetWorthRoute: Hashable {}
+
 struct DashboardView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
@@ -11,9 +15,10 @@ struct DashboardView: View {
 
     private let calendar = Calendar.current
     private var now: Date { Date() }
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if accounts.isEmpty {
                     emptyState
@@ -34,8 +39,11 @@ struct DashboardView: View {
             }
             .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Dashboard")
+            .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
             .refreshable { await coordinator.sync() }
         }
+        // Switching away from this tab resets it to its root page.
+        .onChange(of: router.selectedTab) { if router.selectedTab != 0 { path = NavigationPath() } }
     }
 
     // MARK: Net worth hero
@@ -51,9 +59,7 @@ struct DashboardView: View {
     }
 
     private var heroCard: some View {
-        NavigationLink {
-            NetWorthDetailView()
-        } label: {
+        NavigationLink(value: NetWorthRoute()) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline) {
                     SectionLabel("Net worth")
@@ -132,7 +138,9 @@ struct DashboardView: View {
     // MARK: Spending by category
 
     private var topCategories: [Analytics.CategoryTotal] {
+        // Transfers move money between your own accounts — not real spending.
         Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
+            .filter { $0.category?.name != "Transfers" }
     }
 
     private var maxCategoryTotal: Decimal { topCategories.map(\.total).max() ?? 1 }

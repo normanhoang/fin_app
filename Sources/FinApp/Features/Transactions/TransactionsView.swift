@@ -56,12 +56,18 @@ struct TransactionsView: View {
                         filterChip(label)
                     }
                     List {
-                        ForEach(filtered) { txn in
-                            NavigationLink(value: txn) {
-                                TransactionRow(transaction: txn)
+                        ForEach(monthGroups, id: \.month) { group in
+                            Section {
+                                ForEach(group.txns) { txn in
+                                    NavigationLink(value: txn) {
+                                        TransactionRow(transaction: txn)
+                                    }
+                                    .listRowBackground(Color.surface)
+                                    .accessibilityIdentifier("txnRow-\(txn.id)")
+                                }
+                            } header: {
+                                Text(group.month.formatted(.dateTime.month(.wide).year()))
                             }
-                            .listRowBackground(Color.surface)
-                            .accessibilityIdentifier("txnRow-\(txn.id)")
                         }
                     }
                     .listRowSeparatorTint(Color.hairline)
@@ -77,7 +83,17 @@ struct TransactionsView: View {
         }
         .onChange(of: router.resetToken) { path = [] }
         .onChange(of: router.pendingTxnID) { openPendingTransaction() }
+        .onChange(of: router.selectedTab) { if router.selectedTab != 2 { path = [] } }
         .onAppear { openPendingTransaction() }
+    }
+
+    /// Transactions grouped by month, newest month first.
+    private var monthGroups: [(month: Date, txns: [Transaction])] {
+        let cal = Calendar.current
+        let grouped = Dictionary(grouping: filtered) {
+            cal.dateInterval(of: .month, for: $0.posted)?.start ?? $0.posted
+        }
+        return grouped.map { (month: $0.key, txns: $0.value) }.sorted { $0.month > $1.month }
     }
 
     /// Honor a request (from Dashboard/Accounts) to open a specific transaction.

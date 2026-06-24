@@ -3,8 +3,10 @@ import SwiftData
 
 struct AccountsView: View {
     @Environment(SyncCoordinator.self) private var coordinator
+    @Environment(AppRouter.self) private var router
     @Query(sort: \Account.name) private var accounts: [Account]
     @State private var showingAdd = false
+    @State private var path: [Account] = []
 
     /// Accounts of one type, kept together as a subsection.
     private struct TypeGroup: Identifiable {
@@ -24,8 +26,12 @@ struct AccountsView: View {
             .sorted { $0.type.sortIndex < $1.type.sortIndex }
     }
 
+    private var assetGroups: [TypeGroup] { groups(debt: false) }
+    private var debtGroups: [TypeGroup] { groups(debt: true) }
+    private func total(_ groups: [TypeGroup]) -> Decimal { groups.reduce(Decimal(0)) { $0 + $1.subtotal } }
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if accounts.isEmpty {
                     ContentUnavailableView(
@@ -35,14 +41,21 @@ struct AccountsView: View {
                     )
                 } else {
                     List {
-                        groupSection("Assets", groups(debt: false))
-                        groupSection("Debts", groups(debt: true))
+                        // One Section per type so the inset card rounds at each type's
+                        // top and bottom; an eyebrow marks the first Assets/Debts type.
+                        ForEach(assetGroups) { typeSection($0, groupTitle: "Assets",
+                                                            groupTotal: total(assetGroups),
+                                                            showEyebrow: $0.id == assetGroups.first?.id) }
+                        ForEach(debtGroups) { typeSection($0, groupTitle: "Debts",
+                                                          groupTotal: total(debtGroups),
+                                                          showEyebrow: $0.id == debtGroups.first?.id) }
                     }
                     .listRowSeparatorTint(Color.hairline)
                     .screenBackground()
                 }
             }
             .navigationTitle("Accounts")
+            .navigationDestination(for: Account.self) { AccountDetailView(account: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingAdd = true } label: { Image(systemName: "plus") }
@@ -51,42 +64,40 @@ struct AccountsView: View {
             .sheet(isPresented: $showingAdd) { AddAccountView() }
             .refreshable { await coordinator.sync() }
         }
+        .onChange(of: router.selectedTab) { if router.selectedTab != 1 { path = [] } }
     }
 
-    @ViewBuilder
-    private func groupSection(_ title: String, _ groups: [TypeGroup]) -> some View {
-        if !groups.isEmpty {
-            let total = groups.reduce(Decimal(0)) { $0 + $1.subtotal }
-            Section {
-                ForEach(groups) { group in
-                    HStack {
-                        Text(group.type.displayName)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        MoneyText(value: group.subtotal, size: 15, weight: .semibold,
-                                  color: group.subtotal < 0 ? .negative : .textSecondary)
-                    }
-                    .listRowBackground(Color.appBackground)
-                    .listRowSeparator(.hidden)
-                    ForEach(group.accounts) { account in
-                        NavigationLink {
-                            AccountDetailView(account: account)
-                        } label: {
-                            row(account)
-                        }
-                        .listRowBackground(Color.surface)
-                        .accessibilityIdentifier("accountRow-\(account.id)")
-                    }
+    private func typeSection(_ group: TypeGroup, groupTitle: String, groupTotal: Decimal, showEyebrow: Bool) -> some View {
+        Section {
+            ForEach(group.accounts) { account in
+                NavigationLink(value: account) {
+                    row(account)
                 }
-            } header: {
+                .listRowBackground(Color.surface)
+                .accessibilityIdentifier("accountRow-\(account.id)")
+            }
+        } header: {
+            VStack(alignment: .leading, spacing: 8) {
+                if showEyebrow {
+                    HStack {
+                        Text(groupTitle)
+                            .font(.headline)
+                            .foregroundStyle(Color.textPrimary)
+                        Spacer()
+                        Chip(Money.string(groupTotal), color: groupTotal < 0 ? .negative : .textSecondary)
+                    }
+                    .padding(.top, 8)
+                }
                 HStack {
-                    Text(title)
+                    Text(group.type.displayName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.textSecondary)
                     Spacer()
-                    Chip(Money.string(total), color: total < 0 ? .negative : .textSecondary)
+                    MoneyText(value: group.subtotal, size: 14, weight: .semibold,
+                              color: group.subtotal < 0 ? .negative : .textSecondary)
                 }
             }
-            .headerProminence(.increased)
+            .textCase(nil)
         }
     }
 

@@ -44,6 +44,23 @@ final class FinAppUITests: XCTestCase {
         snap(app, "net-worth-detail")
     }
 
+    // 1b. Switching tabs resets a pushed subpage: open Net Worth, leave, come back
+    //     to the Dashboard root (not the Net Worth detail).
+    func testTabSwitchResetsToRoot() {
+        let app = launch(tab: 0)
+        let card = app.descendants(matching: .any).matching(identifier: "netWorthCard").firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 8))
+        card.tap()
+        XCTAssertTrue(app.staticTexts["Building History"].waitForExistence(timeout: 5),
+                      "Net Worth detail did not open")
+
+        app.buttons["tab-Accounts"].tap()
+        app.buttons["tab-Dashboard"].tap()
+
+        XCTAssertFalse(app.staticTexts["Building History"].waitForExistence(timeout: 2),
+                       "Dashboard should return to its root, not the Net Worth subpage")
+    }
+
     // 2. Transaction detail shows the top category Menu and the Recurring controls.
     func testTransactionDetailHasCategoryMenuAndRecurring() {
         let app = launch(tab: 2)
