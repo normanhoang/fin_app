@@ -6,12 +6,33 @@ import UIKit
 
 // MARK: - Screen background
 
-extension View {
-    /// Charcoal app background behind a List/ScrollView, hiding the system grouped fill.
-    func screenBackground() -> some View {
-        scrollContentBackground(.hidden)
+/// Inset (≈ floating tab bar height + gap) that scroll views add to their bottom
+/// content so the last row clears the bar. Set once in RootView.
+struct BottomBarInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    var bottomBarInset: CGFloat {
+        get { self[BottomBarInsetKey.self] }
+        set { self[BottomBarInsetKey.self] = newValue }
+    }
+}
+
+private struct ScreenBackground: ViewModifier {
+    @Environment(\.bottomBarInset) private var bottomInset
+    func body(content: Content) -> some View {
+        content
+            .scrollContentBackground(.hidden)
+            .contentMargins(.bottom, bottomInset, for: .scrollContent)
             .background(Color.appBackground.ignoresSafeArea())
     }
+}
+
+extension View {
+    /// Charcoal app background behind a List/ScrollView, hiding the system grouped
+    /// fill, plus bottom room so content clears the floating tab bar.
+    func screenBackground() -> some View { modifier(ScreenBackground()) }
 }
 
 // MARK: - Chip

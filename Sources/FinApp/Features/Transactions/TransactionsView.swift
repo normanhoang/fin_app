@@ -81,10 +81,25 @@ struct TransactionsView: View {
                 .refreshable { await coordinator.sync() }
             }
         }
-        .onChange(of: router.resetToken) { path = [] }
+        .onChange(of: router.resetToken) { path = []; search = "" }
         .onChange(of: router.pendingTxnID) { openPendingTransaction() }
-        .onChange(of: router.selectedTab) { if router.selectedTab != 2 { path = [] } }
+        .onChange(of: router.selectedTab) { handleTabChange() }
         .onAppear { openPendingTransaction() }
+    }
+
+    /// On arrival at the Transactions tab (tab tap or swipe), clear the filter and
+    /// search — unless it was a deep-link that wants to keep its filter. On leaving,
+    /// pop any pushed detail so the tab returns to its root.
+    private func handleTabChange() {
+        if router.selectedTab == 2 {
+            if !router.txnArrivalIsDeepLink {
+                router.txnFilter = .all
+                search = ""
+            }
+            router.txnArrivalIsDeepLink = false
+        } else {
+            path = []
+        }
     }
 
     /// Transactions grouped by month, newest month first.

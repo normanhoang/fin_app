@@ -83,9 +83,9 @@ struct RootView: View {
     private func pageView(_ view: some View, _ tag: Int) -> some View {
         view
             .containerRelativeFrame(.horizontal)
-            // Reserve room for the floating bar so list content can clear it while
-            // still scrolling underneath the translucent glass.
-            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: barHeight) }
+            // Scroll views inside each page add this much bottom content margin so
+            // their last row clears the floating bar (see `screenBackground`).
+            .environment(\.bottomBarInset, max(barHeight, 72) + 24)
             .id(tag)
     }
 }

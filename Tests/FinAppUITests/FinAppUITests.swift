@@ -51,13 +51,13 @@ final class FinAppUITests: XCTestCase {
         let card = app.descendants(matching: .any).matching(identifier: "netWorthCard").firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 8))
         card.tap()
-        XCTAssertTrue(app.staticTexts["Building History"].waitForExistence(timeout: 5),
+        XCTAssertTrue(app.navigationBars["Net Worth"].waitForExistence(timeout: 5),
                       "Net Worth detail did not open")
 
         app.buttons["tab-Accounts"].tap()
         app.buttons["tab-Dashboard"].tap()
 
-        XCTAssertFalse(app.staticTexts["Building History"].waitForExistence(timeout: 2),
+        XCTAssertFalse(app.navigationBars["Net Worth"].waitForExistence(timeout: 2),
                        "Dashboard should return to its root, not the Net Worth subpage")
     }
 
@@ -124,6 +124,20 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5),
                       "Filter chip not shown on Transactions")
         snap(app, "filtered-housing")
+    }
+
+    // 5b. Swiping back to Transactions clears a leftover filter (tab tap too).
+    func testSwipingToTransactionsClearsFilter() {
+        let app = launch(tab: 0)
+        app.buttons["category-Housing"].tap()
+        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5))
+
+        app.swipeRight()   // to Accounts
+        XCTAssertTrue(app.staticTexts["Assets"].waitForExistence(timeout: 5))
+        app.swipeLeft()    // back to Transactions
+
+        XCTAssertFalse(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 2),
+                       "Swiping to Transactions should clear the filter")
     }
 
     // 6. Renaming an account updates the list (and persists via customName).

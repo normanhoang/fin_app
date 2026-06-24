@@ -16,6 +16,7 @@ struct DashboardView: View {
     private let calendar = Calendar.current
     private var now: Date { Date() }
     @State private var path = NavigationPath()
+    @Environment(\.bottomBarInset) private var bottomBarInset
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -34,6 +35,7 @@ struct DashboardView: View {
                         .padding(.top, 8)
                         .padding(.bottom, 24)
                     }
+                    .contentMargins(.bottom, bottomBarInset, for: .scrollContent)
                     .scrollIndicators(.hidden)
                 }
             }
