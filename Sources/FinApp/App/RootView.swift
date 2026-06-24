@@ -48,12 +48,18 @@ struct RootView: View {
                 // and updates the tab on swipe.
                 .scrollPosition(id: page)
                 .scrollIndicators(.hidden)
+                // Dismiss the keyboard the moment a swipe begins, on a stable
+                // layout, so paging stays smooth and doesn't skip a page.
+                .scrollDismissesKeyboard(.immediately)
                 // scrollPosition's initial value isn't honored on first render, so
                 // jump to the launch tab once.
                 .onAppear { proxy.scrollTo(router.selectedTab) }
             }
             CustomTabBar(selection: $router.selectedTab)
         }
+        // Keep the keyboard from resizing the pager (it would shift paging offsets
+        // and make a swipe jump two pages).
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .ignoresSafeArea(.container, edges: .horizontal)
         .environment(router)
         .background(KeyboardDismisser())
