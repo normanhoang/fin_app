@@ -1,0 +1,18 @@
+# Xcode / build
+DerivedData/
+build/
+*.xcuserstate
+**/xcuserdata/
+*.xcuserdatad/
+
+# Generated project (xcodegen is source of truth via project.yml)
+# Keep FinApp.xcodeproj out if regenerated on each machine; comment the next
+# line if you choose to commit the generated project.
+# FinApp.xcodeproj/
+
+# macOS
+.DS_Store
+
+# Swift Package Manager (none today, but future-proof)
+.build/
+.swiftpm/

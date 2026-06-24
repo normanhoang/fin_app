@@ -1,0 +1,82 @@
+import XCTest
+import SwiftData
+@testable import FinApp
+
+@MainActor
+final class CategorizationEngineTests: XCTestCase {
+    private var container: ModelContainer!
+    private var ctx: ModelContext { container.mainContext }
+
+    override func setUp() async throws {
+        container = AppSchema.makeInMemoryContainer()
+    }
+
+    private func category(_ name: String) -> FinApp.Category {
+        let c = FinApp.Category(name: name, colorHex: "#000000", systemIcon: "tag")
+        ctx.insert(c)
+        return c
+    }
+
+    private func rule(_ keyword: String, _ cat: FinApp.Category, priority: Int = 100) -> CategoryRule {
+        let r = CategoryRule(keyword: keyword, priority: priority, category: cat)
+        ctx.insert(r)
+        return r
+    }
+
+    func testMatchingRuleAssignsCategory() {
+        let food = category("Food")
+        let rules = [rule("coffee", food)]
+        XCTAssertEqual(CategorizationEngine.bestCategory(forMatchText: "blue bottle coffee", rules: rules), food)
+    }
+
+    func testNoMatchReturnsNil() {
+        let rules = [rule("coffee", category("Food"))]
+        XCTAssertNil(CategorizationEngine.bestCategory(forMatchText: "shell gas station", rules: rules))
+    }
+
+    func testLowerPriorityValueWins() {
+        let food = category("Food")
+        let coffeeShops = category("Coffee")
+        let rules = [
+            rule("coffee", food, priority: 100),
+            rule("coffee", coffeeShops, priority: 0),
+        ]
+        XCTAssertEqual(CategorizationEngine.bestCategory(forMatchText: "coffee", rules: rules), coffeeShops)
+    }
+
+    func testCategorizeSkipsUserCategorized() {
+        let food = category("Food")
+        let txn = Transaction(id: "t1", posted: Date(), amount: -5, detail: "COFFEE", categorizedByUser: true)
+        ctx.insert(txn)
+        CategorizationEngine.categorize(txn, using: [rule("coffee", food)])
+        XCTAssertNil(txn.category) // untouched because user set it
+    }
+
+    func testCategorizeAssignsWhenNotUserCategorized() {
+        let food = category("Food")
+        let txn = Transaction(id: "t1", posted: Date(), amount: -5, detail: "COFFEE SHOP", payee: "Coffee Shop")
+        ctx.insert(txn)
+        CategorizationEngine.categorize(txn, using: [rule("coffee", food)])
+        XCTAssertEqual(txn.category, food)
+    }
+
+    func testLearnCreatesUserRuleAndMarksTransaction() {
+        let food = category("Food")
+        let txn = Transaction(id: "t1", posted: Date(), amount: -5, detail: "COFFEE SHOP #42", payee: "Coffee Shop")
+        ctx.insert(txn)
+
+        let learned = CategorizationEngine.learn(from: txn, category: food, in: ctx)
+
+        XCTAssertEqual(txn.category, food)
+        XCTAssertTrue(txn.categorizedByUser)
+        XCTAssertTrue(learned.createdByUser)
+        XCTAssertEqual(learned.category, food)
+        // The learned rule should catch the same merchant again.
+        XCTAssertTrue(learned.matches("coffee shop #99".lowercased()))
+    }
+
+    func testNormalizeMerchantStripsNumericTokens() {
+        XCTAssertEqual(CategorizationEngine.normalizeMerchant("COFFEE SHOP #42"), "coffee shop")
+        XCTAssertEqual(CategorizationEngine.normalizeMerchant("AMEX EPAYMENT 12345 ACH"), "amex epayment ach")
+    }
+}

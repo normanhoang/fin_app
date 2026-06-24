@@ -1,0 +1,111 @@
+import XCTest
+
+/// End-to-end UI tests driving the real app via accessibility identifiers, so
+/// List `NavigationLink`s and `Menu`s fire deterministically (synthetic cursor
+/// clicks don't). Launches with FINAPP_UITEST=1 → clean in-memory store seeded
+/// with sample data.
+final class FinAppUITests: XCTestCase {
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    private func launch(tab: Int = 0) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchEnvironment["FINAPP_UITEST"] = "1"
+        app.launchEnvironment["FINAPP_TAB"] = String(tab)
+        app.launch()
+        return app
+    }
+
+    private func snap(_ app: XCUIApplication, _ name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
+    private func firstTxnRow(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'txnRow-'"))
+            .firstMatch
+    }
+
+    // 1. Tapping the Net Worth card opens the graph screen (empty "Building
+    //    History" state with sample data, since snapshots only record on sync).
+    func testNetWorthCardOpensGraph() {
+        let app = launch(tab: 0)
+        let card = app.descendants(matching: .any).matching(identifier: "netWorthCard").firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 8), "Net Worth card not found")
+        card.tap()
+
+        let onDetail = app.navigationBars["Net Worth"].waitForExistence(timeout: 5)
+            || app.staticTexts["Building History"].waitForExistence(timeout: 5)
+        XCTAssertTrue(onDetail, "Net Worth detail did not open")
+        snap(app, "net-worth-detail")
+    }
+
+    // 2. Transaction detail shows the top category Menu and the Recurring controls.
+    func testTransactionDetailHasCategoryMenuAndRecurring() {
+        let app = launch(tab: 2)
+        let row = firstTxnRow(app)
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "No transaction rows")
+        row.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch
+            .waitForExistence(timeout: 5), "Category menu missing")
+        XCTAssertTrue(app.buttons["Set as Recurring"].waitForExistence(timeout: 5), "Set as Recurring missing")
+        snap(app, "transaction-detail")
+    }
+
+    // 3. The top category Menu opens and changing it sticks.
+    func testCategoryMenuChangesCategory() {
+        let app = launch(tab: 2)
+        let row = firstTxnRow(app)
+        XCTAssertTrue(row.waitForExistence(timeout: 8))
+        row.tap()
+
+        let menu = app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+
+        let diningItem = app.buttons["Dining"].firstMatch
+        XCTAssertTrue(diningItem.waitForExistence(timeout: 5), "Menu did not open with category items")
+        snap(app, "category-menu-open")
+        diningItem.tap()
+
+        XCTAssertTrue(app.staticTexts["Dining"].waitForExistence(timeout: 5), "Category did not change to Dining")
+        snap(app, "category-changed")
+    }
+
+    // 4. "Set as Recurring" creates a bill that shows on the Recurring tab.
+    func testSetAsRecurringCreatesBill() {
+        let app = launch(tab: 2)
+        let row = firstTxnRow(app)
+        XCTAssertTrue(row.waitForExistence(timeout: 8))
+        row.tap()
+
+        let setBtn = app.buttons["Set as Recurring"]
+        XCTAssertTrue(setBtn.waitForExistence(timeout: 5))
+        setBtn.tap()
+
+        app.buttons["tab-Recurring"].tap()
+        // A confirmed bill lands under the "Upcoming" section; the empty state
+        // ("No Recurring Bills") must be gone.
+        let upcoming = app.staticTexts["Upcoming"].waitForExistence(timeout: 5)
+        snap(app, "recurring-after-set")
+        XCTAssertTrue(upcoming, "Upcoming section not shown after Set as Recurring")
+        XCTAssertFalse(app.staticTexts["No Recurring Bills"].exists, "Recurring tab still empty")
+    }
+
+    // 5. Tapping a Dashboard category drills into a filtered Transactions list.
+    func testDashboardCategoryFiltersTransactions() {
+        let app = launch(tab: 0)
+        let housing = app.buttons["category-Housing"]
+        XCTAssertTrue(housing.waitForExistence(timeout: 8), "Housing category row not found")
+        housing.tap()
+
+        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5),
+                      "Filter chip not shown on Transactions")
+        snap(app, "filtered-housing")
+    }
+}
