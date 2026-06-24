@@ -16,7 +16,11 @@ struct AccountsView: View {
 
     private func groups(debt: Bool) -> [TypeGroup] {
         Dictionary(grouping: accounts.filter { $0.accountType.isDebt == debt }, by: \.accountType)
-            .map { TypeGroup(type: $0.key, accounts: $0.value.sorted { $0.name < $1.name }) }
+            .map { type, accts in
+                TypeGroup(type: type, accounts: accts.sorted {
+                    $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+                })
+            }
             .sorted { $0.type.sortIndex < $1.type.sortIndex }
     }
 

@@ -182,7 +182,10 @@ struct TransactionDetailView: View {
         Menu {
             ForEach(categories) { category in
                 Button {
+                    // Remember this choice as a rule (applies to future syncs) and
+                    // apply it now to similar existing transactions.
                     CategorizationEngine.learn(from: transaction, category: category, in: context)
+                    CategorizationEngine.categorizeAll(in: context)
                 } label: {
                     Label(category.name, systemImage: category.systemIcon)
                     if transaction.category == category {

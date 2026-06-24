@@ -23,6 +23,22 @@ final class CategorizationEngineTests: XCTestCase {
         return r
     }
 
+    func testLearnThenCategorizeAllPropagatesToSimilarTransactions() {
+        let dining = category("Dining")
+        let t1 = Transaction(id: "1", posted: Date(), amount: -5, detail: "STARBUCKS #123", payee: "STARBUCKS #123")
+        let t2 = Transaction(id: "2", posted: Date(), amount: -6, detail: "STARBUCKS #999", payee: "STARBUCKS #999")
+        ctx.insert(t1); ctx.insert(t2)
+
+        // User categorizes one Starbucks; the rule should catch the other.
+        CategorizationEngine.learn(from: t1, category: dining, in: ctx)
+        CategorizationEngine.categorizeAll(in: ctx)
+
+        XCTAssertEqual(t1.category, dining)
+        XCTAssertEqual(t2.category, dining, "Similar merchant should be auto-categorized")
+        XCTAssertTrue(t1.categorizedByUser)
+        XCTAssertFalse(t2.categorizedByUser, "Propagated category is a rule match, not a manual set")
+    }
+
     func testMatchingRuleAssignsCategory() {
         let food = category("Food")
         let rules = [rule("coffee", food)]

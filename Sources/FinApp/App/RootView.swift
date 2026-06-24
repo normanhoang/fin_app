@@ -26,32 +26,35 @@ struct RootView: View {
         // A horizontal paging ScrollView restores swipe-between-tabs WITHOUT the
         // UIPageViewController that made `TabView(.page)` crash on swipe, and with
         // no system tab bar to peek out from under the custom bar.
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                HStack(spacing: 0) {
-                    pageView(DashboardView(), 0)
-                    pageView(AccountsView(), 1)
-                    pageView(TransactionsView(), 2)
-                    pageView(BudgetsView(), 3)
-                    pageView(RecurringView(), 4)
-                    pageView(SettingsView(), 5)
+        // Pager and bar are stacked (not overlaid) so each page's List ends above
+        // the bar instead of being clipped by it — safeAreaInset doesn't propagate
+        // through the horizontal pager to the nested Lists.
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    HStack(spacing: 0) {
+                        pageView(DashboardView(), 0)
+                        pageView(AccountsView(), 1)
+                        pageView(TransactionsView(), 2)
+                        pageView(BudgetsView(), 3)
+                        pageView(RecurringView(), 4)
+                        pageView(SettingsView(), 5)
+                    }
+                    .scrollTargetLayout()
                 }
-                .scrollTargetLayout()
+                .scrollTargetBehavior(.paging)
+                // scrollPosition is the single source of truth: it scrolls on
+                // programmatic tab changes (tab bar, Dashboard/Accounts deep-links)
+                // and updates the tab on swipe.
+                .scrollPosition(id: page)
+                .scrollIndicators(.hidden)
+                // scrollPosition's initial value isn't honored on first render, so
+                // jump to the launch tab once.
+                .onAppear { proxy.scrollTo(router.selectedTab) }
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: page)
-            .scrollIndicators(.hidden)
-            .ignoresSafeArea(edges: .horizontal)
-            // scrollPosition handles swipe→tab updates; this drives programmatic
-            // tab changes (tab bar, Dashboard/Accounts deep-links) reliably even
-            // when a detail is pushed on the current page.
-            .onChange(of: router.selectedTab) { _, tab in
-                withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(tab, anchor: .center) }
-            }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
             CustomTabBar(selection: $router.selectedTab)
         }
+        .ignoresSafeArea(.container, edges: .horizontal)
         .environment(router)
         .background(KeyboardDismisser())
         .task {
@@ -114,7 +117,11 @@ private struct CustomTabBar: View {
         }
         .padding(.top, 8)
         .padding(.horizontal, 2)
-        .background(.bar)
+        // Bleed the bar material into the bottom safe area (home indicator) while
+        // keeping the icons within the safe area.
+        .background {
+            Rectangle().fill(.bar).ignoresSafeArea(edges: .bottom)
+        }
         .overlay(alignment: .top) { Divider() }
     }
 }
