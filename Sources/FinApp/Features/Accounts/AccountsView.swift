@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct AccountsView: View {
-    @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
     @Query(sort: \Account.name) private var accounts: [Account]
     @State private var showingAdd = false
@@ -42,7 +41,6 @@ struct AccountsView: View {
                 } else {
                     ScrollViewReader { proxy in
                         List {
-                            ListTopAnchor()
                             // One Section per type so the inset card rounds at each type's
                             // top and bottom; an eyebrow marks the first Assets/Debts type.
                             ForEach(assetGroups) { typeSection($0, groupTitle: "Assets",
@@ -55,13 +53,15 @@ struct AccountsView: View {
                         .listRowSeparatorTint(Color.hairline)
                         .screenBackground()
                         .onChange(of: router.selectedTab) {
-                            if router.selectedTab == AppTab.accounts.rawValue {
-                                proxy.scrollTo("listTop", anchor: .top)
+                            if router.selectedTab == AppTab.accounts.rawValue,
+                               let topID = assetGroups.first?.id ?? debtGroups.first?.id {
+                                proxy.scrollTo(topID, anchor: .top)
                             }
                         }
                     }
                 }
             }
+            .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Accounts")
             .navigationDestination(for: Account.self) { AccountDetailView(account: $0) }
             .toolbar {
@@ -71,7 +71,6 @@ struct AccountsView: View {
                 }
             }
             .sheet(isPresented: $showingAdd) { AddAccountView() }
-            .refreshable { await coordinator.sync() }
         }
         .onChange(of: router.selectedTab) {
             if router.selectedTab == AppTab.accounts.rawValue { router.subpageOpen = !path.isEmpty }

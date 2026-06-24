@@ -3,7 +3,6 @@ import SwiftData
 
 struct RecurringView: View {
     @Environment(\.modelContext) private var context
-    @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
     @Query(sort: \RecurringBill.nextDue) private var bills: [RecurringBill]
     @State private var path: [RecurringBill] = []
@@ -23,16 +22,14 @@ struct RecurringView: View {
                 } else {
                     ScrollViewReader { proxy in
                         List {
-                            ListTopAnchor()
                             if !confirmed.isEmpty {
                                 Section {
                                     ForEach(confirmed) { billRow($0) }
                                 } header: {
                                     Text("Upcoming")
-                                } footer: {
-                                    Text("Tap a bill to see its past charges and manage it.")
                                 }
                                 .listRowBackground(Color.surface)
+                                .id("listTop")
                             }
                             if !candidates.isEmpty {
                                 Section {
@@ -43,6 +40,7 @@ struct RecurringView: View {
                                     Text("Tap a detected bill to confirm it or remove a false match.")
                                 }
                                 .listRowBackground(Color.surface)
+                                .id(confirmed.isEmpty ? "listTop" : "detectedSection")
                             }
                         }
                         .listRowSeparatorTint(Color.hairline)
@@ -55,10 +53,8 @@ struct RecurringView: View {
                     }
                 }
             }
+            .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Recurring")
-            // Pull-to-refresh also gives the List a proper large-title leading
-            // inset (a bare List as the nav root loses it without .refreshable).
-            .refreshable { await coordinator.sync() }
             .navigationDestination(for: RecurringBill.self) { RecurringDetailView(bill: $0) }
         }
         .onChange(of: router.selectedTab) {

@@ -31,7 +31,6 @@ private struct TrendPlotKey: PreferenceKey {
 }
 
 struct DashboardView: View {
-    @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
     @Query private var accounts: [Account]
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
@@ -90,7 +89,6 @@ struct DashboardView: View {
             .overlay { trendPopupOverlay }
             .navigationTitle("Dashboard")
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
-            .refreshable { await coordinator.sync() }
         }
         // Switching away from this tab resets it to its root page. Only the active
         // tab owns `subpageOpen`, so an inactive tab's reset can't re-enable paging

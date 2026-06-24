@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct TransactionsView: View {
-    @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
     @State private var search = ""
@@ -57,7 +56,6 @@ struct TransactionsView: View {
                     }
                     ScrollViewReader { proxy in
                         List {
-                            ListTopAnchor()
                             ForEach(monthGroups, id: \.month) { group in
                                 Section {
                                     ForEach(group.txns) { txn in
@@ -75,8 +73,9 @@ struct TransactionsView: View {
                         .listRowSeparatorTint(Color.hairline)
                         .screenBackground()
                         .onChange(of: router.selectedTab) {
-                            if router.selectedTab == AppTab.transactions.rawValue {
-                                proxy.scrollTo("listTop", anchor: .top)
+                            if router.selectedTab == AppTab.transactions.rawValue,
+                               let top = monthGroups.first?.month {
+                                proxy.scrollTo(top, anchor: .top)
                             }
                         }
                     }
@@ -86,7 +85,6 @@ struct TransactionsView: View {
                 .navigationDestination(for: Transaction.self) { txn in
                     TransactionDetailView(transaction: txn)
                 }
-                .refreshable { await coordinator.sync() }
             }
         }
         .onChange(of: router.resetToken) { path = []; search = "" }

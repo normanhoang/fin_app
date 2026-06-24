@@ -35,21 +35,6 @@ extension View {
     func screenBackground() -> some View { modifier(ScreenBackground()) }
 }
 
-// MARK: - List scroll anchor
-
-/// A zero-height list row used as a scroll-to-top target (`id "listTop"`), so a
-/// tab can jump its List back to the top on arrival.
-struct ListTopAnchor: View {
-    var body: some View {
-        Color.clear
-            .frame(height: 0)
-            .id("listTop")
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets())
-    }
-}
-
 // MARK: - Chip
 
 /// Small rounded label used for account types, cadences, and subtotals.

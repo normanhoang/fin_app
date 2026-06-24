@@ -12,11 +12,10 @@ struct SettingsView: View {
             ScrollViewReader { proxy in
             VStack(spacing: 0) {
             List {
-                ListTopAnchor()
                 if coordinator.isConnected {
-                    connectedSection
+                    connectedSection.id("listTop")
                 } else {
-                    connectSection
+                    connectSection.id("listTop")
                 }
 
                 if !coordinator.providerErrors.isEmpty {
