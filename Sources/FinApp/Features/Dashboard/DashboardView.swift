@@ -61,9 +61,16 @@ struct DashboardView: View {
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
             .refreshable { await coordinator.sync() }
         }
-        // Switching away from this tab resets it to its root page.
-        .onChange(of: router.selectedTab) { if router.selectedTab != AppTab.dashboard.rawValue { path = NavigationPath() } }
-        .onChange(of: path) { router.subpageOpen = !path.isEmpty }
+        // Switching away from this tab resets it to its root page. Only the active
+        // tab owns `subpageOpen`, so an inactive tab's reset can't re-enable paging
+        // while another tab has a detail open.
+        .onChange(of: router.selectedTab) {
+            if router.selectedTab == AppTab.dashboard.rawValue { router.subpageOpen = !path.isEmpty }
+            else { path = NavigationPath() }
+        }
+        .onChange(of: path) {
+            if router.selectedTab == AppTab.dashboard.rawValue { router.subpageOpen = !path.isEmpty }
+        }
     }
 
     // MARK: Net worth hero

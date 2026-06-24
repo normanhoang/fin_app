@@ -56,7 +56,9 @@ struct FinAppApp: App {
             if phase == .background {
                 lock.lock()
             } else if phase == .active, coordinator.isConnected {
-                Task { await coordinator.sync() }
+                // Only resync on foreground if it's been over an hour since the last
+                // successful sync, instead of hitting SimpleFin on every open.
+                Task { await coordinator.syncIfStale() }
             }
         }
     }

@@ -3,6 +3,7 @@ import SwiftData
 
 struct RecurringView: View {
     @Environment(\.modelContext) private var context
+    @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
     @Query(sort: \RecurringBill.nextDue) private var bills: [RecurringBill]
     @State private var path: [RecurringBill] = []
@@ -47,10 +48,18 @@ struct RecurringView: View {
                 }
             }
             .navigationTitle("Recurring")
+            // Pull-to-refresh also gives the List a proper large-title leading
+            // inset (a bare List as the nav root loses it without .refreshable).
+            .refreshable { await coordinator.sync() }
             .navigationDestination(for: RecurringBill.self) { RecurringDetailView(bill: $0) }
         }
-        .onChange(of: router.selectedTab) { if router.selectedTab != AppTab.recurring.rawValue { path = [] } }
-        .onChange(of: path) { router.subpageOpen = !path.isEmpty }
+        .onChange(of: router.selectedTab) {
+            if router.selectedTab == AppTab.recurring.rawValue { router.subpageOpen = !path.isEmpty }
+            else { path = [] }
+        }
+        .onChange(of: path) {
+            if router.selectedTab == AppTab.recurring.rawValue { router.subpageOpen = !path.isEmpty }
+        }
     }
 
     private func billRow(_ bill: RecurringBill) -> some View {

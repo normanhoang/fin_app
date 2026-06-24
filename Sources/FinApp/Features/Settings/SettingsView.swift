@@ -66,6 +66,9 @@ struct SettingsView: View {
             .listRowSeparatorTint(Color.hairline)
             .screenBackground()
             .navigationTitle("Settings")
+            // Pull-to-refresh also gives the List a proper large-title leading
+            // inset (a bare List as the nav root loses it without .refreshable).
+            .refreshable { await coordinator.sync() }
         }
     }
 

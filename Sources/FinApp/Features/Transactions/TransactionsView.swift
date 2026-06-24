@@ -98,13 +98,19 @@ struct TransactionsView: View {
                 search = ""
             }
             router.txnArrivalIsDeepLink = false
+            router.subpageOpen = !path.isEmpty
         } else {
             path = []
         }
     }
 
+    // Only the active tab owns `subpageOpen`, so an inactive tab resetting its path
+    // can't re-enable pager swiping while this detail is open (which would let a
+    // back-swipe page to a neighbouring tab instead of popping the detail).
     private func handlePathChange() {
-        router.subpageOpen = !path.isEmpty
+        if router.selectedTab == AppTab.transactions.rawValue {
+            router.subpageOpen = !path.isEmpty
+        }
     }
 
     /// Transactions grouped by month, newest month first.

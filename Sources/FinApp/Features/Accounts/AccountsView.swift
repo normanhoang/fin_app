@@ -64,8 +64,13 @@ struct AccountsView: View {
             .sheet(isPresented: $showingAdd) { AddAccountView() }
             .refreshable { await coordinator.sync() }
         }
-        .onChange(of: router.selectedTab) { if router.selectedTab != AppTab.accounts.rawValue { path = [] } }
-        .onChange(of: path) { router.subpageOpen = !path.isEmpty }
+        .onChange(of: router.selectedTab) {
+            if router.selectedTab == AppTab.accounts.rawValue { router.subpageOpen = !path.isEmpty }
+            else { path = [] }
+        }
+        .onChange(of: path) {
+            if router.selectedTab == AppTab.accounts.rawValue { router.subpageOpen = !path.isEmpty }
+        }
     }
 
     private func typeSection(_ group: TypeGroup, groupTitle: String, groupTotal: Decimal, showEyebrow: Bool) -> some View {
