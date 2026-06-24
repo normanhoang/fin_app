@@ -33,6 +33,7 @@
 		53215D2270FEE9E28013DF19 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 365C671522FDEAC79598B554 /* Assets.xcassets */; };
 		602C0A360DECC64397B3AA09 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEEA896C1D6F87E3DD1DCC4 /* RootView.swift */; };
 		62BB21250781CCCB4300C8ED /* SyncServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064BF2355930485CECCB1254 /* SyncServiceTests.swift */; };
+		725DF6EA25A86D6B008EDB90 /* CategoryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0127C7C7BDF450366EE1A196 /* CategoryPicker.swift */; };
 		7331E29CF8B62B45F9C1C21A /* Budget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E67EDF458CCCD9D09B72E62 /* Budget.swift */; };
 		7C00FD449D768A2BFD380181 /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E5762A9CF9A5EF3F565EAB /* SyncCoordinator.swift */; };
 		7EDBDF51B6DE6D779CC20FDA /* FinAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009DED65DEC305AE07BF2B1 /* FinAppUITests.swift */; };
@@ -83,6 +84,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0127C7C7BDF450366EE1A196 /* CategoryPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPicker.swift; sourceTree = "<group>"; };
 		01D92227D4FC668C5E576325 /* CertificatePinnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CertificatePinnerTests.swift; sourceTree = "<group>"; };
 		027C6051FE9F3E15969CBF30 /* SimpleFinDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleFinDecodingTests.swift; sourceTree = "<group>"; };
 		04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorizationEngineTests.swift; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 			isa = PBXGroup;
 			children = (
 				679C5CE470E0A8FB16D007C2 /* AppLock.swift */,
+				0127C7C7BDF450366EE1A196 /* CategoryPicker.swift */,
 				67D9D282FA26B1CA7C500013 /* DesignComponents.swift */,
 				0AF50253EE05EB506D6F973D /* Formatting.swift */,
 				AB70D4CE933C581B0369E8DE /* KeyboardDismiss.swift */,
@@ -516,6 +519,7 @@
 				FFA44D52AC81C504BCD5F43B /* BudgetsView.swift in Sources */,
 				C1B282377FB42D75D41228B1 /* CategorizationEngine.swift in Sources */,
 				FEB7622646B2A61DC95A0D32 /* Category.swift in Sources */,
+				725DF6EA25A86D6B008EDB90 /* CategoryPicker.swift in Sources */,
 				222B3D717288A86A8A9F1D51 /* CategoryRule.swift in Sources */,
 				278F6B84F7328471FEF4DEF7 /* CategorySeed.swift in Sources */,
 				8845CF2FD892AF2F86B8F1D4 /* CertificatePinner.swift in Sources */,

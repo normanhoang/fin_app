@@ -8,6 +8,7 @@ struct TransactionsView: View {
     @State private var path: [Transaction] = []
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
+    @State private var showingFilter = false
 
     private var filtered: [Transaction] {
         var result = transactions.filter { matches(router.txnFilter, $0) }
@@ -133,28 +134,43 @@ struct TransactionsView: View {
     }
 
     private var searchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search payee or category", text: $search)
-                .textFieldStyle(.plain)
-                .foregroundStyle(Color.textPrimary)
-                .autocorrectionDisabled()
-                .accessibilityIdentifier("txnSearchField")
-            if !search.isEmpty {
-                Button {
-                    search = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(Color.textSecondary)
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search payee or category", text: $search)
+                    .textFieldStyle(.plain)
+                    .foregroundStyle(Color.textPrimary)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("txnSearchField")
+                if !search.isEmpty {
+                    Button {
+                        search = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(Color.textSecondary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(10)
+            .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
+
+            Button { showingFilter = true } label: {
+                Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                    .font(.system(size: 26))
+                    .foregroundStyle(Color.brand)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("filterButton")
         }
-        .padding(10)
-        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
         .padding(.horizontal)
         .padding(.top, 8)
         .padding(.bottom, 6)
+        .sheet(isPresented: $showingFilter) {
+            CategoryPicker(includeUncategorized: true) { selected in
+                router.txnFilter = selected.map { .category($0.name) } ?? .uncategorized
+            }
+        }
     }
 
     private func filterChip(_ label: String) -> some View {
@@ -180,11 +196,11 @@ struct TransactionsView: View {
 
 struct TransactionDetailView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \Category.name) private var categories: [Category]
     @Query private var recurringBills: [RecurringBill]
     let transaction: Transaction
 
     @State private var recurringCadence: Cadence = .monthly
+    @State private var showingCategoryPicker = false
 
     private var merchant: String {
         CategorizationEngine.normalizeMerchant(transaction.payee ?? transaction.detail)
@@ -245,21 +261,7 @@ struct TransactionDetailView: View {
     }
 
     private var categoryMenu: some View {
-        Menu {
-            ForEach(categories) { category in
-                Button {
-                    // Remember this choice as a rule (applies to future syncs) and
-                    // apply it now to similar existing transactions.
-                    CategorizationEngine.learn(from: transaction, category: category, in: context)
-                    CategorizationEngine.categorizeAll(in: context)
-                } label: {
-                    Label(category.name, systemImage: category.systemIcon)
-                    if transaction.category == category {
-                        Image(systemName: "checkmark")
-                    }
-                }
-            }
-        } label: {
+        Button { showingCategoryPicker = true } label: {
             HStack {
                 Label {
                     Text(transaction.category?.name ?? "Uncategorized").foregroundStyle(.primary)
@@ -271,7 +273,17 @@ struct TransactionDetailView: View {
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
             }
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("categoryMenu")
+        .sheet(isPresented: $showingCategoryPicker) {
+            CategoryPicker(current: transaction.category) { selected in
+                guard let selected else { return }
+                // Remember this choice as a rule (applies to future syncs) and
+                // apply it now to similar existing transactions.
+                CategorizationEngine.learn(from: transaction, category: selected, in: context)
+                CategorizationEngine.categorizeAll(in: context)
+            }
+        }
     }
 
     private func setRecurring() {
