@@ -1,6 +1,15 @@
 import SwiftUI
 import UIKit
 
+enum Keyboard {
+    /// Resign the first responder app-wide, dismissing the keyboard.
+    static func dismiss() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+        )
+    }
+}
+
 /// Attaches a tap recognizer to the key window so tapping anywhere outside a
 /// text field dismisses the keyboard. `cancelsTouchesInView = false` keeps
 /// buttons, list rows, and other controls fully responsive.

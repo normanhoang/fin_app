@@ -57,6 +57,8 @@ struct RootView: View {
         .ignoresSafeArea(.container, edges: .horizontal)
         .environment(router)
         .background(KeyboardDismisser())
+        // Dismiss the keyboard when changing pages (tab tap or swipe).
+        .onChange(of: router.selectedTab) { Keyboard.dismiss() }
         .task {
             // Collapse any pre-existing duplicate recurring bills, then auto-sync
             // on open (throttled; skipped if not connected).
