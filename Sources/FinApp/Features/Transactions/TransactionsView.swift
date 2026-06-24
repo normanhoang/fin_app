@@ -185,6 +185,7 @@ struct TransactionDetailView: View {
     let transaction: Transaction
 
     @State private var recurringCadence: Cadence = .monthly
+    @State private var showingCategoryPicker = false
 
     private var merchant: String {
         CategorizationEngine.normalizeMerchant(transaction.payee ?? transaction.detail)
@@ -245,21 +246,7 @@ struct TransactionDetailView: View {
     }
 
     private var categoryMenu: some View {
-        Menu {
-            ForEach(categories) { category in
-                Button {
-                    // Remember this choice as a rule (applies to future syncs) and
-                    // apply it now to similar existing transactions.
-                    CategorizationEngine.learn(from: transaction, category: category, in: context)
-                    CategorizationEngine.categorizeAll(in: context)
-                } label: {
-                    Label(category.name, systemImage: category.systemIcon)
-                    if transaction.category == category {
-                        Image(systemName: "checkmark")
-                    }
-                }
-            }
-        } label: {
+        Button { showingCategoryPicker = true } label: {
             HStack {
                 Label {
                     Text(transaction.category?.name ?? "Uncategorized").foregroundStyle(.primary)
@@ -271,7 +258,17 @@ struct TransactionDetailView: View {
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
             }
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("categoryMenu")
+        .popover(isPresented: $showingCategoryPicker) {
+            CategoryPickerList(categories: categories, selected: transaction.category) { category in
+                // Remember this choice as a rule (applies to future syncs) and
+                // apply it now to similar existing transactions.
+                CategorizationEngine.learn(from: transaction, category: category, in: context)
+                CategorizationEngine.categorizeAll(in: context)
+                showingCategoryPicker = false
+            }
+        }
     }
 
     private func setRecurring() {

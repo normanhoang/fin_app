@@ -112,6 +112,7 @@ struct RecurringDetailView: View {
     @Query(sort: \Transaction.posted, order: .reverse) private var allTransactions: [Transaction]
     @Bindable var bill: RecurringBill
     @State private var amountText = ""
+    @State private var showingCategoryPicker = false
 
     private var matched: [Transaction] {
         allTransactions.filter {
@@ -201,16 +202,7 @@ struct RecurringDetailView: View {
     }
 
     private var categoryMenu: some View {
-        Menu {
-            ForEach(categories) { category in
-                Button {
-                    setCategory(category)
-                } label: {
-                    Label(category.name, systemImage: category.systemIcon)
-                    if bill.category == category { Image(systemName: "checkmark") }
-                }
-            }
-        } label: {
+        Button { showingCategoryPicker = true } label: {
             HStack {
                 Label {
                     Text(bill.category?.name ?? "Uncategorized").foregroundStyle(.primary)
@@ -222,7 +214,14 @@ struct RecurringDetailView: View {
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
             }
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("recurringCategoryMenu")
+        .popover(isPresented: $showingCategoryPicker) {
+            CategoryPickerList(categories: categories, selected: bill.category) { category in
+                setCategory(category)
+                showingCategoryPicker = false
+            }
+        }
     }
 
     /// Set the bill's category and apply it to this merchant's transactions, learning

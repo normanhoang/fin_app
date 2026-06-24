@@ -85,8 +85,8 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
         menu.tap()
 
-        let diningItem = app.buttons["Dining"].firstMatch
-        XCTAssertTrue(diningItem.waitForExistence(timeout: 5), "Menu did not open with category items")
+        let diningItem = app.buttons["pickCategory-Dining"].firstMatch
+        XCTAssertTrue(diningItem.waitForExistence(timeout: 5), "Category popup did not open")
         snap(app, "category-menu-open")
         diningItem.tap()
 
