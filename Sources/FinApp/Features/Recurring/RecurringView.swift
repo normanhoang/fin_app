@@ -47,7 +47,9 @@ struct RecurringView: View {
                         .screenBackground()
                         .onChange(of: router.selectedTab) {
                             if router.selectedTab == AppTab.recurring.rawValue {
-                                proxy.scrollTo("listTop", anchor: .top)
+                                DispatchQueue.main.async {
+                                    withAnimation(.none) { proxy.scrollTo("listTop", anchor: .top) }
+                                }
                             }
                         }
                     }

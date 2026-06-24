@@ -75,7 +75,9 @@ struct TransactionsView: View {
                         .onChange(of: router.selectedTab) {
                             if router.selectedTab == AppTab.transactions.rawValue,
                                let top = monthGroups.first?.month {
-                                proxy.scrollTo(top, anchor: .top)
+                                DispatchQueue.main.async {
+                                    withAnimation(.none) { proxy.scrollTo(top, anchor: .top) }
+                                }
                             }
                         }
                     }

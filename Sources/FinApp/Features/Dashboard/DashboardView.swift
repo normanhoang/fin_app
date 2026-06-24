@@ -77,7 +77,10 @@ struct DashboardView: View {
                         .onChange(of: router.selectedTab) {
                             selectedTrendMonth = nil
                             if router.selectedTab == AppTab.dashboard.rawValue {
-                                proxy.scrollTo("dashTop", anchor: .top)
+                                // Defer past the paging transition, else the scroll is dropped.
+                                DispatchQueue.main.async {
+                                    withAnimation(.none) { proxy.scrollTo("dashTop", anchor: .top) }
+                                }
                             }
                         }
                     }

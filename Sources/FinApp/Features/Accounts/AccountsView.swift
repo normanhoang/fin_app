@@ -55,7 +55,9 @@ struct AccountsView: View {
                         .onChange(of: router.selectedTab) {
                             if router.selectedTab == AppTab.accounts.rawValue,
                                let topID = assetGroups.first?.id ?? debtGroups.first?.id {
-                                proxy.scrollTo(topID, anchor: .top)
+                                DispatchQueue.main.async {
+                                    withAnimation(.none) { proxy.scrollTo(topID, anchor: .top) }
+                                }
                             }
                         }
                     }
@@ -100,10 +102,10 @@ struct AccountsView: View {
                         Spacer()
                         Text(Money.string(groupTotal))
                             .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundStyle(groupTotal < 0 ? Color.negative : Color.textSecondary)
+                            .foregroundStyle(groupTotal < 0 ? Color.negative : Color.positive)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background((groupTotal < 0 ? Color.negative : Color.textSecondary).opacity(0.14),
+                            .background((groupTotal < 0 ? Color.negative : Color.positive).opacity(0.14),
                                         in: Capsule())
                     }
                     .padding(.top, 8)
@@ -114,7 +116,7 @@ struct AccountsView: View {
                         .foregroundStyle(Color.textSecondary)
                     Spacer()
                     MoneyText(value: group.subtotal, size: 14, weight: .semibold,
-                              color: group.subtotal < 0 ? .negative : .textSecondary)
+                              color: group.subtotal < 0 ? .negative : .positive)
                 }
             }
             .textCase(nil)
@@ -126,7 +128,7 @@ struct AccountsView: View {
             Text(account.displayName).foregroundStyle(Color.textPrimary)
             Spacer()
             MoneyText(value: account.balance, code: account.currency, size: 17, weight: .semibold,
-                      color: account.balance < 0 ? .negative : .textPrimary)
+                      color: account.balance < 0 ? .negative : .positive)
         }
         .padding(.vertical, 4)
     }
@@ -172,7 +174,7 @@ struct AccountDetailView: View {
                 } else {
                     LabeledContent("Balance") {
                         MoneyText(value: account.balance, code: account.currency,
-                                  color: account.balance < 0 ? .negative : .textPrimary)
+                                  color: account.balance < 0 ? .negative : .positive)
                     }
                 }
                 Picker("Type", selection: $account.accountType) {

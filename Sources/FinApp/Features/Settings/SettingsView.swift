@@ -75,7 +75,9 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .onChange(of: router.selectedTab) {
                 if router.selectedTab == AppTab.settings.rawValue {
-                    proxy.scrollTo("listTop", anchor: .top)
+                    DispatchQueue.main.async {
+                        withAnimation(.none) { proxy.scrollTo("listTop", anchor: .top) }
+                    }
                 }
             }
             }

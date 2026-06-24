@@ -248,6 +248,23 @@ final class FinAppUITests: XCTestCase {
         XCTAssertFalse(popup.waitForExistence(timeout: 2), "Scrolling should dismiss the trend popup")
     }
 
+    // 12. Leaving and returning to a tab scrolls it back to the top.
+    func testTabChangeScrollsToTop() {
+        let app = launch(tab: 2)
+        let card = app.descendants(matching: .any).matching(identifier: "netWorthCard").firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 8))
+
+        // Scroll the dashboard down so the net-worth card leaves the top.
+        app.swipeUp(); app.swipeUp()
+        XCTAssertFalse(card.isHittable, "Card should be scrolled off after swiping up")
+
+        // Leave to another tab and come back.
+        app.buttons["tab-Accounts"].tap()
+        app.buttons["tab-Dashboard"].tap()
+
+        XCTAssertTrue(card.isHittable, "Returning to the tab should scroll back to the top")
+    }
+
     // 11. A manual account can be created, edited, and deleted.
     func testManualAccountCreateEditDelete() {
         let app = launch(tab: 0)
