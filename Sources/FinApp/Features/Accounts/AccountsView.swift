@@ -62,7 +62,7 @@ struct AccountsView: View {
                         Spacer()
                         Text(Money.string(group.subtotal))
                     }
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     ForEach(group.accounts) { account in
                         NavigationLink {
