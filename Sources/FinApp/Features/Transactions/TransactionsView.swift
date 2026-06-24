@@ -147,6 +147,9 @@ struct TransactionDetailView: View {
             Section {
                 LabeledContent("Amount", value: Money.string(transaction.amount))
                 LabeledContent("Date", value: transaction.posted.formatted(date: .abbreviated, time: .omitted))
+                if let account = transaction.account {
+                    LabeledContent("Account", value: account.displayName)
+                }
                 LabeledContent("Description", value: transaction.detail)
                 if let payee = transaction.payee {
                     LabeledContent("Payee", value: payee)

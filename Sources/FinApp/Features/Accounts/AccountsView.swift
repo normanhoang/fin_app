@@ -57,9 +57,13 @@ struct AccountsView: View {
             let total = groups.reduce(Decimal(0)) { $0 + $1.subtotal }
             Section {
                 ForEach(groups) { group in
-                    Text(group.type.displayName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text(group.type.displayName)
+                        Spacer()
+                        Text(Money.string(group.subtotal))
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                     ForEach(group.accounts) { account in
                         NavigationLink {
                             AccountDetailView(account: account)
