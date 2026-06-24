@@ -34,7 +34,23 @@ struct NetWorthDetailView: View {
                                 startPoint: .top, endPoint: .bottom
                             ))
                         }
-                        .chartXAxis { AxisMarks { _ in AxisValueLabel().foregroundStyle(Color.textSecondary) } }
+                        .chartXAxis {
+                            // Cap the number of labels and tilt them so dense daily
+                            // data doesn't overlap. Swift Charts auto-picks the date
+                            // unit (days → weeks → months) as the range grows.
+                            AxisMarks(values: .automatic(desiredCount: 5)) { value in
+                                AxisGridLine().foregroundStyle(Color.hairline)
+                                AxisValueLabel(anchor: .topTrailing) {
+                                    if let day = value.as(Date.self) {
+                                        Text(day, format: .dateTime.month(.abbreviated).day())
+                                            .font(.caption2)
+                                            .fixedSize()
+                                            .rotationEffect(.degrees(-35))
+                                            .foregroundStyle(Color.textSecondary)
+                                    }
+                                }
+                            }
+                        }
                         .chartYAxis { AxisMarks { _ in
                             AxisGridLine().foregroundStyle(Color.hairline)
                             AxisValueLabel().foregroundStyle(Color.textSecondary)

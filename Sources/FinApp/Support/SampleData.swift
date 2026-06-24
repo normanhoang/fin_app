@@ -68,6 +68,18 @@ enum SampleData {
         try? context.save()
         CategorizationEngine.categorizeAll(in: context)
         RecurringDetector.refresh(in: context)
+
+        // Net worth history so the graph and dashboard sparkline render in the demo.
+        let base = (checking.balance + card.balance + invest.balance as NSDecimalNumber).doubleValue
+        let span = 45
+        for d in 0..<span {
+            let date = cal.startOfDay(for: cal.date(byAdding: .day, value: -(span - 1 - d), to: Date())!)
+            let progress = Double(d) / Double(span - 1)
+            let trend = base * 0.9 + base * 0.1 * progress
+            let noise = sin(Double(d) * 0.6) * base * 0.012
+            context.insert(NetWorthSnapshot(day: date, value: Decimal(trend + noise)))
+        }
+        try? context.save()
     }
 }
 #endif
