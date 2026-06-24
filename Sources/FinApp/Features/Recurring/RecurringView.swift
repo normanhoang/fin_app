@@ -21,30 +21,38 @@ struct RecurringView: View {
                         description: Text("Subscriptions and bills are detected automatically as you sync.")
                     )
                 } else {
-                    List {
-                        if !confirmed.isEmpty {
-                            Section {
-                                ForEach(confirmed) { billRow($0) }
-                            } header: {
-                                Text("Upcoming")
-                            } footer: {
-                                Text("Tap a bill to see its past charges and manage it.")
+                    ScrollViewReader { proxy in
+                        List {
+                            ListTopAnchor()
+                            if !confirmed.isEmpty {
+                                Section {
+                                    ForEach(confirmed) { billRow($0) }
+                                } header: {
+                                    Text("Upcoming")
+                                } footer: {
+                                    Text("Tap a bill to see its past charges and manage it.")
+                                }
+                                .listRowBackground(Color.surface)
                             }
-                            .listRowBackground(Color.surface)
+                            if !candidates.isEmpty {
+                                Section {
+                                    ForEach(candidates) { billRow($0) }
+                                } header: {
+                                    Text("Detected")
+                                } footer: {
+                                    Text("Tap a detected bill to confirm it or remove a false match.")
+                                }
+                                .listRowBackground(Color.surface)
+                            }
                         }
-                        if !candidates.isEmpty {
-                            Section {
-                                ForEach(candidates) { billRow($0) }
-                            } header: {
-                                Text("Detected")
-                            } footer: {
-                                Text("Tap a detected bill to confirm it or remove a false match.")
+                        .listRowSeparatorTint(Color.hairline)
+                        .screenBackground()
+                        .onChange(of: router.selectedTab) {
+                            if router.selectedTab == AppTab.recurring.rawValue {
+                                proxy.scrollTo("listTop", anchor: .top)
                             }
-                            .listRowBackground(Color.surface)
                         }
                     }
-                    .listRowSeparatorTint(Color.hairline)
-                    .screenBackground()
                 }
             }
             .navigationTitle("Recurring")
@@ -107,9 +115,11 @@ struct RecurringRow: View {
 struct RecurringDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppRouter.self) private var router
     @Query(sort: \Category.name) private var categories: [Category]
     @Query(sort: \Transaction.posted, order: .reverse) private var allTransactions: [Transaction]
-    let bill: RecurringBill
+    @Bindable var bill: RecurringBill
+    @State private var amountText = ""
 
     private var matched: [Transaction] {
         allTransactions.filter {
@@ -129,9 +139,16 @@ struct RecurringDetailView: View {
         List {
             Section {
                 categoryMenu
-                LabeledContent("Cadence") { Chip(bill.cadence.rawValue.capitalized, color: .brand) }
+                Picker("Cadence", selection: $bill.cadence) {
+                    ForEach(Cadence.allCases, id: \.self) { cadence in
+                        Text(cadence.rawValue.capitalized).tag(cadence)
+                    }
+                }
                 LabeledContent("Typical amount") {
-                    MoneyText(value: bill.expectedAmount, color: .textSecondary)
+                    TextField("0.00", text: $amountText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityIdentifier("recurringAmountField")
                 }
                 if !bill.confirmed {
                     Button {
@@ -162,7 +179,12 @@ struct RecurringDetailView: View {
             } else {
                 ForEach(monthGroups, id: \.month) { group in
                     Section {
-                        ForEach(group.txns) { TransactionRow(transaction: $0) }
+                        ForEach(group.txns) { txn in
+                            TransactionRow(transaction: txn)
+                                .contentShape(Rectangle())
+                                .onTapGesture { router.openTransaction(id: txn.id) }
+                                .accessibilityIdentifier("recurringTxnRow-\(txn.id)")
+                        }
                     } header: {
                         Text(group.month.formatted(.dateTime.month(.wide).year()))
                     }
@@ -174,6 +196,16 @@ struct RecurringDetailView: View {
         .screenBackground()
         .navigationTitle(bill.merchantName.capitalized)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { amountText = NSDecimalNumber(decimal: bill.expectedAmount).stringValue }
+        .onChange(of: amountText) { applyAmount() }
+        .onChange(of: bill.cadenceRaw) { try? context.save() }
+    }
+
+    /// Persist an edited typical amount (ignores unparseable input).
+    private func applyAmount() {
+        guard let value = Decimal(string: amountText, locale: .current) else { return }
+        bill.expectedAmount = value
+        try? context.save()
     }
 
     private var categoryMenu: some View {

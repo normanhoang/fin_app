@@ -3,13 +3,16 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppLock.self) private var lock
+    @Environment(AppRouter.self) private var router
     @AppStorage("appearanceMode") private var appearanceRaw = AppearanceMode.system.rawValue
     @State private var setupToken = ""
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             VStack(spacing: 0) {
             List {
+                ListTopAnchor()
                 if coordinator.isConnected {
                     connectedSection
                 } else {
@@ -71,6 +74,12 @@ struct SettingsView: View {
             // leading inset without needing a pull-to-refresh on this page.
             .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Settings")
+            .onChange(of: router.selectedTab) {
+                if router.selectedTab == AppTab.settings.rawValue {
+                    proxy.scrollTo("listTop", anchor: .top)
+                }
+            }
+            }
         }
     }
 

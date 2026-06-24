@@ -40,18 +40,26 @@ struct AccountsView: View {
                         description: Text("Connect SimpleFin or add a manual account with the + button.")
                     )
                 } else {
-                    List {
-                        // One Section per type so the inset card rounds at each type's
-                        // top and bottom; an eyebrow marks the first Assets/Debts type.
-                        ForEach(assetGroups) { typeSection($0, groupTitle: "Assets",
-                                                            groupTotal: total(assetGroups),
-                                                            showEyebrow: $0.id == assetGroups.first?.id) }
-                        ForEach(debtGroups) { typeSection($0, groupTitle: "Debts",
-                                                          groupTotal: total(debtGroups),
-                                                          showEyebrow: $0.id == debtGroups.first?.id) }
+                    ScrollViewReader { proxy in
+                        List {
+                            ListTopAnchor()
+                            // One Section per type so the inset card rounds at each type's
+                            // top and bottom; an eyebrow marks the first Assets/Debts type.
+                            ForEach(assetGroups) { typeSection($0, groupTitle: "Assets",
+                                                                groupTotal: total(assetGroups),
+                                                                showEyebrow: $0.id == assetGroups.first?.id) }
+                            ForEach(debtGroups) { typeSection($0, groupTitle: "Debts",
+                                                              groupTotal: total(debtGroups),
+                                                              showEyebrow: $0.id == debtGroups.first?.id) }
+                        }
+                        .listRowSeparatorTint(Color.hairline)
+                        .screenBackground()
+                        .onChange(of: router.selectedTab) {
+                            if router.selectedTab == AppTab.accounts.rawValue {
+                                proxy.scrollTo("listTop", anchor: .top)
+                            }
+                        }
                     }
-                    .listRowSeparatorTint(Color.hairline)
-                    .screenBackground()
                 }
             }
             .navigationTitle("Accounts")

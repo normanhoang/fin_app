@@ -55,23 +55,31 @@ struct TransactionsView: View {
                     if let label = filterLabel {
                         filterChip(label)
                     }
-                    List {
-                        ForEach(monthGroups, id: \.month) { group in
-                            Section {
-                                ForEach(group.txns) { txn in
-                                    NavigationLink(value: txn) {
-                                        TransactionRow(transaction: txn)
+                    ScrollViewReader { proxy in
+                        List {
+                            ListTopAnchor()
+                            ForEach(monthGroups, id: \.month) { group in
+                                Section {
+                                    ForEach(group.txns) { txn in
+                                        NavigationLink(value: txn) {
+                                            TransactionRow(transaction: txn)
+                                        }
+                                        .listRowBackground(Color.surface)
+                                        .accessibilityIdentifier("txnRow-\(txn.id)")
                                     }
-                                    .listRowBackground(Color.surface)
-                                    .accessibilityIdentifier("txnRow-\(txn.id)")
+                                } header: {
+                                    Text(group.month.formatted(.dateTime.month(.wide).year()))
                                 }
-                            } header: {
-                                Text(group.month.formatted(.dateTime.month(.wide).year()))
+                            }
+                        }
+                        .listRowSeparatorTint(Color.hairline)
+                        .screenBackground()
+                        .onChange(of: router.selectedTab) {
+                            if router.selectedTab == AppTab.transactions.rawValue {
+                                proxy.scrollTo("listTop", anchor: .top)
                             }
                         }
                     }
-                    .listRowSeparatorTint(Color.hairline)
-                    .screenBackground()
                 }
                 .background(Color.appBackground.ignoresSafeArea())
                 .navigationTitle("Transactions")

@@ -8,6 +8,20 @@ struct NetWorthRoute: Hashable {}
 
 /// Carries the trend chart's plot rect (in "dash" space) up to the Dashboard so
 /// the value popup can be drawn on top of every other element.
+private extension View {
+    /// Fires `action` whenever the scroll view's vertical offset changes — used to
+    /// dismiss the trend popup on scroll without a gesture that would fight the
+    /// horizontal pager. No-op on iOS < 18 (no such device targets this app).
+    @ViewBuilder
+    func onTrendScroll(_ action: @escaping () -> Void) -> some View {
+        if #available(iOS 18.0, *) {
+            onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y }) { _, _ in action() }
+        } else {
+            self
+        }
+    }
+}
+
 private struct TrendPlotKey: PreferenceKey {
     static let defaultValue: CGRect = .zero
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
@@ -38,27 +52,36 @@ struct DashboardView: View {
                 if accounts.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            heroCard
-                            monthRow
-                            if !topCategories.isEmpty { categoryCard }
-                            trendCard
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                heroCard
+                                monthRow
+                                if !topCategories.isEmpty { categoryCard }
+                                trendCard
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                            .padding(.bottom, 24)
+                            .id("dashTop")
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 24)
-                    }
-                    .contentMargins(.bottom, bottomBarInset * 0.7, for: .scrollContent)
-                    .scrollIndicators(.hidden)
-                    // A scroll drag closes the trend popup. Runs simultaneously so
-                    // it never blocks scrolling; the small minimum distance lets a
-                    // bar tap through to toggle the popup instead.
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 8).onChanged { _ in
+                        .contentMargins(.bottom, bottomBarInset * 0.7, for: .scrollContent)
+                        .scrollIndicators(.hidden)
+                        // Scrolling the page closes the trend popup. Observing the
+                        // scroll offset (not a gesture) avoids interfering with the
+                        // horizontal tab-paging swipe.
+                        .onTrendScroll {
                             if selectedTrendMonth != nil { selectedTrendMonth = nil }
                         }
-                    )
+                        // Arriving on this tab (swipe or tap) jumps back to the top
+                        // and dismisses any open popup.
+                        .onChange(of: router.selectedTab) {
+                            selectedTrendMonth = nil
+                            if router.selectedTab == AppTab.dashboard.rawValue {
+                                proxy.scrollTo("dashTop", anchor: .top)
+                            }
+                        }
+                    }
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
