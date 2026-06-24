@@ -1,23 +1,22 @@
 import SwiftUI
 
-/// Brief launch splash: the app icon, enlarged, over its own navy gradient.
+/// Brief launch splash: the brand mark over the app's charcoal background.
 struct SplashView: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(red: 14/255, green: 23/255, blue: 38/255),
-                         Color(red: 19/255, green: 36/255, blue: 59/255)],
-                startPoint: .top,
-                endPoint: .bottom
+                colors: [Color(hex: "#16181B"), Color.appBackground],
+                startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea()
 
-            Image("SplashIcon")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 180, height: 180)
-                .clipShape(RoundedRectangle(cornerRadius: 40, style: .continuous))
-                .shadow(color: .black.opacity(0.35), radius: 24, y: 10)
+            VStack(spacing: 18) {
+                BrandMark(size: 132)
+                    .shadow(color: .black.opacity(0.45), radius: 28, y: 12)
+                Text("FinApp")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.textPrimary)
+            }
         }
     }
 }

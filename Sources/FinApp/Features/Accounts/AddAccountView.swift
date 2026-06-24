@@ -26,18 +26,22 @@ struct AddAccountView: View {
                         }
                     }
                 }
+                .listRowBackground(Color.surface)
                 Section("Balance") {
                     TextField("0.00", text: $balanceText)
                         .keyboardType(.numbersAndPunctuation)
                     TextField("Currency", text: $currency)
                         .textInputAutocapitalization(.characters)
                 }
+                .listRowBackground(Color.surface)
                 if type.isDebt {
                     Text("Debts are stored as negative balances. Enter the amount owed as a negative number (e.g. -1500).")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.textSecondary)
+                        .listRowBackground(Color.surface)
                 }
             }
+            .screenBackground()
             .navigationTitle("Add Account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -45,6 +45,7 @@ struct FinAppApp: App {
                         }
                 }
             }
+            .tint(.brand)
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in

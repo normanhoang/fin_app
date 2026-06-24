@@ -60,10 +60,14 @@ struct TransactionsView: View {
                             NavigationLink(value: txn) {
                                 TransactionRow(transaction: txn)
                             }
+                            .listRowBackground(Color.surface)
                             .accessibilityIdentifier("txnRow-\(txn.id)")
                         }
                     }
+                    .listRowSeparatorTint(Color.hairline)
+                    .screenBackground()
                 }
+                .background(Color.appBackground.ignoresSafeArea())
                 .navigationTitle("Transactions")
                 .navigationDestination(for: Transaction.self) { txn in
                     TransactionDetailView(transaction: txn)
@@ -89,35 +93,42 @@ struct TransactionsView: View {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
             TextField("Search payee or category", text: $search)
                 .textFieldStyle(.plain)
+                .foregroundStyle(Color.textPrimary)
                 .autocorrectionDisabled()
                 .accessibilityIdentifier("txnSearchField")
             if !search.isEmpty {
                 Button {
                     search = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Color.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(8)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+        .padding(10)
+        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
         .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
     }
 
     private func filterChip(_ label: String) -> some View {
-        HStack(spacing: 6) {
-            Text("Filtered: \(label)").font(.subheadline)
-            Button {
-                router.txnFilter = .all
-            } label: {
-                Image(systemName: "xmark.circle.fill")
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Text("Filtered: \(label)")
+                    .font(.system(size: 13, weight: .semibold))
+                Button { router.txnFilter = .all } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .foregroundStyle(Color.brand)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color.brand.opacity(0.12), in: Capsule())
             Spacer()
         }
-        .foregroundStyle(.secondary)
         .padding(.horizontal)
         .padding(.bottom, 8)
     }
@@ -144,8 +155,12 @@ struct TransactionDetailView: View {
             Section {
                 categoryMenu
             }
+            .listRowBackground(Color.surface)
             Section {
-                LabeledContent("Amount", value: Money.string(transaction.amount))
+                LabeledContent("Amount") {
+                    MoneyText(value: transaction.amount,
+                              color: transaction.isInflow ? .positive : .textPrimary)
+                }
                 LabeledContent("Date", value: transaction.posted.formatted(date: .abbreviated, time: .omitted))
                 if let account = transaction.account {
                     LabeledContent("Account", value: account.displayName)
@@ -158,10 +173,11 @@ struct TransactionDetailView: View {
                     LabeledContent("Status", value: "Pending")
                 }
             }
+            .listRowBackground(Color.surface)
             Section("Recurring") {
                 if alreadyRecurring {
                     Label("Added to Recurring", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.positive)
                         .accessibilityIdentifier("recurringAddedIndicator")
                 } else {
                     Picker("Cadence", selection: $recurringCadence) {
@@ -170,13 +186,17 @@ struct TransactionDetailView: View {
                         }
                     }
                     Button {
+                        Haptics.tap()
                         setRecurring()
                     } label: {
                         Label("Set as Recurring", systemImage: "arrow.clockwise")
                     }
                 }
             }
+            .listRowBackground(Color.surface)
         }
+        .listRowSeparatorTint(Color.hairline)
+        .screenBackground()
         .navigationTitle(transaction.payee ?? transaction.detail)
         .navigationBarTitleDisplayMode(.inline)
     }

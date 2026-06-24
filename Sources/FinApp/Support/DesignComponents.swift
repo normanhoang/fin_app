@@ -1,5 +1,81 @@
 import SwiftUI
 import Charts
+#if canImport(UIKit)
+import UIKit
+#endif
+
+// MARK: - Screen background
+
+extension View {
+    /// Charcoal app background behind a List/ScrollView, hiding the system grouped fill.
+    func screenBackground() -> some View {
+        scrollContentBackground(.hidden)
+            .background(Color.appBackground.ignoresSafeArea())
+    }
+}
+
+// MARK: - Haptics
+
+enum Haptics {
+    static func tap() {
+        #if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        #endif
+    }
+}
+
+// MARK: - Chip
+
+/// Small rounded label used for account types, cadences, and subtotals.
+struct Chip: View {
+    let text: String
+    var color: Color = .textSecondary
+    init(_ text: String, color: Color = .textSecondary) {
+        self.text = text
+        self.color = color
+    }
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundStyle(color)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.14), in: Capsule())
+    }
+}
+
+// MARK: - Brand mark
+
+/// The app's logo: a mint upward trend line on a dark rounded tile. Reused on the
+/// splash screen; the same shape backs the app icon.
+struct BrandMark: View {
+    var size: CGFloat = 96
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+                .fill(LinearGradient(colors: [Color(hex: "#1A1D22"), Color(hex: "#0E0F11")],
+                                     startPoint: .top, endPoint: .bottom))
+            GeometryReader { geo in
+                let w = geo.size.width, h = geo.size.height
+                let pts = [CGPoint(x: 0.16, y: 0.72), CGPoint(x: 0.40, y: 0.50),
+                           CGPoint(x: 0.58, y: 0.60), CGPoint(x: 0.84, y: 0.26)]
+                    .map { CGPoint(x: $0.x * w, y: $0.y * h) }
+                Path { p in
+                    p.move(to: pts[0])
+                    pts.dropFirst().forEach { p.addLine(to: $0) }
+                }
+                .stroke(Color.brand, style: StrokeStyle(lineWidth: size * 0.07, lineCap: .round, lineJoin: .round))
+                .shadow(color: .brand.opacity(0.55), radius: size * 0.05)
+                Circle().fill(Color.brand)
+                    .frame(width: size * 0.11, height: size * 0.11)
+                    .position(pts.last!)
+            }
+            .padding(size * 0.18)
+        }
+        .frame(width: size, height: size)
+    }
+}
 
 // MARK: - Card
 

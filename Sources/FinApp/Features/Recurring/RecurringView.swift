@@ -34,6 +34,7 @@ struct RecurringView: View {
                         } footer: {
                             Text("Press and hold a bill to remove it.")
                         }
+                        .listRowBackground(Color.surface)
                     }
                     if !candidates.isEmpty {
                         Section {
@@ -53,8 +54,11 @@ struct RecurringView: View {
                         } footer: {
                             Text("Press and hold a detected bill to confirm it or dismiss a false match.")
                         }
+                        .listRowBackground(Color.surface)
                     }
                 }
+                .listRowSeparatorTint(Color.hairline)
+                .screenBackground()
                 .navigationTitle("Recurring")
             }
         }
@@ -74,25 +78,31 @@ struct RecurringView: View {
 struct RecurringRow: View {
     let bill: RecurringBill
 
-    private var subtitle: String {
-        var text = bill.cadence.rawValue.capitalized
-        if let due = bill.nextDue {
-            text += " · next \(due.formatted(.dateTime.month().day()))"
-        }
-        return text
+    private var dueText: String? {
+        bill.nextDue.map { "next \($0.formatted(.dateTime.month().day()))" }
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(bill.merchantName.capitalized)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(Color.brand.opacity(0.15))
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.brand)
+            }
+            .frame(width: 38, height: 38)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(bill.merchantName.capitalized).foregroundStyle(Color.textPrimary)
+                HStack(spacing: 6) {
+                    Chip(bill.cadence.rawValue.capitalized, color: .brand)
+                    if let dueText {
+                        Text(dueText).font(.caption).foregroundStyle(Color.textSecondary)
+                    }
+                }
             }
             Spacer()
-            Text(Money.string(bill.expectedAmount))
-                .foregroundStyle(.secondary)
+            MoneyText(value: bill.expectedAmount, size: 16, weight: .semibold, color: .textSecondary)
         }
+        .padding(.vertical, 2)
     }
 }

@@ -40,9 +40,12 @@ struct BudgetsView: View {
                                     Analytics.spending(for: $0, in: transactions, inMonthOf: now, calendar: calendar)
                                 } ?? 0
                             )
+                            .listRowBackground(Color.surface)
                         }
                         .onDelete(perform: delete)
                     }
+                    .listRowSeparatorTint(Color.hairline)
+                    .screenBackground()
                 }
             }
             .navigationTitle("Budgets")
@@ -73,25 +76,37 @@ struct BudgetRow: View {
     }
 
     private var over: Bool { spent > budget.monthlyLimit }
+    private var ringColor: Color { over ? .negative : .brand }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Label {
-                    Text(budget.category?.name ?? "—")
-                } icon: {
-                    Image(systemName: budget.category?.systemIcon ?? "tag")
-                        .foregroundStyle(Color(hex: budget.category?.colorHex ?? "#8E8E93"))
-                }
-                Spacer()
-                Text("\(Money.string(spent)) / \(Money.string(budget.monthlyLimit))")
-                    .font(.subheadline)
-                    .foregroundStyle(over ? .red : .secondary)
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().stroke(Color.hairline, lineWidth: 6)
+                Circle().trim(from: 0, to: fraction)
+                    .stroke(ringColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text("\(Int((fraction * 100).rounded()))%")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.textPrimary)
             }
-            ProgressView(value: fraction)
-                .tint(over ? .red : .green)
+            .frame(width: 48, height: 48)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Image(systemName: budget.category?.systemIcon ?? "tag")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color(hex: budget.category?.colorHex ?? "#8E8E93"))
+                    Text(budget.category?.name ?? "—").foregroundStyle(Color.textPrimary)
+                }
+                HStack(spacing: 4) {
+                    MoneyText(value: spent, size: 14, weight: .semibold,
+                              color: over ? .negative : .textPrimary)
+                    Text("of").font(.caption).foregroundStyle(Color.textSecondary)
+                    MoneyText(value: budget.monthlyLimit, size: 14, weight: .regular, color: .textSecondary)
+                }
+            }
+            Spacer()
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 }
 
@@ -106,15 +121,19 @@ struct AddBudgetView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Picker("Category", selection: $selected) {
-                    Text("Select").tag(Category?.none)
-                    ForEach(categories) { cat in
-                        Text(cat.name).tag(Category?.some(cat))
+                Section {
+                    Picker("Category", selection: $selected) {
+                        Text("Select").tag(Category?.none)
+                        ForEach(categories) { cat in
+                            Text(cat.name).tag(Category?.some(cat))
+                        }
                     }
+                    TextField("Monthly limit", value: $amount, format: .currency(code: "USD"))
+                        .keyboardType(.decimalPad)
                 }
-                TextField("Monthly limit", value: $amount, format: .currency(code: "USD"))
-                    .keyboardType(.decimalPad)
+                .listRowBackground(Color.surface)
             }
+            .screenBackground()
             .navigationTitle("New Budget")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

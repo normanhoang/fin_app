@@ -22,20 +22,29 @@ struct NetWorthDetailView: View {
                                 y: .value("Net Worth", (point.value as NSDecimalNumber).doubleValue)
                             )
                             .interpolationMethod(.monotone)
+                            .foregroundStyle(Color.brand)
+                            .lineStyle(StrokeStyle(lineWidth: 2.5))
                             AreaMark(
                                 x: .value("Day", point.day, unit: .day),
                                 y: .value("Net Worth", (point.value as NSDecimalNumber).doubleValue)
                             )
                             .interpolationMethod(.monotone)
                             .foregroundStyle(.linearGradient(
-                                colors: [.accentColor.opacity(0.3), .accentColor.opacity(0.02)],
+                                colors: [.brand.opacity(0.30), .brand.opacity(0.02)],
                                 startPoint: .top, endPoint: .bottom
                             ))
                         }
+                        .chartXAxis { AxisMarks { _ in AxisValueLabel().foregroundStyle(Color.textSecondary) } }
+                        .chartYAxis { AxisMarks { _ in
+                            AxisGridLine().foregroundStyle(Color.hairline)
+                            AxisValueLabel().foregroundStyle(Color.textSecondary)
+                        } }
                         .frame(height: 240)
                         .padding(.vertical, 8)
                     }
+                    .listRowBackground(Color.surface)
                 }
+                .screenBackground()
             }
         }
         .navigationTitle("Net Worth")

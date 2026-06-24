@@ -89,6 +89,7 @@ private struct CustomTabBar: View {
         HStack(spacing: 0) {
             ForEach(Array(Self.items.enumerated()), id: \.offset) { index, item in
                 Button {
+                    Haptics.tap()
                     // Tapping the Transactions tab resets any active filter and pops
                     // to the list root, so the bar is a "show everything" entry point.
                     if index == 2 {
@@ -97,18 +98,25 @@ private struct CustomTabBar: View {
                         withAnimation(.easeInOut(duration: 0.25)) { selection = index }
                     }
                 } label: {
-                    VStack(spacing: 3) {
+                    VStack(spacing: 4) {
                         Image(systemName: item.icon)
-                            .font(.system(size: 18))
+                            .font(.system(size: 17))
                             .frame(height: 20)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 5)
+                            .background {
+                                if selection == index {
+                                    Capsule().fill(Color.brand.opacity(0.16))
+                                }
+                            }
                         Text(item.title)
-                            .font(.system(size: 9))
+                            .font(.system(size: 9, weight: selection == index ? .semibold : .regular))
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
                             .frame(height: 12)
                     }
                     .frame(maxWidth: .infinity)
-                    .foregroundStyle(selection == index ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(selection == index ? Color.brand : Color.textSecondary)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

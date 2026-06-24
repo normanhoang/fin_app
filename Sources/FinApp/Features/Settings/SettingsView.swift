@@ -22,13 +22,15 @@ struct SettingsView: View {
                                 .foregroundStyle(.orange)
                         }
                     }
+                    .listRowBackground(Color.surface)
                 }
 
                 if let error = coordinator.errorMessage {
                     Section {
                         Label(error, systemImage: "xmark.octagon")
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.negative)
                     }
+                    .listRowBackground(Color.surface)
                 }
 
                 Section("Security") {
@@ -37,24 +39,29 @@ struct SettingsView: View {
                         .disabled(!lock.biometryAvailable)
                     if !lock.biometryAvailable {
                         Text("No biometrics or passcode is set up on this device.")
-                            .font(.footnote).foregroundStyle(.secondary)
+                            .font(.footnote).foregroundStyle(Color.textSecondary)
                     }
                 }
+                .listRowBackground(Color.surface)
 
                 Section {
                     Text("Your financial data is stored only on this device — there is no server we operate. Account data is fetched through SimpleFin Bridge, which connects to your banks on your behalf, so that fetch does pass through SimpleFin's service.")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.textSecondary)
                 } header: {
                     Text("Privacy")
                 }
+                .listRowBackground(Color.surface)
 
                 #if DEBUG
                 Section("Developer") {
                     Button("Load Sample Data") { SampleData.inject(into: context) }
                 }
+                .listRowBackground(Color.surface)
                 #endif
             }
+            .listRowSeparatorTint(Color.hairline)
+            .screenBackground()
             .navigationTitle("Settings")
         }
     }
@@ -82,12 +89,13 @@ struct SettingsView: View {
         } footer: {
             Text("Get a setup token from your SimpleFin account. It is used once to establish a read-only connection. Your bank data is fetched through SimpleFin Bridge and stored only on this device.")
         }
+        .listRowBackground(Color.surface)
     }
 
     private var connectedSection: some View {
         Section("Connection") {
             Label("Connected to SimpleFin", systemImage: "checkmark.seal.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.positive)
             if let last = coordinator.lastSyncDate {
                 LabeledContent("Last synced", value: last.formatted(date: .abbreviated, time: .shortened))
             }
@@ -107,5 +115,6 @@ struct SettingsView: View {
                 Label("Disconnect", systemImage: "minus.circle")
             }
         }
+        .listRowBackground(Color.surface)
     }
 }

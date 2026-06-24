@@ -38,6 +38,8 @@ struct AccountsView: View {
                         groupSection("Assets", groups(debt: false))
                         groupSection("Debts", groups(debt: true))
                     }
+                    .listRowSeparatorTint(Color.hairline)
+                    .screenBackground()
                 }
             }
             .navigationTitle("Accounts")
@@ -59,17 +61,21 @@ struct AccountsView: View {
                 ForEach(groups) { group in
                     HStack {
                         Text(group.type.displayName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Text(Money.string(group.subtotal))
+                        MoneyText(value: group.subtotal, size: 15, weight: .semibold,
+                                  color: group.subtotal < 0 ? .negative : .textSecondary)
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .listRowBackground(Color.appBackground)
+                    .listRowSeparator(.hidden)
                     ForEach(group.accounts) { account in
                         NavigationLink {
                             AccountDetailView(account: account)
                         } label: {
                             row(account)
                         }
+                        .listRowBackground(Color.surface)
                         .accessibilityIdentifier("accountRow-\(account.id)")
                     }
                 }
@@ -77,7 +83,7 @@ struct AccountsView: View {
                 HStack {
                     Text(title)
                     Spacer()
-                    Text(Money.string(total)).foregroundStyle(.secondary)
+                    Chip(Money.string(total), color: total < 0 ? .negative : .textSecondary)
                 }
             }
             .headerProminence(.increased)
@@ -85,20 +91,24 @@ struct AccountsView: View {
     }
 
     private func row(_ account: Account) -> some View {
-        HStack {
-            Image(systemName: account.accountType.icon)
-                .foregroundStyle(.secondary)
-                .frame(width: 26)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(account.displayName)
-                Text(account.accountType.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        let tint: Color = account.accountType.isDebt ? .negative : .brand
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(tint.opacity(0.15))
+                Image(systemName: account.accountType.icon)
+                    .font(.system(size: 15))
+                    .foregroundStyle(tint)
+            }
+            .frame(width: 38, height: 38)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(account.displayName).foregroundStyle(Color.textPrimary)
+                Chip(account.accountType.displayName, color: .textSecondary)
             }
             Spacer()
-            Text(Money.string(account.balance, code: account.currency))
-                .foregroundStyle(account.balance < 0 ? .red : .primary)
+            MoneyText(value: account.balance, code: account.currency, size: 17, weight: .semibold,
+                      color: account.balance < 0 ? .negative : .textPrimary)
         }
+        .padding(.vertical, 4)
     }
 }
 
@@ -118,10 +128,16 @@ struct AccountDetailView: View {
                 TextField("Account name", text: $editedName)
                     .accessibilityIdentifier("accountNameField")
             }
+            .listRowBackground(Color.surface)
             Section {
-                LabeledContent("Balance", value: Money.string(account.balance, code: account.currency))
+                LabeledContent("Balance") {
+                    MoneyText(value: account.balance, code: account.currency,
+                              color: account.balance < 0 ? .negative : .textPrimary)
+                }
                 if let avail = account.availableBalance {
-                    LabeledContent("Available", value: Money.string(avail, code: account.currency))
+                    LabeledContent("Available") {
+                        MoneyText(value: avail, code: account.currency, weight: .regular, color: .textSecondary)
+                    }
                 }
                 Picker("Type", selection: $account.accountType) {
                     ForEach(AccountType.allCases) { type in
@@ -129,19 +145,23 @@ struct AccountDetailView: View {
                     }
                 }
             }
+            .listRowBackground(Color.surface)
             Section("Transactions") {
                 if transactions.isEmpty {
-                    Text("No transactions in the synced window.").foregroundStyle(.secondary)
+                    Text("No transactions in the synced window.").foregroundStyle(Color.textSecondary)
                 } else {
                     ForEach(transactions) { txn in
                         TransactionRow(transaction: txn)
                             .contentShape(Rectangle())
-                            .onTapGesture { router.openTransaction(id: txn.id) }
+                            .onTapGesture { Haptics.tap(); router.openTransaction(id: txn.id) }
                             .accessibilityIdentifier("acctTxnRow-\(txn.id)")
                     }
                 }
             }
+            .listRowBackground(Color.surface)
         }
+        .listRowSeparatorTint(Color.hairline)
+        .screenBackground()
         .navigationTitle(account.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { editedName = account.displayName }

@@ -5,12 +5,12 @@ struct LockScreen: View {
     @Environment(AppLock.self) private var lock
 
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(.tint)
-            Text("FinApp is Locked")
-                .font(.title2.bold())
+        VStack(spacing: 22) {
+            BrandMark(size: 92)
+                .shadow(color: .black.opacity(0.4), radius: 20, y: 8)
+            Text("FinApp is locked")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Color.textPrimary)
             Button {
                 Task { await lock.authenticate() }
             } label: {
@@ -19,11 +19,11 @@ struct LockScreen: View {
             }
             .buttonStyle(.borderedProminent)
             if let error = lock.lastError {
-                Text(error).font(.footnote).foregroundStyle(.red)
+                Text(error).font(.footnote).foregroundStyle(Color.negative)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
+        .background(Color.appBackground.ignoresSafeArea())
         .task { await lock.authenticate() }
     }
 }
