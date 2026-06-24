@@ -82,10 +82,16 @@ struct AccountsView: View {
                 if showEyebrow {
                     HStack {
                         Text(groupTitle)
-                            .font(.headline)
+                            .font(.title3.weight(.bold))
                             .foregroundStyle(Color.textPrimary)
                         Spacer()
-                        Chip(Money.string(groupTotal), color: groupTotal < 0 ? .negative : .textSecondary)
+                        Text(Money.string(groupTotal))
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(groupTotal < 0 ? Color.negative : Color.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background((groupTotal < 0 ? Color.negative : Color.textSecondary).opacity(0.14),
+                                        in: Capsule())
                     }
                     .padding(.top, 8)
                 }

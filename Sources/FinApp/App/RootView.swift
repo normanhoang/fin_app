@@ -76,7 +76,7 @@ struct RootView: View {
             // Collapse any pre-existing duplicate recurring bills, then auto-sync
             // on open (throttled; skipped if not connected).
             RecurringStore.dedupe(in: context)
-            if coordinator.isConnected { await coordinator.sync() }
+            if coordinator.isConnected { await coordinator.syncIfStale() }
         }
     }
 
@@ -129,8 +129,6 @@ private struct CustomTabBar: View {
     }
 
     private func tab(_ index: Int, _ item: (title: String, icon: String)) -> some View {
-        // Dashboard is the home tab — render it a touch larger than the rest.
-        let isDashboard = index == AppTab.dashboard.rawValue
         let isActive = selection == index
         return Button {
             // Tapping the Transactions tab resets any active filter and pops to the
@@ -150,11 +148,11 @@ private struct CustomTabBar: View {
                             .matchedGeometryEffect(id: "activePill", in: pill)
                     }
                     Image(systemName: item.icon)
-                        .font(.system(size: isDashboard ? 21 : 17, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                 }
                 .frame(width: 52, height: 30)
                 Text(item.title)
-                    .font(.system(size: isDashboard ? 11 : 9, weight: isActive || isDashboard ? .semibold : .medium))
+                    .font(.system(size: 9, weight: isActive ? .semibold : .medium))
                     .lineLimit(1)
                     .frame(height: 13)
             }

@@ -99,18 +99,12 @@ struct TransactionsView: View {
             }
             router.txnArrivalIsDeepLink = false
         } else {
-            router.txnOriginTab = nil
             path = []
         }
     }
 
     private func handlePathChange() {
         router.subpageOpen = !path.isEmpty
-        // Back-swiped out of a transaction opened from another tab → return there.
-        if path.isEmpty, router.selectedTab == AppTab.transactions.rawValue, let origin = router.txnOriginTab {
-            router.txnOriginTab = nil
-            router.selectedTab = origin
-        }
     }
 
     /// Transactions grouped by month, newest month first.

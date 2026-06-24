@@ -23,36 +23,21 @@ struct RecurringView: View {
                     List {
                         if !confirmed.isEmpty {
                             Section {
-                                ForEach(confirmed) { bill in
-                                    billRow(bill, menu: {
-                                        Button(role: .destructive) { dismiss(bill) } label: {
-                                            Label("Remove", systemImage: "trash")
-                                        }
-                                    })
-                                }
+                                ForEach(confirmed) { billRow($0) }
                             } header: {
                                 Text("Upcoming")
                             } footer: {
-                                Text("Tap to see past charges. Press and hold to remove.")
+                                Text("Tap a bill to see its past charges and manage it.")
                             }
                             .listRowBackground(Color.surface)
                         }
                         if !candidates.isEmpty {
                             Section {
-                                ForEach(candidates) { bill in
-                                    billRow(bill, menu: {
-                                        Button { confirm(bill) } label: {
-                                            Label("Confirm", systemImage: "checkmark")
-                                        }
-                                        Button(role: .destructive) { dismiss(bill) } label: {
-                                            Label("Dismiss", systemImage: "xmark")
-                                        }
-                                    })
-                                }
+                                ForEach(candidates) { billRow($0) }
                             } header: {
                                 Text("Detected")
                             } footer: {
-                                Text("Press and hold a detected bill to confirm it or dismiss a false match.")
+                                Text("Tap a detected bill to confirm it or remove a false match.")
                             }
                             .listRowBackground(Color.surface)
                         }
@@ -68,22 +53,11 @@ struct RecurringView: View {
         .onChange(of: path) { router.subpageOpen = !path.isEmpty }
     }
 
-    private func billRow<M: View>(_ bill: RecurringBill, @ViewBuilder menu: () -> M) -> some View {
+    private func billRow(_ bill: RecurringBill) -> some View {
         NavigationLink(value: bill) {
             RecurringRow(bill: bill)
         }
-        .contextMenu(menuItems: menu)
         .accessibilityIdentifier("recurringRow-\(bill.merchantName)")
-    }
-
-    private func confirm(_ bill: RecurringBill) {
-        bill.confirmed = true
-        try? context.save()
-    }
-
-    private func dismiss(_ bill: RecurringBill) {
-        bill.dismissed = true
-        try? context.save()
     }
 }
 
@@ -123,6 +97,7 @@ struct RecurringRow: View {
 /// Past charges for one recurring bill, with the ability to recategorize it.
 struct RecurringDetailView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Category.name) private var categories: [Category]
     @Query(sort: \Transaction.posted, order: .reverse) private var allTransactions: [Transaction]
     let bill: RecurringBill
@@ -168,6 +143,27 @@ struct RecurringDetailView: View {
                     .listRowBackground(Color.surface)
                 }
             }
+
+            Section {
+                if !bill.confirmed {
+                    Button {
+                        bill.confirmed = true
+                        try? context.save()
+                    } label: {
+                        Label("Confirm Recurring", systemImage: "checkmark.circle")
+                    }
+                    .accessibilityIdentifier("confirmRecurringButton")
+                }
+                Button(role: .destructive) {
+                    bill.dismissed = true
+                    try? context.save()
+                    dismiss()
+                } label: {
+                    Label("Delete Recurring", systemImage: "trash")
+                }
+                .accessibilityIdentifier("deleteRecurringButton")
+            }
+            .listRowBackground(Color.surface)
         }
         .listRowSeparatorTint(Color.hairline)
         .screenBackground()

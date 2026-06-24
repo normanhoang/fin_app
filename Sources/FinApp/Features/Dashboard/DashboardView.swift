@@ -6,6 +6,16 @@ import Charts
 /// path-bound and can be reset on tab switch).
 struct NetWorthRoute: Hashable {}
 
+/// Carries the trend chart's plot rect (in "dash" space) up to the Dashboard so
+/// the value popup can be drawn on top of every other element.
+private struct TrendPlotKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next != .zero { value = next }
+    }
+}
+
 struct DashboardView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppRouter.self) private var router
@@ -17,6 +27,9 @@ struct DashboardView: View {
     private var now: Date { Date() }
     @State private var path = NavigationPath()
     @State private var selectedTrendMonth: Date?
+    /// The trend chart's plot rectangle, in the "dash" coordinate space — used to
+    /// position the popup and to map taps back to a bar.
+    @State private var trendPlot: CGRect = .zero
     @Environment(\.bottomBarInset) private var bottomBarInset
 
     var body: some View {
@@ -41,6 +54,9 @@ struct DashboardView: View {
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
+            .coordinateSpace(name: "dash")
+            .onPreferenceChange(TrendPlotKey.self) { trendPlot = $0 }
+            .overlay { trendPopupOverlay }
             .navigationTitle("Dashboard")
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
             .refreshable { await coordinator.sync() }
@@ -227,10 +243,6 @@ struct DashboardView: View {
                 if let point = selectedPoint {
                     RuleMark(x: .value("Month", point.month, unit: .month))
                         .foregroundStyle(Color.textSecondary.opacity(0.35))
-                        .annotation(position: .top, spacing: 4,
-                                    overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
-                            trendPopup(point)
-                        }
                 }
             }
             .chartForegroundStyleScale(["Income": Color.positive, "Spending": Color.negative])
@@ -248,17 +260,17 @@ struct DashboardView: View {
             }
             .chartOverlay { proxy in
                 GeometryReader { geo in
-                    Rectangle().fill(.clear).contentShape(Rectangle())
+                    // Report the plot rect in "dash" space so the popup can sit on
+                    // top of everything, outside the chart's clip.
+                    Color.clear
+                        .preference(key: TrendPlotKey.self, value: plotRect(proxy, geo))
+                        .contentShape(Rectangle())
+                        // Opens the popup; while open, the full-screen catcher below
+                        // intercepts taps (switch bar / dismiss) instead.
                         .onTapGesture { location in
                             guard let plot = proxy.plotFrame else { return }
                             let x = location.x - geo[plot].origin.x
-                            guard let date: Date = proxy.value(atX: x, as: Date.self),
-                                  let month = calendar.dateInterval(of: .month, for: date)?.start else { return }
-                            if let sel = selectedTrendMonth, calendar.isDate(sel, equalTo: month, toGranularity: .month) {
-                                selectedTrendMonth = nil
-                            } else {
-                                selectedTrendMonth = month
-                            }
+                            selectTrendBar(atX: x, using: proxy)
                         }
                 }
             }
@@ -287,6 +299,62 @@ struct DashboardView: View {
             Spacer(minLength: 14)
             MoneyText(value: value, size: 12, weight: .semibold, color: color)
         }
+    }
+
+    /// The chart's plot rect translated into the "dash" coordinate space.
+    private func plotRect(_ proxy: ChartProxy, _ geo: GeometryProxy) -> CGRect {
+        guard let anchor = proxy.plotFrame else { return .zero }
+        let local = geo[anchor]
+        let frame = geo.frame(in: .named("dash"))
+        return CGRect(x: frame.minX + local.minX, y: frame.minY + local.minY,
+                      width: local.width, height: local.height)
+    }
+
+    private func selectTrendBar(atX x: CGFloat, using proxy: ChartProxy) {
+        guard let date: Date = proxy.value(atX: x, as: Date.self),
+              let month = calendar.dateInterval(of: .month, for: date)?.start else { return }
+        toggleTrendMonth(month)
+    }
+
+    private func toggleTrendMonth(_ month: Date) {
+        if let sel = selectedTrendMonth, calendar.isDate(sel, equalTo: month, toGranularity: .month) {
+            selectedTrendMonth = nil
+        } else {
+            selectedTrendMonth = month
+        }
+    }
+
+    /// Floats the value popup above all chart elements, with a full-screen tap
+    /// catcher: a tap on another bar switches the popup, a tap anywhere else
+    /// closes it.
+    @ViewBuilder
+    private var trendPopupOverlay: some View {
+        if let point = selectedPoint, trendPlot != .zero {
+            ZStack(alignment: .topLeading) {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture(coordinateSpace: .named("dash")) { handlePopupTap($0) }
+                trendPopup(point)
+                    .fixedSize()
+                    .position(popupPosition(for: point))
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private func handlePopupTap(_ loc: CGPoint) {
+        guard trendPlot.contains(loc) else { selectedTrendMonth = nil; return }
+        let frac = (loc.x - trendPlot.minX) / trendPlot.width
+        let idx = min(max(Int(frac * CGFloat(trend.count)), 0), trend.count - 1)
+        toggleTrendMonth(trend[idx].month)
+    }
+
+    private func popupPosition(for point: Analytics.MonthPoint) -> CGPoint {
+        let count = max(trend.count, 1)
+        let idx = trend.firstIndex { calendar.isDate($0.month, equalTo: point.month, toGranularity: .month) } ?? 0
+        let x = trendPlot.minX + (CGFloat(idx) + 0.5) / CGFloat(count) * trendPlot.width
+        let clampedX = min(max(x, trendPlot.minX + 54), trendPlot.maxX - 54)
+        return CGPoint(x: clampedX, y: trendPlot.minY - 34)
     }
 
     // MARK: Empty

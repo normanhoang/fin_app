@@ -34,9 +34,6 @@ final class AppRouter {
     /// tap or swipe leaves this false, so Transactions resets its filter + search.
     /// Consumed by TransactionsView on arrival.
     var txnArrivalIsDeepLink = false
-    /// Tab the user came from when opening a transaction across tabs, so popping
-    /// the detail returns there.
-    var txnOriginTab: Int?
     /// True while the active tab has a pushed subpage; pauses pager swiping so the
     /// native back-swipe pops instead of changing tabs.
     var subpageOpen = false
@@ -52,18 +49,16 @@ final class AppRouter {
     func showTransactions(_ filter: TransactionFilter) {
         txnFilter = filter
         txnArrivalIsDeepLink = filter != .all
-        txnOriginTab = nil
         pendingTxnID = nil
         resetToken = UUID()
         selectedTab = AppTab.transactions.rawValue
     }
 
-    /// Switch to the Transactions tab and open one transaction's detail, remembering
-    /// the origin tab so a back-swipe returns there.
+    /// Switch to the Transactions tab and open one transaction's detail. Back-swiping
+    /// the detail simply closes it, leaving the Transactions list showing.
     func openTransaction(id: String) {
         txnFilter = .all
         txnArrivalIsDeepLink = true
-        txnOriginTab = selectedTab
         pendingTxnID = id
         selectedTab = AppTab.transactions.rawValue
     }

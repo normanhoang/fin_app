@@ -80,6 +80,13 @@ final class SyncCoordinator {
         }
     }
 
+    /// Auto-sync on app open only when it's been over an hour since the last
+    /// successful sync, so a quick reopen doesn't re-hit SimpleFin every time.
+    func syncIfStale(maxAge: TimeInterval = 3600) async {
+        if let last = lastSyncDate, Date().timeIntervalSince(last) < maxAge { return }
+        await sync()
+    }
+
     func disconnect() {
         store.deleteAccessURL()
         isConnected = false
