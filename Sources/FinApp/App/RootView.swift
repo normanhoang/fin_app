@@ -5,7 +5,7 @@ struct RootView: View {
     @Environment(\.modelContext) private var context
     @State private var router = AppRouter(selectedTab: Self.initialTab)
 
-    static let tabCount = 6
+    static let tabCount = 5
 
     private static var initialTab: Int {
         #if DEBUG
@@ -33,12 +33,13 @@ struct RootView: View {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
                     HStack(spacing: 0) {
+                        // Budgets is intentionally hidden for now (kept in the codebase
+                        // for later). Indices stay 0-based with Budgets removed.
                         pageView(DashboardView(), 0)
                         pageView(AccountsView(), 1)
                         pageView(TransactionsView(), 2)
-                        pageView(BudgetsView(), 3)
-                        pageView(RecurringView(), 4)
-                        pageView(SettingsView(), 5)
+                        pageView(RecurringView(), 3)
+                        pageView(SettingsView(), 4)
                     }
                     .scrollTargetLayout()
                 }
@@ -84,17 +85,17 @@ private struct CustomTabBar: View {
     @Binding var selection: Int
     @Environment(AppRouter.self) private var router
 
+    // Budgets is hidden for now (page omitted above too).
     private static let items: [(title: String, icon: String)] = [
         ("Dashboard", "chart.pie.fill"),
         ("Accounts", "building.columns.fill"),
         ("Transactions", "list.bullet"),
-        ("Budgets", "chart.bar.fill"),
         ("Recurring", "arrow.clockwise"),
         ("Settings", "gearshape.fill"),
     ]
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 2) {
             ForEach(Array(Self.items.enumerated()), id: \.offset) { index, item in
                 Button {
                     // Tapping the Transactions tab resets any active filter and pops
@@ -110,11 +111,11 @@ private struct CustomTabBar: View {
                         Image(systemName: item.icon)
                             .font(.system(size: 17))
                             .frame(height: 20)
-                            .padding(.horizontal, 14)
+                            .padding(.horizontal, 12)
                             .padding(.vertical, 5)
                             .background {
                                 if selection == index {
-                                    Capsule().fill(Color.brand.opacity(0.16))
+                                    Capsule().fill(Color.brand.opacity(0.18))
                                 }
                             }
                         Text(item.title)
@@ -131,14 +132,29 @@ private struct CustomTabBar: View {
                 .accessibilityIdentifier("tab-\(item.title)")
             }
         }
-        .padding(.top, 8)
-        .padding(.horizontal, 2)
-        // Bleed the bar material into the bottom safe area (home indicator) while
-        // keeping the icons within the safe area.
-        .background {
-            Rectangle().fill(.bar).ignoresSafeArea(edges: .bottom)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        // A floating Liquid Glass pill (iOS 26), with a translucent-material fallback.
+        .glassTabBar()
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .padding(.horizontal, 18)
+        .padding(.top, 6)
+        .padding(.bottom, 2)
+        .frame(maxWidth: .infinity)
+        .background(Color.appBackground.ignoresSafeArea(edges: .bottom))
+    }
+}
+
+private extension View {
+    /// Liquid Glass capsule on iOS 26+, falling back to an ultra-thin material.
+    @ViewBuilder
+    func glassTabBar() -> some View {
+        if #available(iOS 26.0, *) {
+            glassEffect(.regular, in: Capsule())
+        } else {
+            background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
         }
-        .overlay(alignment: .top) { Divider() }
     }
 }
 
