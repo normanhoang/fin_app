@@ -80,7 +80,9 @@ struct DashboardView: View {
     }
 
     private var topCategories: [Analytics.CategoryTotal] {
-        Array(Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar).prefix(6))
+        // Every category with non-zero spending this month (income already excluded
+        // by spendingByCategory), largest first.
+        Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
     }
 
     private var categorySection: some View {
