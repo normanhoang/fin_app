@@ -22,14 +22,15 @@ struct RootView: View {
         Binding(get: { router.selectedTab }, set: { if let new = $0 { router.selectedTab = new } })
     }
 
+    @State private var barHeight: CGFloat = 0
+
     var body: some View {
         // A horizontal paging ScrollView restores swipe-between-tabs WITHOUT the
-        // UIPageViewController that made `TabView(.page)` crash on swipe, and with
-        // no system tab bar to peek out from under the custom bar.
-        // Pager and bar are stacked (not overlaid) so each page's List ends above
-        // the bar instead of being clipped by it — safeAreaInset doesn't propagate
-        // through the horizontal pager to the nested Lists.
-        VStack(spacing: 0) {
+        // UIPageViewController that made `TabView(.page)` crash on swipe. The glass
+        // bar floats over the pages; each page reserves a bottom safe-area inset
+        // equal to the bar height, so content scrolls UNDER the translucent bar
+        // while the last row still clears it.
+        ZStack(alignment: .bottom) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
                     HStack(spacing: 0) {
@@ -56,7 +57,12 @@ struct RootView: View {
                 // jump to the launch tab once.
                 .onAppear { proxy.scrollTo(router.selectedTab) }
             }
+
             CustomTabBar(selection: $router.selectedTab)
+                .background(GeometryReader { geo in
+                    Color.clear.preference(key: BarHeightKey.self, value: geo.size.height)
+                })
+                .onPreferenceChange(BarHeightKey.self) { barHeight = $0 }
         }
         // Keep the keyboard from resizing the pager (it would shift paging offsets
         // and make a swipe jump two pages).
@@ -77,13 +83,22 @@ struct RootView: View {
     private func pageView(_ view: some View, _ tag: Int) -> some View {
         view
             .containerRelativeFrame(.horizontal)
+            // Reserve room for the floating bar so list content can clear it while
+            // still scrolling underneath the translucent glass.
+            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: barHeight) }
             .id(tag)
     }
+}
+
+private struct BarHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 private struct CustomTabBar: View {
     @Binding var selection: Int
     @Environment(AppRouter.self) private var router
+    @Namespace private var pill
 
     // Budgets is hidden for now (page omitted above too).
     private static let items: [(title: String, icon: String)] = [
@@ -100,7 +115,6 @@ private struct CustomTabBar: View {
                 Button {
                     // Tapping the Transactions tab resets any active filter and pops
                     // to the list root, so the bar is a "show everything" entry point.
-                    // No animation: switch straight to the page rather than sliding it in.
                     if index == 2 {
                         router.showTransactions(.all)
                     } else {
@@ -115,7 +129,9 @@ private struct CustomTabBar: View {
                             .padding(.vertical, 5)
                             .background {
                                 if selection == index {
+                                    // The active pill slides + bounces between tabs.
                                     Capsule().fill(Color.brand.opacity(0.18))
+                                        .matchedGeometryEffect(id: "activePill", in: pill)
                                 }
                             }
                         Text(item.title)
@@ -135,13 +151,13 @@ private struct CustomTabBar: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
         // A floating Liquid Glass pill (iOS 26), with a translucent-material fallback.
+        // No opaque background, so page content shows through underneath.
         .glassTabBar()
         .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
         .padding(.horizontal, 18)
         .padding(.top, 6)
-        .padding(.bottom, 2)
-        .frame(maxWidth: .infinity)
-        .background(Color.appBackground.ignoresSafeArea(edges: .bottom))
+        .padding(.bottom, 4)
+        .animation(.spring(response: 0.34, dampingFraction: 0.68), value: selection)
     }
 }
 
