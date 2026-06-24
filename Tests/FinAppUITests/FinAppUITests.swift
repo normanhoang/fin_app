@@ -33,7 +33,7 @@ final class FinAppUITests: XCTestCase {
     // 1. Tapping the Net Worth card opens the graph screen (empty "Building
     //    History" state with sample data, since snapshots only record on sync).
     func testNetWorthCardOpensGraph() {
-        let app = launch(tab: 0)
+        let app = launch(tab: 2)
         let card = app.descendants(matching: .any).matching(identifier: "netWorthCard").firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 8), "Net Worth card not found")
         card.tap()
@@ -47,7 +47,7 @@ final class FinAppUITests: XCTestCase {
     // 1b. Switching tabs resets a pushed subpage: open Net Worth, leave, come back
     //     to the Dashboard root (not the Net Worth detail).
     func testTabSwitchResetsToRoot() {
-        let app = launch(tab: 0)
+        let app = launch(tab: 2)
         let card = app.descendants(matching: .any).matching(identifier: "netWorthCard").firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 8))
         card.tap()
@@ -63,7 +63,7 @@ final class FinAppUITests: XCTestCase {
 
     // 2. Transaction detail shows the top category Menu and the Recurring controls.
     func testTransactionDetailHasCategoryMenuAndRecurring() {
-        let app = launch(tab: 2)
+        let app = launch(tab: 1)
         let row = firstTxnRow(app)
         XCTAssertTrue(row.waitForExistence(timeout: 8), "No transaction rows")
         row.tap()
@@ -76,7 +76,7 @@ final class FinAppUITests: XCTestCase {
 
     // 3. The top category Menu opens and changing it sticks.
     func testCategoryMenuChangesCategory() {
-        let app = launch(tab: 2)
+        let app = launch(tab: 1)
         let row = firstTxnRow(app)
         XCTAssertTrue(row.waitForExistence(timeout: 8))
         row.tap()
@@ -96,7 +96,7 @@ final class FinAppUITests: XCTestCase {
 
     // 4. "Set as Recurring" creates a bill that shows on the Recurring tab.
     func testSetAsRecurringCreatesBill() {
-        let app = launch(tab: 2)
+        let app = launch(tab: 1)
         let row = firstTxnRow(app)
         XCTAssertTrue(row.waitForExistence(timeout: 8))
         row.tap()
@@ -116,7 +116,7 @@ final class FinAppUITests: XCTestCase {
 
     // 5. Tapping a Dashboard category drills into a filtered Transactions list.
     func testDashboardCategoryFiltersTransactions() {
-        let app = launch(tab: 0)
+        let app = launch(tab: 2)
         let housing = app.buttons["category-Housing"]
         XCTAssertTrue(housing.waitForExistence(timeout: 8), "Housing category row not found")
         housing.tap()
@@ -128,7 +128,7 @@ final class FinAppUITests: XCTestCase {
 
     // 5b. Swiping back to Transactions clears a leftover filter (tab tap too).
     func testSwipingToTransactionsClearsFilter() {
-        let app = launch(tab: 0)
+        let app = launch(tab: 2)
         app.buttons["category-Housing"].tap()
         XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5))
 
@@ -142,7 +142,7 @@ final class FinAppUITests: XCTestCase {
 
     // 6. Renaming an account updates the list (and persists via customName).
     func testRenameAccountUpdatesList() {
-        let app = launch(tab: 1)
+        let app = launch(tab: 0)
         let row = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'accountRow-'")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 8), "No account rows")
@@ -165,7 +165,7 @@ final class FinAppUITests: XCTestCase {
 
     // 6b. Tapping the Transactions tab clears an active filter from the Dashboard.
     func testTransactionsTabClearsFilter() {
-        let app = launch(tab: 0)
+        let app = launch(tab: 2)
         let housing = app.buttons["category-Housing"]
         XCTAssertTrue(housing.waitForExistence(timeout: 8))
         housing.tap()
@@ -180,7 +180,7 @@ final class FinAppUITests: XCTestCase {
     // 8. Re-filtering from the Dashboard pops any open transaction back to the
     //    filtered list (not stuck on the single detail).
     func testReFilterPopsOpenTransaction() {
-        let app = launch(tab: 2)
+        let app = launch(tab: 1)
         let row = firstTxnRow(app)
         XCTAssertTrue(row.waitForExistence(timeout: 8))
         row.tap()
@@ -198,7 +198,7 @@ final class FinAppUITests: XCTestCase {
 
     // 9. Tapping a transaction inside an account opens it in the Transactions tab.
     func testAccountTransactionOpensInTransactions() {
-        let app = launch(tab: 1)
+        let app = launch(tab: 0)
         let account = app.descendants(matching: .any).matching(identifier: "accountRow-s-card").firstMatch
         XCTAssertTrue(account.waitForExistence(timeout: 8), "Account row not found")
         account.tap()
@@ -214,13 +214,13 @@ final class FinAppUITests: XCTestCase {
     // 7. Swiping across the app must not crash (regression for the page-style
     //    TabView + NavigationStack UINavigationBar layout assertion).
     func testSwipingChangesPageAndDoesNotCrash() {
-        let app = launch(tab: 0)
-        XCTAssertTrue(app.staticTexts["Dashboard"].waitForExistence(timeout: 8))
+        let app = launch(tab: 0) // Accounts
+        XCTAssertTrue(app.staticTexts["Assets"].waitForExistence(timeout: 8))
 
-        // Swiping left pages from Dashboard to Accounts ("Assets" header).
+        // Swiping left pages from Accounts to Transactions (its search field).
         app.swipeLeft()
-        XCTAssertTrue(app.staticTexts["Assets"].waitForExistence(timeout: 5),
-                      "Swipe did not page to the Accounts tab")
+        XCTAssertTrue(app.textFields["txnSearchField"].waitForExistence(timeout: 5),
+                      "Swipe did not page to the Transactions tab")
 
         for _ in 0..<6 {
             app.swipeLeft()
@@ -228,5 +228,17 @@ final class FinAppUITests: XCTestCase {
         }
         // App still alive and responsive if the tab bar is still queryable.
         XCTAssertTrue(app.buttons["tab-Dashboard"].exists, "App crashed during swiping")
+    }
+
+    // 8. A Recurring row opens a detail page listing that merchant's past charges.
+    func testRecurringRowOpensDetail() {
+        let app = launch(tab: 3) // Recurring
+        let row = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'recurringRow-'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "No recurring rows")
+        row.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "recurringCategoryMenu").firstMatch
+            .waitForExistence(timeout: 5), "Recurring detail did not open")
+        snap(app, "recurring-detail")
     }
 }

@@ -84,6 +84,7 @@ struct TransactionsView: View {
         .onChange(of: router.resetToken) { path = []; search = "" }
         .onChange(of: router.pendingTxnID) { openPendingTransaction() }
         .onChange(of: router.selectedTab) { handleTabChange() }
+        .onChange(of: path) { handlePathChange() }
         .onAppear { openPendingTransaction() }
     }
 
@@ -91,14 +92,24 @@ struct TransactionsView: View {
     /// search — unless it was a deep-link that wants to keep its filter. On leaving,
     /// pop any pushed detail so the tab returns to its root.
     private func handleTabChange() {
-        if router.selectedTab == 2 {
+        if router.selectedTab == AppTab.transactions.rawValue {
             if !router.txnArrivalIsDeepLink {
                 router.txnFilter = .all
                 search = ""
             }
             router.txnArrivalIsDeepLink = false
         } else {
+            router.txnOriginTab = nil
             path = []
+        }
+    }
+
+    private func handlePathChange() {
+        router.subpageOpen = !path.isEmpty
+        // Back-swiped out of a transaction opened from another tab → return there.
+        if path.isEmpty, router.selectedTab == AppTab.transactions.rawValue, let origin = router.txnOriginTab {
+            router.txnOriginTab = nil
+            router.selectedTab = origin
         }
     }
 

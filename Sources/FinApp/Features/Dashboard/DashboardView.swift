@@ -16,6 +16,7 @@ struct DashboardView: View {
     private let calendar = Calendar.current
     private var now: Date { Date() }
     @State private var path = NavigationPath()
+    @State private var selectedTrendMonth: Date?
     @Environment(\.bottomBarInset) private var bottomBarInset
 
     var body: some View {
@@ -35,7 +36,7 @@ struct DashboardView: View {
                         .padding(.top, 8)
                         .padding(.bottom, 24)
                     }
-                    .contentMargins(.bottom, bottomBarInset, for: .scrollContent)
+                    .contentMargins(.bottom, bottomBarInset * 0.7, for: .scrollContent)
                     .scrollIndicators(.hidden)
                 }
             }
@@ -45,7 +46,8 @@ struct DashboardView: View {
             .refreshable { await coordinator.sync() }
         }
         // Switching away from this tab resets it to its root page.
-        .onChange(of: router.selectedTab) { if router.selectedTab != 0 { path = NavigationPath() } }
+        .onChange(of: router.selectedTab) { if router.selectedTab != AppTab.dashboard.rawValue { path = NavigationPath() } }
+        .onChange(of: path) { router.subpageOpen = !path.isEmpty }
     }
 
     // MARK: Net worth hero
@@ -199,22 +201,37 @@ struct DashboardView: View {
         Analytics.monthlyTrend(transactions, endingIn: now, count: 6, calendar: calendar)
     }
 
+    private var selectedPoint: Analytics.MonthPoint? {
+        guard let m = selectedTrendMonth else { return nil }
+        return trend.first { calendar.isDate($0.month, equalTo: m, toGranularity: .month) }
+    }
+
     private var trendCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel("6-month trend")
-            Chart(trend) { point in
-                BarMark(
-                    x: .value("Month", point.month, unit: .month),
-                    y: .value("Income", (point.income as NSDecimalNumber).doubleValue)
-                )
-                .position(by: .value("Type", "Income"))
-                .foregroundStyle(by: .value("Type", "Income"))
-                BarMark(
-                    x: .value("Month", point.month, unit: .month),
-                    y: .value("Spending", (point.spending as NSDecimalNumber).doubleValue)
-                )
-                .position(by: .value("Type", "Spending"))
-                .foregroundStyle(by: .value("Type", "Spending"))
+            Chart {
+                ForEach(trend) { point in
+                    BarMark(
+                        x: .value("Month", point.month, unit: .month),
+                        y: .value("Income", (point.income as NSDecimalNumber).doubleValue)
+                    )
+                    .position(by: .value("Type", "Income"))
+                    .foregroundStyle(by: .value("Type", "Income"))
+                    BarMark(
+                        x: .value("Month", point.month, unit: .month),
+                        y: .value("Spending", (point.spending as NSDecimalNumber).doubleValue)
+                    )
+                    .position(by: .value("Type", "Spending"))
+                    .foregroundStyle(by: .value("Type", "Spending"))
+                }
+                if let point = selectedPoint {
+                    RuleMark(x: .value("Month", point.month, unit: .month))
+                        .foregroundStyle(Color.textSecondary.opacity(0.35))
+                        .annotation(position: .top, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                            trendPopup(point)
+                        }
+                }
             }
             .chartForegroundStyleScale(["Income": Color.positive, "Spending": Color.negative])
             .chartXAxis {
@@ -229,9 +246,47 @@ struct DashboardView: View {
                     AxisValueLabel().foregroundStyle(Color.textSecondary)
                 }
             }
+            .chartOverlay { proxy in
+                GeometryReader { geo in
+                    Rectangle().fill(.clear).contentShape(Rectangle())
+                        .onTapGesture { location in
+                            guard let plot = proxy.plotFrame else { return }
+                            let x = location.x - geo[plot].origin.x
+                            guard let date: Date = proxy.value(atX: x, as: Date.self),
+                                  let month = calendar.dateInterval(of: .month, for: date)?.start else { return }
+                            if let sel = selectedTrendMonth, calendar.isDate(sel, equalTo: month, toGranularity: .month) {
+                                selectedTrendMonth = nil
+                            } else {
+                                selectedTrendMonth = month
+                            }
+                        }
+                }
+            }
             .frame(height: 170)
         }
         .cardStyle()
+    }
+
+    private func trendPopup(_ point: Analytics.MonthPoint) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(point.month, format: .dateTime.month(.abbreviated).year())
+                .font(.caption2.weight(.semibold)).foregroundStyle(Color.textSecondary)
+            popupRow("Income", point.income, .positive)
+            popupRow("Spending", point.spending, .negative)
+        }
+        .padding(8)
+        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+    }
+
+    private func popupRow(_ label: String, _ value: Decimal, _ color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 7, height: 7)
+            Text(label).font(.caption2).foregroundStyle(Color.textPrimary)
+            Spacer(minLength: 14)
+            MoneyText(value: value, size: 12, weight: .semibold, color: color)
+        }
     }
 
     // MARK: Empty

@@ -3,65 +3,77 @@ import SwiftData
 
 struct RecurringView: View {
     @Environment(\.modelContext) private var context
+    @Environment(AppRouter.self) private var router
     @Query(sort: \RecurringBill.nextDue) private var bills: [RecurringBill]
+    @State private var path: [RecurringBill] = []
 
     private var confirmed: [RecurringBill] { bills.filter { $0.confirmed && !$0.dismissed } }
     private var candidates: [RecurringBill] { bills.filter { !$0.confirmed && !$0.dismissed } }
 
     var body: some View {
-        NavigationStack {
-            if confirmed.isEmpty && candidates.isEmpty {
-                ContentUnavailableView(
-                    "No Recurring Bills",
-                    systemImage: "arrow.clockwise",
-                    description: Text("Subscriptions and bills are detected automatically as you sync.")
-                )
-                .navigationTitle("Recurring")
-            } else {
-                List {
-                    if !confirmed.isEmpty {
-                        Section {
-                            ForEach(confirmed) { bill in
-                                RecurringRow(bill: bill)
-                                    .contextMenu {
+        NavigationStack(path: $path) {
+            Group {
+                if confirmed.isEmpty && candidates.isEmpty {
+                    ContentUnavailableView(
+                        "No Recurring Bills",
+                        systemImage: "arrow.clockwise",
+                        description: Text("Subscriptions and bills are detected automatically as you sync.")
+                    )
+                } else {
+                    List {
+                        if !confirmed.isEmpty {
+                            Section {
+                                ForEach(confirmed) { bill in
+                                    billRow(bill, menu: {
                                         Button(role: .destructive) { dismiss(bill) } label: {
                                             Label("Remove", systemImage: "trash")
                                         }
-                                    }
+                                    })
+                                }
+                            } header: {
+                                Text("Upcoming")
+                            } footer: {
+                                Text("Tap to see past charges. Press and hold to remove.")
                             }
-                        } header: {
-                            Text("Upcoming")
-                        } footer: {
-                            Text("Press and hold a bill to remove it.")
+                            .listRowBackground(Color.surface)
                         }
-                        .listRowBackground(Color.surface)
-                    }
-                    if !candidates.isEmpty {
-                        Section {
-                            ForEach(candidates) { bill in
-                                RecurringRow(bill: bill)
-                                    .contextMenu {
+                        if !candidates.isEmpty {
+                            Section {
+                                ForEach(candidates) { bill in
+                                    billRow(bill, menu: {
                                         Button { confirm(bill) } label: {
                                             Label("Confirm", systemImage: "checkmark")
                                         }
                                         Button(role: .destructive) { dismiss(bill) } label: {
                                             Label("Dismiss", systemImage: "xmark")
                                         }
-                                    }
+                                    })
+                                }
+                            } header: {
+                                Text("Detected")
+                            } footer: {
+                                Text("Press and hold a detected bill to confirm it or dismiss a false match.")
                             }
-                        } header: {
-                            Text("Detected")
-                        } footer: {
-                            Text("Press and hold a detected bill to confirm it or dismiss a false match.")
+                            .listRowBackground(Color.surface)
                         }
-                        .listRowBackground(Color.surface)
                     }
+                    .listRowSeparatorTint(Color.hairline)
+                    .screenBackground()
                 }
-                .listRowSeparatorTint(Color.hairline)
-                .screenBackground()
-                .navigationTitle("Recurring")
             }
+            .navigationTitle("Recurring")
+            .navigationDestination(for: RecurringBill.self) { RecurringDetailView(bill: $0) }
         }
+        .onChange(of: router.selectedTab) { if router.selectedTab != AppTab.recurring.rawValue { path = [] } }
+        .onChange(of: path) { router.subpageOpen = !path.isEmpty }
+    }
+
+    private func billRow<M: View>(_ bill: RecurringBill, @ViewBuilder menu: () -> M) -> some View {
+        NavigationLink(value: bill) {
+            RecurringRow(bill: bill)
+        }
+        .contextMenu(menuItems: menu)
+        .accessibilityIdentifier("recurringRow-\(bill.merchantName)")
     }
 
     private func confirm(_ bill: RecurringBill) {
@@ -105,5 +117,97 @@ struct RecurringRow: View {
             MoneyText(value: bill.expectedAmount, size: 16, weight: .semibold, color: .textSecondary)
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// Past charges for one recurring bill, with the ability to recategorize it.
+struct RecurringDetailView: View {
+    @Environment(\.modelContext) private var context
+    @Query(sort: \Category.name) private var categories: [Category]
+    @Query(sort: \Transaction.posted, order: .reverse) private var allTransactions: [Transaction]
+    let bill: RecurringBill
+
+    private var matched: [Transaction] {
+        allTransactions.filter {
+            CategorizationEngine.normalizeMerchant($0.payee ?? $0.detail) == bill.merchantName
+        }
+    }
+
+    private var monthGroups: [(month: Date, txns: [Transaction])] {
+        let cal = Calendar.current
+        let grouped = Dictionary(grouping: matched) {
+            cal.dateInterval(of: .month, for: $0.posted)?.start ?? $0.posted
+        }
+        return grouped.map { (month: $0.key, txns: $0.value) }.sorted { $0.month > $1.month }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                categoryMenu
+                LabeledContent("Cadence") { Chip(bill.cadence.rawValue.capitalized, color: .brand) }
+                LabeledContent("Typical amount") {
+                    MoneyText(value: bill.expectedAmount, color: .textSecondary)
+                }
+            }
+            .listRowBackground(Color.surface)
+
+            if matched.isEmpty {
+                Section("Past charges") {
+                    Text("No past charges found for this merchant.")
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .listRowBackground(Color.surface)
+            } else {
+                ForEach(monthGroups, id: \.month) { group in
+                    Section {
+                        ForEach(group.txns) { TransactionRow(transaction: $0) }
+                    } header: {
+                        Text(group.month.formatted(.dateTime.month(.wide).year()))
+                    }
+                    .listRowBackground(Color.surface)
+                }
+            }
+        }
+        .listRowSeparatorTint(Color.hairline)
+        .screenBackground()
+        .navigationTitle(bill.merchantName.capitalized)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var categoryMenu: some View {
+        Menu {
+            ForEach(categories) { category in
+                Button {
+                    setCategory(category)
+                } label: {
+                    Label(category.name, systemImage: category.systemIcon)
+                    if bill.category == category { Image(systemName: "checkmark") }
+                }
+            }
+        } label: {
+            HStack {
+                Label {
+                    Text(bill.category?.name ?? "Uncategorized").foregroundStyle(.primary)
+                } icon: {
+                    Image(systemName: bill.category?.systemIcon ?? "questionmark.circle")
+                        .foregroundStyle(Color(hex: bill.category?.colorHex ?? "#8E8E93"))
+                }
+                Spacer()
+                Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityIdentifier("recurringCategoryMenu")
+    }
+
+    /// Set the bill's category and apply it to this merchant's transactions, learning
+    /// a rule so future charges categorize automatically.
+    private func setCategory(_ category: Category) {
+        bill.category = category
+        if let sample = matched.first {
+            CategorizationEngine.learn(from: sample, category: category, in: context)
+        }
+        CategorizationEngine.categorizeAll(in: context)
+        try? context.save()
     }
 }

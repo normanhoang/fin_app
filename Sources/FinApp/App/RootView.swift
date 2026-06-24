@@ -9,10 +9,9 @@ struct RootView: View {
 
     private static var initialTab: Int {
         #if DEBUG
-        return Int(ProcessInfo.processInfo.environment["FINAPP_TAB"] ?? "0") ?? 0
-        #else
-        return 0
+        if let raw = ProcessInfo.processInfo.environment["FINAPP_TAB"], let i = Int(raw) { return i }
         #endif
+        return AppTab.dashboard.rawValue
     }
 
     /// Drives the paging ScrollView and the custom bar from the same source.
@@ -34,17 +33,19 @@ struct RootView: View {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
                     HStack(spacing: 0) {
-                        // Budgets is intentionally hidden for now (kept in the codebase
-                        // for later). Indices stay 0-based with Budgets removed.
-                        pageView(DashboardView(), 0)
-                        pageView(AccountsView(), 1)
-                        pageView(TransactionsView(), 2)
-                        pageView(RecurringView(), 3)
-                        pageView(SettingsView(), 4)
+                        // Order: Accounts · Transactions · Dashboard · Recurring · Settings.
+                        // (Budgets hidden for now, kept in the codebase.)
+                        pageView(AccountsView(), AppTab.accounts.rawValue)
+                        pageView(TransactionsView(), AppTab.transactions.rawValue)
+                        pageView(DashboardView(), AppTab.dashboard.rawValue)
+                        pageView(RecurringView(), AppTab.recurring.rawValue)
+                        pageView(SettingsView(), AppTab.settings.rawValue)
                     }
                     .scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.paging)
+                // Pause tab paging while a detail is open so the native back-swipe pops.
+                .scrollDisabled(router.subpageOpen)
                 // scrollPosition is the single source of truth: it scrolls on
                 // programmatic tab changes (tab bar, Dashboard/Accounts deep-links)
                 // and updates the tab on swipe.
@@ -67,7 +68,6 @@ struct RootView: View {
         // Keep the keyboard from resizing the pager (it would shift paging offsets
         // and make a swipe jump two pages).
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .ignoresSafeArea(.container, edges: .horizontal)
         .environment(router)
         .background(KeyboardDismisser())
         // Dismiss the keyboard when changing pages (tab tap or swipe).
@@ -100,11 +100,11 @@ private struct CustomTabBar: View {
     @Environment(AppRouter.self) private var router
     @Namespace private var pill
 
-    // Budgets is hidden for now (page omitted above too).
+    // Order matches the pager: Accounts · Transactions · Dashboard · Recurring · Settings.
     private static let items: [(title: String, icon: String)] = [
-        ("Dashboard", "chart.pie.fill"),
         ("Accounts", "building.columns.fill"),
         ("Transactions", "list.bullet"),
+        ("Dashboard", "chart.pie.fill"),
         ("Recurring", "arrow.clockwise"),
         ("Settings", "gearshape.fill"),
     ]
@@ -129,10 +129,13 @@ private struct CustomTabBar: View {
     }
 
     private func tab(_ index: Int, _ item: (title: String, icon: String)) -> some View {
-        Button {
+        // Dashboard is the home tab — render it a touch larger than the rest.
+        let isDashboard = index == AppTab.dashboard.rawValue
+        let isActive = selection == index
+        return Button {
             // Tapping the Transactions tab resets any active filter and pops to the
             // list root, so the bar is a "show everything" entry point.
-            if index == 2 {
+            if index == AppTab.transactions.rawValue {
                 router.showTransactions(.all)
             } else {
                 selection = index
@@ -142,21 +145,21 @@ private struct CustomTabBar: View {
                 // Fixed-size box so the active pill never shifts layout — keeps every
                 // icon and label on the same baseline.
                 ZStack {
-                    if selection == index {
+                    if isActive {
                         Capsule().fill(Color.brand.opacity(0.18))
                             .matchedGeometryEffect(id: "activePill", in: pill)
                     }
                     Image(systemName: item.icon)
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: isDashboard ? 21 : 17, weight: .semibold))
                 }
                 .frame(width: 52, height: 30)
                 Text(item.title)
-                    .font(.system(size: 9, weight: selection == index ? .semibold : .medium))
+                    .font(.system(size: isDashboard ? 11 : 9, weight: isActive || isDashboard ? .semibold : .medium))
                     .lineLimit(1)
-                    .frame(height: 12)
+                    .frame(height: 13)
             }
             .frame(maxWidth: .infinity)
-            .foregroundStyle(selection == index ? Color.brand : Color.textSecondary)
+            .foregroundStyle(isActive ? Color.brand : Color.textSecondary)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

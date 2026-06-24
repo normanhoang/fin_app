@@ -64,7 +64,8 @@ struct AccountsView: View {
             .sheet(isPresented: $showingAdd) { AddAccountView() }
             .refreshable { await coordinator.sync() }
         }
-        .onChange(of: router.selectedTab) { if router.selectedTab != 1 { path = [] } }
+        .onChange(of: router.selectedTab) { if router.selectedTab != AppTab.accounts.rawValue { path = [] } }
+        .onChange(of: path) { router.subpageOpen = !path.isEmpty }
     }
 
     private func typeSection(_ group: TypeGroup, groupTitle: String, groupTotal: Decimal, showEyebrow: Bool) -> some View {
@@ -102,15 +103,7 @@ struct AccountsView: View {
     }
 
     private func row(_ account: Account) -> some View {
-        let tint: Color = account.accountType.isDebt ? .negative : .brand
-        return HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(tint.opacity(0.15))
-                Image(systemName: account.accountType.icon)
-                    .font(.system(size: 15))
-                    .foregroundStyle(tint)
-            }
-            .frame(width: 38, height: 38)
+        HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(account.displayName).foregroundStyle(Color.textPrimary)
                 Chip(account.accountType.displayName, color: .textSecondary)
@@ -133,6 +126,14 @@ struct AccountDetailView: View {
         account.transactions.sorted { $0.posted > $1.posted }
     }
 
+    private var monthGroups: [(month: Date, txns: [Transaction])] {
+        let cal = Calendar.current
+        let grouped = Dictionary(grouping: transactions) {
+            cal.dateInterval(of: .month, for: $0.posted)?.start ?? $0.posted
+        }
+        return grouped.map { (month: $0.key, txns: $0.value) }.sorted { $0.month > $1.month }
+    }
+
     var body: some View {
         List {
             Section("Name") {
@@ -152,19 +153,26 @@ struct AccountDetailView: View {
                 }
             }
             .listRowBackground(Color.surface)
-            Section("Transactions") {
-                if transactions.isEmpty {
+            if transactions.isEmpty {
+                Section("Transactions") {
                     Text("No transactions in the synced window.").foregroundStyle(Color.textSecondary)
-                } else {
-                    ForEach(transactions) { txn in
-                        TransactionRow(transaction: txn)
-                            .contentShape(Rectangle())
-                            .onTapGesture { router.openTransaction(id: txn.id) }
-                            .accessibilityIdentifier("acctTxnRow-\(txn.id)")
+                }
+                .listRowBackground(Color.surface)
+            } else {
+                ForEach(monthGroups, id: \.month) { group in
+                    Section {
+                        ForEach(group.txns) { txn in
+                            TransactionRow(transaction: txn)
+                                .contentShape(Rectangle())
+                                .onTapGesture { router.openTransaction(id: txn.id) }
+                                .accessibilityIdentifier("acctTxnRow-\(txn.id)")
+                        }
+                    } header: {
+                        Text(group.month.formatted(.dateTime.month(.wide).year()))
                     }
+                    .listRowBackground(Color.surface)
                 }
             }
-            .listRowBackground(Color.surface)
         }
         .listRowSeparatorTint(Color.hairline)
         .screenBackground()

@@ -3,7 +3,6 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppLock.self) private var lock
-    @Environment(\.modelContext) private var context
     @AppStorage("appearanceMode") private var appearanceRaw = AppearanceMode.system.rawValue
     @State private var setupToken = ""
 
@@ -63,13 +62,6 @@ struct SettingsView: View {
                     Text("Privacy")
                 }
                 .listRowBackground(Color.surface)
-
-                #if DEBUG
-                Section("Developer") {
-                    Button("Load Sample Data") { SampleData.inject(into: context) }
-                }
-                .listRowBackground(Color.surface)
-                #endif
             }
             .listRowSeparatorTint(Color.hairline)
             .screenBackground()

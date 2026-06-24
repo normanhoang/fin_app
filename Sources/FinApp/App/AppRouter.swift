@@ -1,6 +1,15 @@
 import Foundation
 import Observation
 
+/// Bottom-bar pages in display order. Dashboard sits centre and is the default.
+enum AppTab: Int, CaseIterable {
+    case accounts = 0
+    case transactions = 1
+    case dashboard = 2
+    case recurring = 3
+    case settings = 4
+}
+
 /// Active filter applied to the Transactions list, set when the user drills in
 /// from the Dashboard.
 enum TransactionFilter: Equatable {
@@ -25,11 +34,17 @@ final class AppRouter {
     /// tap or swipe leaves this false, so Transactions resets its filter + search.
     /// Consumed by TransactionsView on arrival.
     var txnArrivalIsDeepLink = false
+    /// Tab the user came from when opening a transaction across tabs, so popping
+    /// the detail returns there.
+    var txnOriginTab: Int?
+    /// True while the active tab has a pushed subpage; pauses pager swiping so the
+    /// native back-swipe pops instead of changing tabs.
+    var subpageOpen = false
     /// Bumped on every "show the Transactions list" deep-link so the Transactions
     /// stack pops any pushed detail back to the (filtered) root.
     private(set) var resetToken = UUID()
 
-    init(selectedTab: Int = 0) {
+    init(selectedTab: Int = AppTab.dashboard.rawValue) {
         self.selectedTab = selectedTab
     }
 
@@ -37,16 +52,19 @@ final class AppRouter {
     func showTransactions(_ filter: TransactionFilter) {
         txnFilter = filter
         txnArrivalIsDeepLink = filter != .all
+        txnOriginTab = nil
         pendingTxnID = nil
         resetToken = UUID()
-        selectedTab = 2
+        selectedTab = AppTab.transactions.rawValue
     }
 
-    /// Switch to the Transactions tab and open one transaction's detail.
+    /// Switch to the Transactions tab and open one transaction's detail, remembering
+    /// the origin tab so a back-swipe returns there.
     func openTransaction(id: String) {
         txnFilter = .all
         txnArrivalIsDeepLink = true
+        txnOriginTab = selectedTab
         pendingTxnID = id
-        selectedTab = 2
+        selectedTab = AppTab.transactions.rawValue
     }
 }
