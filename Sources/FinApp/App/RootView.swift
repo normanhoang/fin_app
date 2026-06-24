@@ -170,7 +170,8 @@ private extension View {
     @ViewBuilder
     func glassTabBar() -> some View {
         if #available(iOS 26.0, *) {
-            glassEffect(.regular.interactive(), in: Capsule())
+            // Plain (non-interactive) glass: no scale/enlarge response on touch.
+            glassEffect(.regular, in: Capsule())
         } else {
             background(.ultraThinMaterial, in: Capsule())
                 .overlay(

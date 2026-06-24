@@ -6,8 +6,6 @@ import Charts
 /// path-bound and can be reset on tab switch).
 struct NetWorthRoute: Hashable {}
 
-/// Carries the trend chart's plot rect (in "dash" space) up to the Dashboard so
-/// the value popup can be drawn on top of every other element.
 private extension View {
     /// Fires `action` whenever the scroll view's vertical offset changes — used to
     /// dismiss the trend popup on scroll without a gesture that would fight the
@@ -19,14 +17,6 @@ private extension View {
         } else {
             self
         }
-    }
-}
-
-private struct TrendPlotKey: PreferenceKey {
-    static let defaultValue: CGRect = .zero
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        let next = nextValue()
-        if next != .zero { value = next }
     }
 }
 
@@ -79,7 +69,6 @@ struct DashboardView: View {
             }
             .background(Color.appBackground.ignoresSafeArea())
             .coordinateSpace(name: "dash")
-            .onPreferenceChange(TrendPlotKey.self) { trendPlot = $0 }
             .overlay { trendPopupOverlay }
             .navigationTitle("Dashboard")
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
@@ -295,15 +284,14 @@ struct DashboardView: View {
             }
             .chartOverlay { proxy in
                 GeometryReader { geo in
-                    // Report the plot rect in "dash" space so the popup can sit on
-                    // top of everything, outside the chart's clip.
                     Color.clear
-                        .preference(key: TrendPlotKey.self, value: plotRect(proxy, geo))
                         .contentShape(Rectangle())
-                        // Opens the popup; while open, the full-screen catcher below
-                        // intercepts taps (switch bar / dismiss) instead.
                         .onTapGesture { location in
                             guard let plot = proxy.plotFrame else { return }
+                            // Capture the plot rect on tap only — measuring it every
+                            // scroll frame via a preference re-rendered the whole
+                            // dashboard and made scrolling stutter.
+                            trendPlot = plotRect(proxy, geo)
                             let x = location.x - geo[plot].origin.x
                             selectTrendBar(atX: x, using: proxy)
                         }

@@ -97,11 +97,10 @@ struct AccountsView: View {
                         Spacer()
                         Text(Money.string(groupTotal))
                             .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundStyle(groupTotal < 0 ? Color.negative : Color.positive)
+                            .foregroundStyle(balanceColor(groupTotal))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background((groupTotal < 0 ? Color.negative : Color.positive).opacity(0.14),
-                                        in: Capsule())
+                            .background(balanceColor(groupTotal).opacity(0.14), in: Capsule())
                     }
                     .padding(.top, 8)
                 }
@@ -111,7 +110,7 @@ struct AccountsView: View {
                         .foregroundStyle(Color.textSecondary)
                     Spacer()
                     MoneyText(value: group.subtotal, size: 14, weight: .semibold,
-                              color: group.subtotal < 0 ? .negative : .positive)
+                              color: balanceColor(group.subtotal))
                 }
             }
             .textCase(nil)
@@ -123,10 +122,17 @@ struct AccountsView: View {
             Text(account.displayName).foregroundStyle(Color.textPrimary)
             Spacer()
             MoneyText(value: account.balance, code: account.currency, size: 17, weight: .semibold,
-                      color: account.balance < 0 ? .negative : .positive)
+                      color: balanceColor(account.balance))
         }
         .padding(.vertical, 4)
     }
+}
+
+/// Red for negative, green for positive, white for exactly zero.
+func balanceColor(_ value: Decimal) -> Color {
+    if value < 0 { return .negative }
+    if value == 0 { return .textPrimary }
+    return .positive
 }
 
 struct AccountDetailView: View {
@@ -169,7 +175,7 @@ struct AccountDetailView: View {
                 } else {
                     LabeledContent("Balance") {
                         MoneyText(value: account.balance, code: account.currency,
-                                  color: account.balance < 0 ? .negative : .positive)
+                                  color: balanceColor(account.balance))
                     }
                 }
                 Picker("Type", selection: $account.accountType) {
