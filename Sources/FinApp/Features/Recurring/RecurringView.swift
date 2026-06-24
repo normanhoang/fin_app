@@ -83,12 +83,13 @@ struct RecurringRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        let color = Color(hex: bill.category?.colorHex ?? "#8E8E93")
+        return HStack(spacing: 12) {
             ZStack {
-                Circle().fill(Color.brand.opacity(0.15))
-                Image(systemName: "arrow.clockwise")
+                Circle().fill(color.opacity(0.15))
+                Image(systemName: bill.category?.systemIcon ?? "questionmark.circle")
                     .font(.system(size: 14))
-                    .foregroundStyle(Color.brand)
+                    .foregroundStyle(color)
             }
             .frame(width: 38, height: 38)
             VStack(alignment: .leading, spacing: 4) {

@@ -11,6 +11,7 @@ enum RecurringDetector {
         var cadence: Cadence
         var lastSeen: Date
         var nextDue: Date
+        var category: Category?
     }
 
     static let minOccurrences = 3
@@ -31,13 +32,16 @@ enum RecurringDetector {
             let amounts = items.map { abs($0.amount) }.sorted()
             let lastSeen = dates.last!
             let nextDue = calendar.date(byAdding: .day, value: cadence.days, to: lastSeen) ?? lastSeen
+            // Most recent assigned category from this merchant's transactions.
+            let category = items.sorted { $0.posted > $1.posted }.compactMap(\.category).first
 
             return Candidate(
                 merchantName: merchant,
                 expectedAmount: median(amounts),
                 cadence: cadence,
                 lastSeen: lastSeen,
-                nextDue: nextDue
+                nextDue: nextDue,
+                category: category
             )
         }
         .sorted { $0.merchantName < $1.merchantName }
@@ -79,6 +83,7 @@ enum RecurringDetector {
                 bill.cadence = candidate.cadence
                 bill.lastSeen = candidate.lastSeen
                 bill.nextDue = candidate.nextDue
+                if bill.category == nil { bill.category = candidate.category }
             } else {
                 context.insert(RecurringBill(
                     merchantName: candidate.merchantName,
@@ -86,7 +91,8 @@ enum RecurringDetector {
                     cadence: candidate.cadence,
                     lastSeen: candidate.lastSeen,
                     nextDue: candidate.nextDue,
-                    confirmed: false
+                    confirmed: false,
+                    category: candidate.category
                 ))
             }
         }

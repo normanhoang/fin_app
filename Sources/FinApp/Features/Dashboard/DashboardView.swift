@@ -147,7 +147,7 @@ struct DashboardView: View {
 
     private var categoryCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionLabel("\(now.formatted(.dateTime.month(.wide))) Spending")
+            SectionLabel("Spending Categories")
             ForEach(topCategories) { item in
                 let color = Color(hex: item.category?.colorHex ?? "#8E8E93")
                 let name = item.category?.name ?? "Uncategorized"
