@@ -4,6 +4,7 @@ import SwiftData
 struct TransactionsView: View {
     @Environment(AppRouter.self) private var router
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
+    @Query(sort: \Category.name) private var categories: [Category]
     @State private var search = ""
     @State private var path: [Transaction] = []
     /// Bumped on tab arrival to rebuild the List at the very top.
@@ -132,26 +133,51 @@ struct TransactionsView: View {
         router.pendingTxnID = nil
     }
 
-    private var searchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search payee or category", text: $search)
-                .textFieldStyle(.plain)
-                .foregroundStyle(Color.textPrimary)
-                .autocorrectionDisabled()
-                .accessibilityIdentifier("txnSearchField")
-            if !search.isEmpty {
-                Button {
-                    search = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(Color.textSecondary)
-                }
-                .buttonStyle(.plain)
-            }
+    private var currentFilterCategory: Category? {
+        if case .category(let name) = router.txnFilter {
+            return categories.first { $0.name == name }
         }
-        .padding(10)
-        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
+        return nil
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search payee or category", text: $search)
+                    .textFieldStyle(.plain)
+                    .foregroundStyle(Color.textPrimary)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("txnSearchField")
+                if !search.isEmpty {
+                    Button {
+                        search = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(Color.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(10)
+            .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
+
+            Menu {
+                ForEach(categories) { category in
+                    Button {
+                        router.txnFilter = .category(category.name)
+                    } label: {
+                        Label(category.name, systemImage: category.systemIcon)
+                        if currentFilterCategory == category { Image(systemName: "checkmark") }
+                    }
+                }
+            } label: {
+                Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                    .font(.system(size: 26))
+                    .foregroundStyle(Color.brand)
+            }
+            .accessibilityIdentifier("filterButton")
+        }
         .padding(.horizontal)
         .padding(.top, 8)
         .padding(.bottom, 6)
@@ -185,7 +211,6 @@ struct TransactionDetailView: View {
     let transaction: Transaction
 
     @State private var recurringCadence: Cadence = .monthly
-    @State private var showingCategoryPicker = false
 
     private var merchant: String {
         CategorizationEngine.normalizeMerchant(transaction.payee ?? transaction.detail)
@@ -246,7 +271,21 @@ struct TransactionDetailView: View {
     }
 
     private var categoryMenu: some View {
-        Button { showingCategoryPicker = true } label: {
+        Menu {
+            ForEach(categories) { category in
+                Button {
+                    // Remember this choice as a rule (applies to future syncs) and
+                    // apply it now to similar existing transactions.
+                    CategorizationEngine.learn(from: transaction, category: category, in: context)
+                    CategorizationEngine.categorizeAll(in: context)
+                } label: {
+                    Label(category.name, systemImage: category.systemIcon)
+                    if transaction.category == category {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+        } label: {
             HStack {
                 Label {
                     Text(transaction.category?.name ?? "Uncategorized").foregroundStyle(.primary)
@@ -258,17 +297,7 @@ struct TransactionDetailView: View {
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
             }
         }
-        .buttonStyle(.plain)
         .accessibilityIdentifier("categoryMenu")
-        .popover(isPresented: $showingCategoryPicker) {
-            CategoryPickerList(categories: categories, selected: transaction.category) { category in
-                // Remember this choice as a rule (applies to future syncs) and
-                // apply it now to similar existing transactions.
-                CategorizationEngine.learn(from: transaction, category: category, in: context)
-                CategorizationEngine.categorizeAll(in: context)
-                showingCategoryPicker = false
-            }
-        }
     }
 
     private func setRecurring() {

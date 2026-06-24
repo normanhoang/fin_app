@@ -35,48 +35,6 @@ extension View {
     func screenBackground() -> some View { modifier(ScreenBackground()) }
 }
 
-// MARK: - Category picker
-
-/// A vertical list of categories (icon + name + checkmark), shown in a popover so
-/// every category is visible without scrolling — a taller stand-in for the system
-/// Menu, which caps its height and scrolls.
-struct CategoryPickerList: View {
-    let categories: [Category]
-    let selected: Category?
-    let onSelect: (Category) -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ForEach(categories) { category in
-                Button {
-                    onSelect(category)
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: category.systemIcon)
-                            .foregroundStyle(Color(hex: category.colorHex))
-                            .frame(width: 24)
-                        Text(category.name).foregroundStyle(Color.textPrimary)
-                        Spacer(minLength: 12)
-                        if selected == category {
-                            Image(systemName: "checkmark").foregroundStyle(Color.brand)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("pickCategory-\(category.name)")
-                if category != categories.last {
-                    Divider().overlay(Color.hairline)
-                }
-            }
-        }
-        .frame(width: 260)
-        .presentationCompactAdaptation(.popover)
-    }
-}
-
 // MARK: - Chip
 
 /// Small rounded label used for account types, cadences, and subtotals.
