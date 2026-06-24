@@ -43,6 +43,10 @@ struct DashboardView: View {
     /// The trend chart's plot rectangle, in the "dash" coordinate space — used to
     /// position the popup and to map taps back to a bar.
     @State private var trendPlot: CGRect = .zero
+    /// Bumped when this tab becomes active to rebuild the scroll view, which
+    /// reliably lands at the very top (expanded title) — scrollTo only reaches the
+    /// first item and is dropped mid-paging.
+    @State private var topReset = 0
     @Environment(\.bottomBarInset) private var bottomBarInset
 
     var body: some View {
@@ -51,39 +55,26 @@ struct DashboardView: View {
                 if accounts.isEmpty {
                     emptyState
                 } else {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            VStack(spacing: 16) {
-                                heroCard
-                                monthRow
-                                if !topCategories.isEmpty { categoryCard }
-                                trendCard
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                            .padding(.bottom, 24)
-                            .id("dashTop")
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            heroCard
+                            monthRow
+                            if !topCategories.isEmpty { categoryCard }
+                            trendCard
                         }
-                        .contentMargins(.bottom, bottomBarInset * 0.7, for: .scrollContent)
-                        .scrollIndicators(.hidden)
-                        // Scrolling the page closes the trend popup. Observing the
-                        // scroll offset (not a gesture) avoids interfering with the
-                        // horizontal tab-paging swipe.
-                        .onTrendScroll {
-                            if selectedTrendMonth != nil { selectedTrendMonth = nil }
-                        }
-                        // Arriving on this tab (swipe or tap) jumps back to the top
-                        // and dismisses any open popup.
-                        .onChange(of: router.selectedTab) {
-                            selectedTrendMonth = nil
-                            if router.selectedTab == AppTab.dashboard.rawValue {
-                                // Defer past the paging transition, else the scroll is dropped.
-                                DispatchQueue.main.async {
-                                    withAnimation(.none) { proxy.scrollTo("dashTop", anchor: .top) }
-                                }
-                            }
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
                     }
+                    .contentMargins(.bottom, bottomBarInset * 0.7, for: .scrollContent)
+                    .scrollIndicators(.hidden)
+                    // Scrolling the page closes the trend popup. Observing the
+                    // scroll offset (not a gesture) avoids interfering with the
+                    // horizontal tab-paging swipe.
+                    .onTrendScroll {
+                        if selectedTrendMonth != nil { selectedTrendMonth = nil }
+                    }
+                    .id(topReset)
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
@@ -97,8 +88,13 @@ struct DashboardView: View {
         // tab owns `subpageOpen`, so an inactive tab's reset can't re-enable paging
         // while another tab has a detail open.
         .onChange(of: router.selectedTab) {
-            if router.selectedTab == AppTab.dashboard.rawValue { router.subpageOpen = !path.isEmpty }
-            else { path = NavigationPath() }
+            selectedTrendMonth = nil
+            if router.selectedTab == AppTab.dashboard.rawValue {
+                router.subpageOpen = !path.isEmpty
+                topReset += 1   // arriving → rebuild at the very top
+            } else {
+                path = NavigationPath()
+            }
         }
         .onChange(of: path) {
             if router.selectedTab == AppTab.dashboard.rawValue { router.subpageOpen = !path.isEmpty }

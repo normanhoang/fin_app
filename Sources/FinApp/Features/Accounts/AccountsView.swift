@@ -6,6 +6,8 @@ struct AccountsView: View {
     @Query(sort: \Account.name) private var accounts: [Account]
     @State private var showingAdd = false
     @State private var path: [Account] = []
+    /// Bumped on tab arrival to rebuild the List at the very top.
+    @State private var topReset = 0
 
     /// Accounts of one type, kept together as a subsection.
     private struct TypeGroup: Identifiable {
@@ -39,28 +41,19 @@ struct AccountsView: View {
                         description: Text("Connect SimpleFin or add a manual account with the + button.")
                     )
                 } else {
-                    ScrollViewReader { proxy in
-                        List {
-                            // One Section per type so the inset card rounds at each type's
-                            // top and bottom; an eyebrow marks the first Assets/Debts type.
-                            ForEach(assetGroups) { typeSection($0, groupTitle: "Assets",
-                                                                groupTotal: total(assetGroups),
-                                                                showEyebrow: $0.id == assetGroups.first?.id) }
-                            ForEach(debtGroups) { typeSection($0, groupTitle: "Debts",
-                                                              groupTotal: total(debtGroups),
-                                                              showEyebrow: $0.id == debtGroups.first?.id) }
-                        }
-                        .listRowSeparatorTint(Color.hairline)
-                        .screenBackground()
-                        .onChange(of: router.selectedTab) {
-                            if router.selectedTab == AppTab.accounts.rawValue,
-                               let topID = assetGroups.first?.id ?? debtGroups.first?.id {
-                                DispatchQueue.main.async {
-                                    withAnimation(.none) { proxy.scrollTo(topID, anchor: .top) }
-                                }
-                            }
-                        }
+                    List {
+                        // One Section per type so the inset card rounds at each type's
+                        // top and bottom; an eyebrow marks the first Assets/Debts type.
+                        ForEach(assetGroups) { typeSection($0, groupTitle: "Assets",
+                                                            groupTotal: total(assetGroups),
+                                                            showEyebrow: $0.id == assetGroups.first?.id) }
+                        ForEach(debtGroups) { typeSection($0, groupTitle: "Debts",
+                                                          groupTotal: total(debtGroups),
+                                                          showEyebrow: $0.id == debtGroups.first?.id) }
                     }
+                    .listRowSeparatorTint(Color.hairline)
+                    .screenBackground()
+                    .id(topReset)
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
@@ -75,8 +68,10 @@ struct AccountsView: View {
             .sheet(isPresented: $showingAdd) { AddAccountView() }
         }
         .onChange(of: router.selectedTab) {
-            if router.selectedTab == AppTab.accounts.rawValue { router.subpageOpen = !path.isEmpty }
-            else { path = [] }
+            if router.selectedTab == AppTab.accounts.rawValue {
+                router.subpageOpen = !path.isEmpty
+                topReset += 1
+            } else { path = [] }
         }
         .onChange(of: path) {
             if router.selectedTab == AppTab.accounts.rawValue { router.subpageOpen = !path.isEmpty }

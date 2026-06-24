@@ -6,6 +6,8 @@ struct RecurringView: View {
     @Environment(AppRouter.self) private var router
     @Query(sort: \RecurringBill.nextDue) private var bills: [RecurringBill]
     @State private var path: [RecurringBill] = []
+    /// Bumped on tab arrival to rebuild the List at the very top.
+    @State private var topReset = 0
 
     private var confirmed: [RecurringBill] { bills.filter { $0.confirmed && !$0.dismissed } }
     private var candidates: [RecurringBill] { bills.filter { !$0.confirmed && !$0.dismissed } }
@@ -20,39 +22,29 @@ struct RecurringView: View {
                         description: Text("Subscriptions and bills are detected automatically as you sync.")
                     )
                 } else {
-                    ScrollViewReader { proxy in
-                        List {
-                            if !confirmed.isEmpty {
-                                Section {
-                                    ForEach(confirmed) { billRow($0) }
-                                } header: {
-                                    Text("Upcoming")
-                                }
-                                .listRowBackground(Color.surface)
-                                .id("listTop")
+                    List {
+                        if !confirmed.isEmpty {
+                            Section {
+                                ForEach(confirmed) { billRow($0) }
+                            } header: {
+                                Text("Upcoming")
                             }
-                            if !candidates.isEmpty {
-                                Section {
-                                    ForEach(candidates) { billRow($0) }
-                                } header: {
-                                    Text("Detected")
-                                } footer: {
-                                    Text("Tap a detected bill to confirm it or remove a false match.")
-                                }
-                                .listRowBackground(Color.surface)
-                                .id(confirmed.isEmpty ? "listTop" : "detectedSection")
-                            }
+                            .listRowBackground(Color.surface)
                         }
-                        .listRowSeparatorTint(Color.hairline)
-                        .screenBackground()
-                        .onChange(of: router.selectedTab) {
-                            if router.selectedTab == AppTab.recurring.rawValue {
-                                DispatchQueue.main.async {
-                                    withAnimation(.none) { proxy.scrollTo("listTop", anchor: .top) }
-                                }
+                        if !candidates.isEmpty {
+                            Section {
+                                ForEach(candidates) { billRow($0) }
+                            } header: {
+                                Text("Detected")
+                            } footer: {
+                                Text("Tap a detected bill to confirm it or remove a false match.")
                             }
+                            .listRowBackground(Color.surface)
                         }
                     }
+                    .listRowSeparatorTint(Color.hairline)
+                    .screenBackground()
+                    .id(topReset)
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
@@ -60,8 +52,10 @@ struct RecurringView: View {
             .navigationDestination(for: RecurringBill.self) { RecurringDetailView(bill: $0) }
         }
         .onChange(of: router.selectedTab) {
-            if router.selectedTab == AppTab.recurring.rawValue { router.subpageOpen = !path.isEmpty }
-            else { path = [] }
+            if router.selectedTab == AppTab.recurring.rawValue {
+                router.subpageOpen = !path.isEmpty
+                topReset += 1
+            } else { path = [] }
         }
         .onChange(of: path) {
             if router.selectedTab == AppTab.recurring.rawValue { router.subpageOpen = !path.isEmpty }

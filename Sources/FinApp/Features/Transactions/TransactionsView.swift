@@ -6,6 +6,8 @@ struct TransactionsView: View {
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
     @State private var search = ""
     @State private var path: [Transaction] = []
+    /// Bumped on tab arrival to rebuild the List at the very top.
+    @State private var topReset = 0
 
     private var filtered: [Transaction] {
         var result = transactions.filter { matches(router.txnFilter, $0) }
@@ -54,33 +56,24 @@ struct TransactionsView: View {
                     if let label = filterLabel {
                         filterChip(label)
                     }
-                    ScrollViewReader { proxy in
-                        List {
-                            ForEach(monthGroups, id: \.month) { group in
-                                Section {
-                                    ForEach(group.txns) { txn in
-                                        NavigationLink(value: txn) {
-                                            TransactionRow(transaction: txn)
-                                        }
-                                        .listRowBackground(Color.surface)
-                                        .accessibilityIdentifier("txnRow-\(txn.id)")
+                    List {
+                        ForEach(monthGroups, id: \.month) { group in
+                            Section {
+                                ForEach(group.txns) { txn in
+                                    NavigationLink(value: txn) {
+                                        TransactionRow(transaction: txn)
                                     }
-                                } header: {
-                                    Text(group.month.formatted(.dateTime.month(.wide).year()))
+                                    .listRowBackground(Color.surface)
+                                    .accessibilityIdentifier("txnRow-\(txn.id)")
                                 }
-                            }
-                        }
-                        .listRowSeparatorTint(Color.hairline)
-                        .screenBackground()
-                        .onChange(of: router.selectedTab) {
-                            if router.selectedTab == AppTab.transactions.rawValue,
-                               let top = monthGroups.first?.month {
-                                DispatchQueue.main.async {
-                                    withAnimation(.none) { proxy.scrollTo(top, anchor: .top) }
-                                }
+                            } header: {
+                                Text(group.month.formatted(.dateTime.month(.wide).year()))
                             }
                         }
                     }
+                    .listRowSeparatorTint(Color.hairline)
+                    .screenBackground()
+                    .id(topReset)
                 }
                 .background(Color.appBackground.ignoresSafeArea())
                 .navigationTitle("Transactions")
@@ -107,6 +100,7 @@ struct TransactionsView: View {
             }
             router.txnArrivalIsDeepLink = false
             router.subpageOpen = !path.isEmpty
+            topReset += 1   // arriving → rebuild the list at the very top
         } else {
             path = []
         }

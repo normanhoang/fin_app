@@ -6,16 +6,17 @@ struct SettingsView: View {
     @Environment(AppRouter.self) private var router
     @AppStorage("appearanceMode") private var appearanceRaw = AppearanceMode.system.rawValue
     @State private var setupToken = ""
+    /// Bumped on tab arrival to rebuild the List at the very top.
+    @State private var topReset = 0
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
             VStack(spacing: 0) {
             List {
                 if coordinator.isConnected {
-                    connectedSection.id("listTop")
+                    connectedSection
                 } else {
-                    connectSection.id("listTop")
+                    connectSection
                 }
 
                 if !coordinator.providerErrors.isEmpty {
@@ -68,18 +69,14 @@ struct SettingsView: View {
             }
             .listRowSeparatorTint(Color.hairline)
             .screenBackground()
+            .id(topReset)
             }
             // Wrapping the List in a VStack gives the large title its proper
             // leading inset without needing a pull-to-refresh on this page.
             .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Settings")
             .onChange(of: router.selectedTab) {
-                if router.selectedTab == AppTab.settings.rawValue {
-                    DispatchQueue.main.async {
-                        withAnimation(.none) { proxy.scrollTo("listTop", anchor: .top) }
-                    }
-                }
-            }
+                if router.selectedTab == AppTab.settings.rawValue { topReset += 1 }
             }
         }
     }
