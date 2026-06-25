@@ -49,6 +49,7 @@ struct RecurringView: View {
             }
             .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Recurring")
+            .fixLargeTitleInset(trigger: topReset)
             .navigationDestination(for: RecurringBill.self) { RecurringDetailView(bill: $0) }
         }
         .onChange(of: router.selectedTab) {

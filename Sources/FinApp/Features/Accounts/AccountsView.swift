@@ -58,6 +58,7 @@ struct AccountsView: View {
             }
             .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Accounts")
+            .fixLargeTitleInset(trigger: topReset)
             .navigationDestination(for: Account.self) { AccountDetailView(account: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

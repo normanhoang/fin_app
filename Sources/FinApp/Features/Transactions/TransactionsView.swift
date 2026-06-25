@@ -78,6 +78,7 @@ struct TransactionsView: View {
                 }
                 .background(Color.appBackground.ignoresSafeArea())
                 .navigationTitle("Transactions")
+                .fixLargeTitleInset(trigger: topReset)
                 .navigationDestination(for: Transaction.self) { txn in
                     TransactionDetailView(transaction: txn)
                 }

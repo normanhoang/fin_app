@@ -11,7 +11,6 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
             List {
                 if coordinator.isConnected {
                     connectedSection
@@ -70,11 +69,9 @@ struct SettingsView: View {
             .listRowSeparatorTint(Color.hairline)
             .screenBackground()
             .id(topReset)
-            }
-            // Wrapping the List in a VStack gives the large title its proper
-            // leading inset without needing a pull-to-refresh on this page.
             .background(Color.appBackground.ignoresSafeArea())
             .navigationTitle("Settings")
+            .fixLargeTitleInset(trigger: topReset)
             .onChange(of: router.selectedTab) {
                 if router.selectedTab == AppTab.settings.rawValue { topReset += 1 }
             }

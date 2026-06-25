@@ -71,6 +71,7 @@ struct DashboardView: View {
             .coordinateSpace(name: "dash")
             .overlay { trendPopupOverlay }
             .navigationTitle("Dashboard")
+            .fixLargeTitleInset(trigger: topReset)
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
         }
         // Switching away from this tab resets it to its root page. Only the active

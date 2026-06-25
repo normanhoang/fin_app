@@ -309,6 +309,26 @@ final class FinAppUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts[name].waitForExistence(timeout: 3), "Account not deleted")
     }
 
+    // 13. After switching tabs, the large navigation title keeps its proper leading
+    //     inset (regression: it used to render flush-left until a manual scroll).
+    func testLargeTitleInsetAfterTabSwitch() {
+        let app = launch(tab: 2) // Dashboard (production default landing tab)
+        XCTAssertTrue(app.navigationBars["Dashboard"].waitForExistence(timeout: 8))
+
+        for title in ["Recurring", "Settings", "Accounts", "Transactions"] {
+            app.buttons["tab-\(title)"].tap()
+            let bar = app.navigationBars[title]
+            XCTAssertTrue(bar.waitForExistence(timeout: 5), "\(title) nav bar missing")
+            let titleText = bar.staticTexts[title]
+            XCTAssertTrue(titleText.waitForExistence(timeout: 3), "\(title) large title missing")
+            snap(app, "title-inset-\(title)")
+            // A correct large title sits ~16pt from the screen edge; the bug
+            // collapses the leading inset toward 0.
+            XCTAssertGreaterThan(titleText.frame.minX, 12,
+                                 "\(title) large title is flush-left (inset collapsed)")
+        }
+    }
+
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
     func testRecurringRowOpensDetail() {
         let app = launch(tab: 3) // Recurring
