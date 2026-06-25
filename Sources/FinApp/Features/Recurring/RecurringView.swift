@@ -203,12 +203,19 @@ struct RecurringDetailView: View {
 
     private var categoryMenu: some View {
         Menu {
+            Button {
+                bill.category = nil
+                try? context.save()
+            } label: {
+                Label("Uncategorized",
+                      systemImage: bill.category == nil ? "checkmark" : "questionmark.circle")
+            }
             ForEach(categories) { category in
                 Button {
                     setCategory(category)
                 } label: {
-                    Label(category.name, systemImage: category.systemIcon)
-                    if bill.category == category { Image(systemName: "checkmark") }
+                    Label(category.name,
+                          systemImage: bill.category == category ? "checkmark" : category.systemIcon)
                 }
             }
         } label: {

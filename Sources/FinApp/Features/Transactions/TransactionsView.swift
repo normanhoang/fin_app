@@ -164,12 +164,18 @@ struct TransactionsView: View {
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
 
             Menu {
+                Button {
+                    router.txnFilter = .uncategorized
+                } label: {
+                    Label("Uncategorized",
+                          systemImage: router.txnFilter == .uncategorized ? "checkmark" : "questionmark.circle")
+                }
                 ForEach(categories) { category in
                     Button {
                         router.txnFilter = .category(category.name)
                     } label: {
-                        Label(category.name, systemImage: category.systemIcon)
-                        if currentFilterCategory == category { Image(systemName: "checkmark") }
+                        Label(category.name,
+                              systemImage: currentFilterCategory == category ? "checkmark" : category.systemIcon)
                     }
                 }
             } label: {
@@ -273,6 +279,15 @@ struct TransactionDetailView: View {
 
     private var categoryMenu: some View {
         Menu {
+            Button {
+                // Clear the category and protect the choice from auto-recategorizing.
+                transaction.category = nil
+                transaction.categorizedByUser = true
+                try? context.save()
+            } label: {
+                Label("Uncategorized",
+                      systemImage: transaction.category == nil ? "checkmark" : "questionmark.circle")
+            }
             ForEach(categories) { category in
                 Button {
                     // Remember this choice as a rule (applies to future syncs) and
@@ -280,10 +295,10 @@ struct TransactionDetailView: View {
                     CategorizationEngine.learn(from: transaction, category: category, in: context)
                     CategorizationEngine.categorizeAll(in: context)
                 } label: {
-                    Label(category.name, systemImage: category.systemIcon)
-                    if transaction.category == category {
-                        Image(systemName: "checkmark")
-                    }
+                    // A trailing checkmark image is dropped by the native menu, so mark
+                    // the active row by swapping its leading icon to a checkmark.
+                    Label(category.name,
+                          systemImage: transaction.category == category ? "checkmark" : category.systemIcon)
                 }
             }
         } label: {
