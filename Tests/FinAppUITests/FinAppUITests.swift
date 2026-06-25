@@ -94,6 +94,22 @@ final class FinAppUITests: XCTestCase {
         snap(app, "category-changed")
     }
 
+    // 3c. The filter menu offers an "Uncategorized" option that filters the list.
+    func testUncategorizedFilterOption() {
+        let app = launch(tab: 1)
+        let filter = app.buttons["filterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
+        filter.tap()
+
+        let uncategorized = app.buttons["Uncategorized"].firstMatch
+        XCTAssertTrue(uncategorized.waitForExistence(timeout: 5), "Uncategorized option missing from filter menu")
+        uncategorized.tap()
+
+        XCTAssertTrue(app.staticTexts["Filtered: Uncategorized"].waitForExistence(timeout: 5),
+                      "Uncategorized filter not applied")
+        snap(app, "filter-uncategorized")
+    }
+
     // 3b. The Filter button opens the category popup and filters the list.
     func testFilterButtonFiltersTransactions() {
         let app = launch(tab: 1)
@@ -327,6 +343,27 @@ final class FinAppUITests: XCTestCase {
             XCTAssertGreaterThan(titleText.frame.minX, 12,
                                  "\(title) large title is flush-left (inset collapsed)")
         }
+    }
+
+    // 14. The Spending Categories filter hides a category from the Dashboard list.
+    func testHideCategoryFromDashboard() {
+        let app = launch(tab: 2)
+        let groceries = app.buttons["category-Groceries"]
+        XCTAssertTrue(groceries.waitForExistence(timeout: 8), "Groceries row not found")
+
+        let filter = app.buttons["categoryFilterButton"]
+        while !filter.isHittable { app.swipeUp() }
+        filter.tap()
+
+        let toggle = app.buttons["catToggle-Groceries"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "Category filter popup did not open")
+        toggle.tap()
+        // Tap away (outside the popover) to dismiss it.
+        app.navigationBars["Dashboard"].tap()
+
+        XCTAssertFalse(app.buttons["category-Groceries"].waitForExistence(timeout: 3),
+                       "Hidden category should be removed from the Spending Categories list")
+        snap(app, "category-hidden")
     }
 
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
