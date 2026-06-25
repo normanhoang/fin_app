@@ -10,6 +10,8 @@ final class Category {
     var systemIcon: String
     /// Income categories (paycheck, refunds) are kept out of spending totals.
     var isIncome: Bool
+    /// Hidden categories are omitted from the Dashboard "Spending Categories" list.
+    var isHidden: Bool = false
 
     @Relationship(deleteRule: .nullify)
     var transactions: [Transaction]
