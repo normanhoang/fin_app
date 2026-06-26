@@ -54,12 +54,8 @@ struct RecurringView: View {
         }
         .onChange(of: router.selectedTab) {
             if router.selectedTab == AppTab.recurring.rawValue {
-                router.subpageOpen = !path.isEmpty
                 topReset += 1
             } else { path = [] }
-        }
-        .onChange(of: path) {
-            if router.selectedTab == AppTab.recurring.rawValue { router.subpageOpen = !path.isEmpty }
         }
     }
 
@@ -113,6 +109,7 @@ struct RecurringDetailView: View {
     @Query(sort: \Transaction.posted, order: .reverse) private var allTransactions: [Transaction]
     @Bindable var bill: RecurringBill
     @State private var amountText = ""
+    @State private var showCategoryPicker = false
 
     private var matched: [Transaction] {
         allTransactions.filter {
@@ -202,15 +199,8 @@ struct RecurringDetailView: View {
     }
 
     private var categoryMenu: some View {
-        Menu {
-            ForEach(categories) { category in
-                Button {
-                    setCategory(category)
-                } label: {
-                    Label(category.name, systemImage: category.systemIcon)
-                    if bill.category == category { Image(systemName: "checkmark") }
-                }
-            }
+        Button {
+            showCategoryPicker = true
         } label: {
             HStack {
                 Label {
@@ -222,8 +212,26 @@ struct RecurringDetailView: View {
                 Spacer()
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("recurringCategoryMenu")
+        .popover(isPresented: $showCategoryPicker) {
+            CategoryPickerPopup(
+                categories: categories,
+                selectedName: bill.category?.name,
+                isUncategorizedSelected: bill.category == nil,
+                onSelect: { selected in
+                    if let category = selected {
+                        setCategory(category)
+                    } else {
+                        bill.category = nil
+                        try? context.save()
+                    }
+                }
+            )
+            .presentationCompactAdaptation(.popover)
+        }
     }
 
     /// Set the bill's category and apply it to this merchant's transactions, learning

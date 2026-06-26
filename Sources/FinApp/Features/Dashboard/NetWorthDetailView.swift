@@ -24,10 +24,27 @@ enum NWRange: String, CaseIterable, Identifiable {
 struct NetWorthDetailView: View {
     @Query(sort: \NetWorthSnapshot.day) private var snapshots: [NetWorthSnapshot]
     @State private var range: NWRange = .sixMonths
+    @State private var selectedDate: Date?
 
     private var filtered: [NetWorthSnapshot] {
         guard let start = range.start() else { return snapshots }
         return snapshots.filter { $0.day >= start }
+    }
+
+    /// Y range with ~18% top headroom so the scrub popup clears a near-max dot.
+    private var yDomain: ClosedRange<Double> {
+        let vals = filtered.map { ($0.value as NSDecimalNumber).doubleValue }
+        let maxV = vals.max() ?? 1
+        let minV = Swift.min(vals.min() ?? 0, 0)
+        return minV ... (maxV * 1.18)
+    }
+
+    /// Snapshot in `filtered` whose day is closest to the scrubbed x-position.
+    private var selectedSnapshot: NetWorthSnapshot? {
+        guard let selectedDate else { return nil }
+        return filtered.min {
+            abs($0.day.timeIntervalSince(selectedDate)) < abs($1.day.timeIntervalSince(selectedDate))
+        }
     }
 
     var body: some View {
@@ -99,7 +116,28 @@ struct NetWorthDetailView: View {
                     colors: [.brand.opacity(0.30), .brand.opacity(0.02)],
                     startPoint: .top, endPoint: .bottom
                 ))
+
+                if let selectedSnapshot {
+                    RuleMark(x: .value("Day", selectedSnapshot.day, unit: .day))
+                        .foregroundStyle(Color.textSecondary.opacity(0.4))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    // The label rides the PointMark (the last-drawn mark) so it renders
+                    // on top of every other element; `y: .disabled` keeps it directly
+                    // above the dot instead of being pushed down onto it.
+                    PointMark(
+                        x: .value("Day", selectedSnapshot.day, unit: .day),
+                        y: .value("Net Worth", (selectedSnapshot.value as NSDecimalNumber).doubleValue)
+                    )
+                    .foregroundStyle(Color.brand)
+                    .symbolSize(80)
+                    .annotation(position: .top, spacing: 8,
+                                overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                        scrubLabel(selectedSnapshot)
+                    }
+                }
             }
+            .chartXSelection(value: $selectedDate)
+            .chartYScale(domain: yDomain)
             .chartXAxis {
                 // Cap the number of labels and tilt them so dense data doesn't overlap.
                 AxisMarks(values: .automatic(desiredCount: 5)) { value in
@@ -119,8 +157,24 @@ struct NetWorthDetailView: View {
                 AxisGridLine().foregroundStyle(Color.hairline)
                 AxisValueLabel().foregroundStyle(Color.textSecondary)
             } }
+            .padding(.top, 28)
             .frame(height: 240)
             .padding(.vertical, 8)
         }
+    }
+
+    private func scrubLabel(_ snapshot: NetWorthSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(snapshot.day, format: .dateTime.month(.abbreviated).day().year())
+                .font(.caption2)
+                .foregroundStyle(Color.textSecondary)
+            Text(Money.string(snapshot.value))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.textPrimary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.hairline))
     }
 }

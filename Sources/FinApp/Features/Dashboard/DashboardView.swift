@@ -25,11 +25,15 @@ struct DashboardView: View {
     @Query private var accounts: [Account]
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
     @Query(sort: \NetWorthSnapshot.day) private var snapshots: [NetWorthSnapshot]
+    @Query(sort: \Category.name) private var categories: [Category]
 
     private let calendar = Calendar.current
     private var now: Date { Date() }
     @State private var path = NavigationPath()
     @State private var selectedTrendMonth: Date?
+    @State private var showCategoryFilter = false
+    /// Hide the synthetic "Uncategorized" row from the Spending Categories list.
+    @AppStorage("dashHideUncategorized") private var hideUncategorized = false
     /// The trend chart's plot rectangle, in the "dash" coordinate space — used to
     /// position the popup and to map taps back to a bar.
     @State private var trendPlot: CGRect = .zero
@@ -74,20 +78,14 @@ struct DashboardView: View {
             .fixLargeTitleInset(trigger: topReset)
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
         }
-        // Switching away from this tab resets it to its root page. Only the active
-        // tab owns `subpageOpen`, so an inactive tab's reset can't re-enable paging
-        // while another tab has a detail open.
+        // Switching away from this tab resets it to its root page.
         .onChange(of: router.selectedTab) {
             selectedTrendMonth = nil
             if router.selectedTab == AppTab.dashboard.rawValue {
-                router.subpageOpen = !path.isEmpty
                 topReset += 1   // arriving → rebuild at the very top
             } else {
                 path = NavigationPath()
             }
-        }
-        .onChange(of: path) {
-            if router.selectedTab == AppTab.dashboard.rawValue { router.subpageOpen = !path.isEmpty }
         }
     }
 
@@ -186,13 +184,29 @@ struct DashboardView: View {
         // Transfers move money between your own accounts — not real spending.
         Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
             .filter { $0.category?.name != "Transfers" }
+            .filter { !($0.category?.isHidden ?? false) }
+            .filter { $0.category != nil || !hideUncategorized }
     }
 
     private var maxCategoryTotal: Decimal { topCategories.map(\.total).max() ?? 1 }
 
     private var categoryCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionLabel("Spending Categories")
+            HStack {
+                SectionLabel("Spending Categories")
+                Spacer()
+                Button { showCategoryFilter = true } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.brand)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("categoryFilterButton")
+                .popover(isPresented: $showCategoryFilter) {
+                    categoryFilterPopup
+                        .presentationCompactAdaptation(.popover)
+                }
+            }
             ForEach(topCategories) { item in
                 let color = Color(hex: item.category?.colorHex ?? "#8E8E93")
                 let name = item.category?.name ?? "Uncategorized"
@@ -234,6 +248,71 @@ struct DashboardView: View {
                 }
         }
         .frame(height: 4)
+    }
+
+    /// Toggle which categories appear in the Spending Categories list. Tapping a
+    /// row flips `isHidden` (SwiftData autosaves); the list updates live behind the
+    /// popover, and tapping outside dismisses it.
+    private var categoryFilterPopup: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionLabel("Show Categories")
+            ScrollView {
+                VStack(spacing: 4) {
+                    let uncatVisible = !hideUncategorized
+                    Button {
+                        hideUncategorized.toggle()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "questionmark.circle")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.textSecondary)
+                                .frame(width: 22)
+                            Text("Uncategorized")
+                                .foregroundStyle(Color.textPrimary)
+                            Spacer(minLength: 16)
+                            Image(systemName: uncatVisible ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(uncatVisible ? Color.brand : Color.textSecondary)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(uncatVisible ? Color.brand.opacity(0.12) : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("catToggle-Uncategorized")
+                    ForEach(categories) { category in
+                        let visible = !category.isHidden
+                        Button {
+                            category.isHidden.toggle()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: category.systemIcon)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(Color(hex: category.colorHex))
+                                    .frame(width: 22)
+                                Text(category.name)
+                                    .foregroundStyle(Color.textPrimary)
+                                Spacer(minLength: 16)
+                                Image(systemName: visible ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(visible ? Color.brand : Color.textSecondary)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(visible ? Color.brand.opacity(0.12) : Color.clear,
+                                        in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("catToggle-\(category.name)")
+                    }
+                }
+            }
+            .frame(maxHeight: 360)
+        }
+        .padding(16)
+        .frame(width: 260)
+        .background(Color.surface)
     }
 
     // MARK: Trend

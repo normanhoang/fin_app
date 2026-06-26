@@ -6,6 +6,7 @@ struct TransactionsView: View {
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
     @Query(sort: \Category.name) private var categories: [Category]
     @State private var search = ""
+    @State private var showFilterPicker = false
     @State private var path: [Transaction] = []
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
@@ -87,7 +88,6 @@ struct TransactionsView: View {
         .onChange(of: router.resetToken) { path = []; search = "" }
         .onChange(of: router.pendingTxnID) { openPendingTransaction() }
         .onChange(of: router.selectedTab) { handleTabChange() }
-        .onChange(of: path) { handlePathChange() }
         .onAppear { openPendingTransaction() }
     }
 
@@ -101,19 +101,9 @@ struct TransactionsView: View {
                 search = ""
             }
             router.txnArrivalIsDeepLink = false
-            router.subpageOpen = !path.isEmpty
             topReset += 1   // arriving → rebuild the list at the very top
         } else {
             path = []
-        }
-    }
-
-    // Only the active tab owns `subpageOpen`, so an inactive tab resetting its path
-    // can't re-enable pager swiping while this detail is open (which would let a
-    // back-swipe page to a neighbouring tab instead of popping the detail).
-    private func handlePathChange() {
-        if router.selectedTab == AppTab.transactions.rawValue {
-            router.subpageOpen = !path.isEmpty
         }
     }
 
@@ -132,13 +122,6 @@ struct TransactionsView: View {
               let txn = transactions.first(where: { $0.id == id }) else { return }
         path = [txn]
         router.pendingTxnID = nil
-    }
-
-    private var currentFilterCategory: Category? {
-        if case .category(let name) = router.txnFilter {
-            return categories.first { $0.name == name }
-        }
-        return nil
     }
 
     private var searchBar: some View {
@@ -163,21 +146,30 @@ struct TransactionsView: View {
             .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
 
-            Menu {
-                ForEach(categories) { category in
-                    Button {
-                        router.txnFilter = .category(category.name)
-                    } label: {
-                        Label(category.name, systemImage: category.systemIcon)
-                        if currentFilterCategory == category { Image(systemName: "checkmark") }
-                    }
-                }
+            Button {
+                showFilterPicker = true
             } label: {
                 Image(systemName: "line.3.horizontal.decrease.circle.fill")
                     .font(.system(size: 26))
                     .foregroundStyle(Color.brand)
             }
+            .buttonStyle(.plain)
             .accessibilityIdentifier("filterButton")
+            .popover(isPresented: $showFilterPicker) {
+                CategoryPickerPopup(
+                    categories: categories,
+                    selectedName: { if case .category(let name) = router.txnFilter { name } else { nil } }(),
+                    isUncategorizedSelected: router.txnFilter == .uncategorized,
+                    onSelect: { selected in
+                        if let category = selected {
+                            router.txnFilter = .category(category.name)
+                        } else {
+                            router.txnFilter = .uncategorized
+                        }
+                    }
+                )
+                .presentationCompactAdaptation(.popover)
+            }
         }
         .padding(.horizontal)
         .padding(.top, 8)
@@ -212,6 +204,7 @@ struct TransactionDetailView: View {
     let transaction: Transaction
 
     @State private var recurringCadence: Cadence = .monthly
+    @State private var showCategoryPicker = false
 
     private var merchant: String {
         CategorizationEngine.normalizeMerchant(transaction.payee ?? transaction.detail)
@@ -272,20 +265,8 @@ struct TransactionDetailView: View {
     }
 
     private var categoryMenu: some View {
-        Menu {
-            ForEach(categories) { category in
-                Button {
-                    // Remember this choice as a rule (applies to future syncs) and
-                    // apply it now to similar existing transactions.
-                    CategorizationEngine.learn(from: transaction, category: category, in: context)
-                    CategorizationEngine.categorizeAll(in: context)
-                } label: {
-                    Label(category.name, systemImage: category.systemIcon)
-                    if transaction.category == category {
-                        Image(systemName: "checkmark")
-                    }
-                }
-            }
+        Button {
+            showCategoryPicker = true
         } label: {
             HStack {
                 Label {
@@ -297,8 +278,31 @@ struct TransactionDetailView: View {
                 Spacer()
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("categoryMenu")
+        .popover(isPresented: $showCategoryPicker) {
+            CategoryPickerPopup(
+                categories: categories,
+                selectedName: transaction.category?.name,
+                isUncategorizedSelected: transaction.category == nil,
+                onSelect: { selected in
+                    if let category = selected {
+                        // Remember this choice as a rule (applies to future syncs)
+                        // and apply it now to similar existing transactions.
+                        CategorizationEngine.learn(from: transaction, category: category, in: context)
+                        CategorizationEngine.categorizeAll(in: context)
+                    } else {
+                        // Clear the category and protect it from auto-recategorizing.
+                        transaction.category = nil
+                        transaction.categorizedByUser = true
+                        try? context.save()
+                    }
+                }
+            )
+            .presentationCompactAdaptation(.popover)
+        }
     }
 
     private func setRecurring() {
