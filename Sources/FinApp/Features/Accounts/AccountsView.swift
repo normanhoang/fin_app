@@ -70,12 +70,8 @@ struct AccountsView: View {
         }
         .onChange(of: router.selectedTab) {
             if router.selectedTab == AppTab.accounts.rawValue {
-                router.subpageOpen = !path.isEmpty
                 topReset += 1
             } else { path = [] }
-        }
-        .onChange(of: path) {
-            if router.selectedTab == AppTab.accounts.rawValue { router.subpageOpen = !path.isEmpty }
         }
     }
 

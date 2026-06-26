@@ -88,7 +88,6 @@ struct TransactionsView: View {
         .onChange(of: router.resetToken) { path = []; search = "" }
         .onChange(of: router.pendingTxnID) { openPendingTransaction() }
         .onChange(of: router.selectedTab) { handleTabChange() }
-        .onChange(of: path) { handlePathChange() }
         .onAppear { openPendingTransaction() }
     }
 
@@ -102,19 +101,9 @@ struct TransactionsView: View {
                 search = ""
             }
             router.txnArrivalIsDeepLink = false
-            router.subpageOpen = !path.isEmpty
             topReset += 1   // arriving → rebuild the list at the very top
         } else {
             path = []
-        }
-    }
-
-    // Only the active tab owns `subpageOpen`, so an inactive tab resetting its path
-    // can't re-enable pager swiping while this detail is open (which would let a
-    // back-swipe page to a neighbouring tab instead of popping the detail).
-    private func handlePathChange() {
-        if router.selectedTab == AppTab.transactions.rawValue {
-            router.subpageOpen = !path.isEmpty
         }
     }
 
