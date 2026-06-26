@@ -32,6 +32,8 @@ struct DashboardView: View {
     @State private var path = NavigationPath()
     @State private var selectedTrendMonth: Date?
     @State private var showCategoryFilter = false
+    /// Hide the synthetic "Uncategorized" row from the Spending Categories list.
+    @AppStorage("dashHideUncategorized") private var hideUncategorized = false
     /// The trend chart's plot rectangle, in the "dash" coordinate space — used to
     /// position the popup and to map taps back to a bar.
     @State private var trendPlot: CGRect = .zero
@@ -189,6 +191,7 @@ struct DashboardView: View {
         Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
             .filter { $0.category?.name != "Transfers" }
             .filter { !($0.category?.isHidden ?? false) }
+            .filter { $0.category != nil || !hideUncategorized }
     }
 
     private var maxCategoryTotal: Decimal { topCategories.map(\.total).max() ?? 1 }
@@ -261,6 +264,29 @@ struct DashboardView: View {
             SectionLabel("Show Categories")
             ScrollView {
                 VStack(spacing: 4) {
+                    let uncatVisible = !hideUncategorized
+                    Button {
+                        hideUncategorized.toggle()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "questionmark.circle")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.textSecondary)
+                                .frame(width: 22)
+                            Text("Uncategorized")
+                                .foregroundStyle(Color.textPrimary)
+                            Spacer(minLength: 16)
+                            Image(systemName: uncatVisible ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(uncatVisible ? Color.brand : Color.textSecondary)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(uncatVisible ? Color.brand.opacity(0.12) : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("catToggle-Uncategorized")
                     ForEach(categories) { category in
                         let visible = !category.isHidden
                         Button {
