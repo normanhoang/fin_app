@@ -31,6 +31,14 @@ struct NetWorthDetailView: View {
         return snapshots.filter { $0.day >= start }
     }
 
+    /// Y range with ~18% top headroom so the scrub popup clears a near-max dot.
+    private var yDomain: ClosedRange<Double> {
+        let vals = filtered.map { ($0.value as NSDecimalNumber).doubleValue }
+        let maxV = vals.max() ?? 1
+        let minV = Swift.min(vals.min() ?? 0, 0)
+        return minV ... (maxV * 1.18)
+    }
+
     /// Snapshot in `filtered` whose day is closest to the scrubbed x-position.
     private var selectedSnapshot: NetWorthSnapshot? {
         guard let selectedDate else { return nil }
@@ -113,18 +121,23 @@ struct NetWorthDetailView: View {
                     RuleMark(x: .value("Day", selectedSnapshot.day, unit: .day))
                         .foregroundStyle(Color.textSecondary.opacity(0.4))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                        .annotation(position: .top, spacing: 4, overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
-                            scrubLabel(selectedSnapshot)
-                        }
+                    // The label rides the PointMark (the last-drawn mark) so it renders
+                    // on top of every other element; `y: .disabled` keeps it directly
+                    // above the dot instead of being pushed down onto it.
                     PointMark(
                         x: .value("Day", selectedSnapshot.day, unit: .day),
                         y: .value("Net Worth", (selectedSnapshot.value as NSDecimalNumber).doubleValue)
                     )
                     .foregroundStyle(Color.brand)
                     .symbolSize(80)
+                    .annotation(position: .top, spacing: 8,
+                                overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                        scrubLabel(selectedSnapshot)
+                    }
                 }
             }
             .chartXSelection(value: $selectedDate)
+            .chartYScale(domain: yDomain)
             .chartXAxis {
                 // Cap the number of labels and tilt them so dense data doesn't overlap.
                 AxisMarks(values: .automatic(desiredCount: 5)) { value in
