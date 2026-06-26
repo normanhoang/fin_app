@@ -134,13 +134,6 @@ struct TransactionsView: View {
         router.pendingTxnID = nil
     }
 
-    private var currentFilterCategory: Category? {
-        if case .category(let name) = router.txnFilter {
-            return categories.first { $0.name == name }
-        }
-        return nil
-    }
-
     private var searchBar: some View {
         HStack(spacing: 10) {
             HStack(spacing: 8) {
@@ -164,20 +157,31 @@ struct TransactionsView: View {
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
 
             Menu {
-                Button {
-                    router.txnFilter = .uncategorized
-                } label: {
-                    Label("Uncategorized",
-                          systemImage: router.txnFilter == .uncategorized ? "checkmark" : "questionmark.circle")
-                }
-                ForEach(categories) { category in
-                    Button {
-                        router.txnFilter = .category(category.name)
-                    } label: {
-                        Label(category.name,
-                              systemImage: currentFilterCategory == category ? "checkmark" : category.systemIcon)
+                // Inline Picker: keeps category icons, native checkmark on the active
+                // filter. Selection is keyed by name; "" means no category filter
+                // (e.g. All/Income/Spending) so nothing is checked.
+                Picker("Filter", selection: Binding(
+                    get: {
+                        switch router.txnFilter {
+                        case .uncategorized: "\u{0000}uncategorized"
+                        case .category(let name): name
+                        default: ""
+                        }
+                    },
+                    set: { (newValue: String) in
+                        if newValue == "\u{0000}uncategorized" {
+                            router.txnFilter = .uncategorized
+                        } else if let category = categories.first(where: { $0.name == newValue }) {
+                            router.txnFilter = .category(category.name)
+                        }
+                    }
+                )) {
+                    Label("Uncategorized", systemImage: "questionmark.circle").tag("\u{0000}uncategorized")
+                    ForEach(categories) { category in
+                        Label(category.name, systemImage: category.systemIcon).tag(category.name)
                     }
                 }
+                .pickerStyle(.inline)
             } label: {
                 Image(systemName: "line.3.horizontal.decrease.circle.fill")
                     .font(.system(size: 26))
@@ -279,28 +283,30 @@ struct TransactionDetailView: View {
 
     private var categoryMenu: some View {
         Menu {
-            Button {
-                // Clear the category and protect the choice from auto-recategorizing.
-                transaction.category = nil
-                transaction.categorizedByUser = true
-                try? context.save()
-            } label: {
-                Label("Uncategorized",
-                      systemImage: transaction.category == nil ? "checkmark" : "questionmark.circle")
-            }
-            ForEach(categories) { category in
-                Button {
-                    // Remember this choice as a rule (applies to future syncs) and
-                    // apply it now to similar existing transactions.
-                    CategorizationEngine.learn(from: transaction, category: category, in: context)
-                    CategorizationEngine.categorizeAll(in: context)
-                } label: {
-                    // A trailing checkmark image is dropped by the native menu, so mark
-                    // the active row by swapping its leading icon to a checkmark.
-                    Label(category.name,
-                          systemImage: transaction.category == category ? "checkmark" : category.systemIcon)
+            // An inline Picker keeps each category's icon and shows a native
+            // checkmark on the current selection (nil == Uncategorized).
+            Picker("Category", selection: Binding(
+                get: { transaction.category },
+                set: { newValue in
+                    if let category = newValue {
+                        // Remember this choice as a rule (applies to future syncs)
+                        // and apply it now to similar existing transactions.
+                        CategorizationEngine.learn(from: transaction, category: category, in: context)
+                        CategorizationEngine.categorizeAll(in: context)
+                    } else {
+                        // Clear the category and protect it from auto-recategorizing.
+                        transaction.category = nil
+                        transaction.categorizedByUser = true
+                        try? context.save()
+                    }
+                }
+            )) {
+                Label("Uncategorized", systemImage: "questionmark.circle").tag(Optional<Category>.none)
+                ForEach(categories) { category in
+                    Label(category.name, systemImage: category.systemIcon).tag(Optional(category))
                 }
             }
+            .pickerStyle(.inline)
         } label: {
             HStack {
                 Label {

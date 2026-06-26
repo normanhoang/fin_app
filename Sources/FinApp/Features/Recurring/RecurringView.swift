@@ -203,21 +203,25 @@ struct RecurringDetailView: View {
 
     private var categoryMenu: some View {
         Menu {
-            Button {
-                bill.category = nil
-                try? context.save()
-            } label: {
-                Label("Uncategorized",
-                      systemImage: bill.category == nil ? "checkmark" : "questionmark.circle")
-            }
-            ForEach(categories) { category in
-                Button {
-                    setCategory(category)
-                } label: {
-                    Label(category.name,
-                          systemImage: bill.category == category ? "checkmark" : category.systemIcon)
+            // Inline Picker keeps category icons and shows a native checkmark on the
+            // current selection (nil == Uncategorized).
+            Picker("Category", selection: Binding(
+                get: { bill.category },
+                set: { newValue in
+                    if let category = newValue {
+                        setCategory(category)
+                    } else {
+                        bill.category = nil
+                        try? context.save()
+                    }
+                }
+            )) {
+                Label("Uncategorized", systemImage: "questionmark.circle").tag(Optional<Category>.none)
+                ForEach(categories) { category in
+                    Label(category.name, systemImage: category.systemIcon).tag(Optional(category))
                 }
             }
+            .pickerStyle(.inline)
         } label: {
             HStack {
                 Label {
