@@ -113,6 +113,7 @@ struct RecurringDetailView: View {
     @Query(sort: \Transaction.posted, order: .reverse) private var allTransactions: [Transaction]
     @Bindable var bill: RecurringBill
     @State private var amountText = ""
+    @State private var showCategoryPicker = false
 
     private var matched: [Transaction] {
         allTransactions.filter {
@@ -202,26 +203,8 @@ struct RecurringDetailView: View {
     }
 
     private var categoryMenu: some View {
-        Menu {
-            // Inline Picker keeps category icons and shows a native checkmark on the
-            // current selection (nil == Uncategorized).
-            Picker("Category", selection: Binding(
-                get: { bill.category },
-                set: { newValue in
-                    if let category = newValue {
-                        setCategory(category)
-                    } else {
-                        bill.category = nil
-                        try? context.save()
-                    }
-                }
-            )) {
-                Label("Uncategorized", systemImage: "questionmark.circle").tag(Optional<Category>.none)
-                ForEach(categories) { category in
-                    Label(category.name, systemImage: category.systemIcon).tag(Optional(category))
-                }
-            }
-            .pickerStyle(.inline)
+        Button {
+            showCategoryPicker = true
         } label: {
             HStack {
                 Label {
@@ -233,8 +216,26 @@ struct RecurringDetailView: View {
                 Spacer()
                 Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("recurringCategoryMenu")
+        .popover(isPresented: $showCategoryPicker) {
+            CategoryPickerPopup(
+                categories: categories,
+                selectedName: bill.category?.name,
+                isUncategorizedSelected: bill.category == nil,
+                onSelect: { selected in
+                    if let category = selected {
+                        setCategory(category)
+                    } else {
+                        bill.category = nil
+                        try? context.save()
+                    }
+                }
+            )
+            .presentationCompactAdaptation(.popover)
+        }
     }
 
     /// Set the bill's category and apply it to this merchant's transactions, learning

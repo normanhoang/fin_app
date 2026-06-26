@@ -38,6 +38,7 @@
 		7EDBDF51B6DE6D779CC20FDA /* FinAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009DED65DEC305AE07BF2B1 /* FinAppUITests.swift */; };
 		830604D207F45DDE30C64A52 /* RecurringStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 725B00DD1C0DB2802CC7B87F /* RecurringStoreTests.swift */; };
 		8845CF2FD892AF2F86B8F1D4 /* CertificatePinner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83E9F972299B9113B1459971 /* CertificatePinner.swift */; };
+		8F265E086629CA5F3323F3A0 /* CategoryPickerPopup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 700D2977F598124C05780603 /* CategoryPickerPopup.swift */; };
 		9050621A3E190824E037C9C8 /* CertificatePinnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01D92227D4FC668C5E576325 /* CertificatePinnerTests.swift */; };
 		92E54102B44376538D0F6B44 /* CredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA19FD56220E94FB9F9B8A06 /* CredentialStoreTests.swift */; };
 		9C6DB0B1771AA72FDF3D81E1 /* AccountType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D3BBB0FAE7CB66E82483CA /* AccountType.swift */; };
@@ -105,6 +106,7 @@
 		679C5CE470E0A8FB16D007C2 /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		67D9D282FA26B1CA7C500013 /* DesignComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignComponents.swift; sourceTree = "<group>"; };
 		6EE2F05A0132E181B8820225 /* RecurringDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringDetectorTests.swift; sourceTree = "<group>"; };
+		700D2977F598124C05780603 /* CategoryPickerPopup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPickerPopup.swift; sourceTree = "<group>"; };
 		71E0C0CFBEFA86055F447425 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
 		725B00DD1C0DB2802CC7B87F /* RecurringStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringStoreTests.swift; sourceTree = "<group>"; };
 		768E0A9F851B31523F3F4359 /* CategoryRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryRule.swift; sourceTree = "<group>"; };
@@ -243,6 +245,7 @@
 			isa = PBXGroup;
 			children = (
 				679C5CE470E0A8FB16D007C2 /* AppLock.swift */,
+				700D2977F598124C05780603 /* CategoryPickerPopup.swift */,
 				67D9D282FA26B1CA7C500013 /* DesignComponents.swift */,
 				0AF50253EE05EB506D6F973D /* Formatting.swift */,
 				AB70D4CE933C581B0369E8DE /* KeyboardDismiss.swift */,
@@ -519,6 +522,7 @@
 				FFA44D52AC81C504BCD5F43B /* BudgetsView.swift in Sources */,
 				C1B282377FB42D75D41228B1 /* CategorizationEngine.swift in Sources */,
 				FEB7622646B2A61DC95A0D32 /* Category.swift in Sources */,
+				8F265E086629CA5F3323F3A0 /* CategoryPickerPopup.swift in Sources */,
 				222B3D717288A86A8A9F1D51 /* CategoryRule.swift in Sources */,
 				278F6B84F7328471FEF4DEF7 /* CategorySeed.swift in Sources */,
 				8845CF2FD892AF2F86B8F1D4 /* CertificatePinner.swift in Sources */,
