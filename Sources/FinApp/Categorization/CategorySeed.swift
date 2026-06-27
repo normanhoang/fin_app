@@ -36,6 +36,8 @@ enum CategorySeed {
              keywords: ["tuition", "university", "college", "campus", "udemy", "coursera", "edx", "textbook", "bookstore", "school"]),
         Seed(name: "Travel", color: "#FFCC00", icon: "airplane", isIncome: false,
              keywords: ["airline", "hotel", "airbnb", "delta", "united", "expedia", "marriott", "hilton"]),
+        Seed(name: "Entertainment", color: "#FF6482", icon: "theatermasks", isIncome: false,
+             keywords: ["cinema", "movie", "theater", "theatre", "amc", "regal", "concert", "ticketmaster", "stubhub", "steam", "playstation", "xbox", "nintendo", "bowling", "arcade", "museum"]),
         Seed(name: "Transfers", color: "#8E8E93", icon: "arrow.left.arrow.right", isIncome: false,
              keywords: ["transfer", "venmo", "zelle", "withdrawal", "atm", "paypal"]),
     ]
