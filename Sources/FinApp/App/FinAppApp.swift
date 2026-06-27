@@ -27,6 +27,11 @@ struct FinAppApp: App {
         self.container = container
         _coordinator = State(initialValue: SyncCoordinator(context: container.mainContext))
         #endif
+
+        // Seed default categories at launch so newly-shipped defaults reach
+        // existing installs without waiting for a network sync.
+        CategorySeed.seedIfNeeded(in: self.container.mainContext)
+        CategorySeed.ensureMissing(in: self.container.mainContext)
     }
 
     var body: some Scene {
