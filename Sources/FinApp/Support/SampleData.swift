@@ -1,9 +1,9 @@
-#if DEBUG
 import Foundation
 import SwiftData
 
 /// Injects realistic fake data so the UI can be exercised without a live
-/// SimpleFin connection. DEBUG-only; never compiled into release builds.
+/// SimpleFin connection. Compiled into release too, so the Settings screen can
+/// offer a "Preview with sample data" path (used for App Review demos).
 enum SampleData {
     @MainActor
     static func inject(into context: ModelContext) {
@@ -81,5 +81,14 @@ enum SampleData {
         }
         try? context.save()
     }
+
+    /// Deletes every persisted object, so a user (or App Review) can remove
+    /// sample data or wipe all local financial data.
+    @MainActor
+    static func wipeAll(in context: ModelContext) {
+        for model in AppSchema.models {
+            try? context.delete(model: model)
+        }
+        try? context.save()
+    }
 }
-#endif
