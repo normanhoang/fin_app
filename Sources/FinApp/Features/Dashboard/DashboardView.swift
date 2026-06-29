@@ -78,14 +78,20 @@ struct DashboardView: View {
             .fixLargeTitleInset(trigger: topReset)
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
         }
-        // Switching away from this tab resets it to its root page.
+        // Switching away from this tab resets it to its root page. Only the active
+        // tab owns `subpageOpen`, so an inactive tab's reset can't re-enable paging
+        // while another tab has a detail open.
         .onChange(of: router.selectedTab) {
             selectedTrendMonth = nil
             if router.selectedTab == AppTab.dashboard.rawValue {
+                router.subpageOpen = !path.isEmpty
                 topReset += 1   // arriving → rebuild at the very top
             } else {
                 path = NavigationPath()
             }
+        }
+        .onChange(of: path) {
+            if router.selectedTab == AppTab.dashboard.rawValue { router.subpageOpen = !path.isEmpty }
         }
     }
 

@@ -44,6 +44,8 @@ struct RootView: View {
                     .scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.paging)
+                // Pause tab paging while a detail is open so the native back-swipe pops.
+                .scrollDisabled(router.subpageOpen)
                 // scrollPosition is the single source of truth: it scrolls on
                 // programmatic tab changes (tab bar, Dashboard/Accounts deep-links)
                 // and updates the tab on swipe.

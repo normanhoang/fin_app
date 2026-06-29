@@ -34,6 +34,9 @@ final class AppRouter {
     /// tap or swipe leaves this false, so Transactions resets its filter + search.
     /// Consumed by TransactionsView on arrival.
     var txnArrivalIsDeepLink = false
+    /// True while the active tab has a pushed subpage; pauses pager swiping so the
+    /// native back-swipe pops instead of changing tabs.
+    var subpageOpen = false
     /// Bumped on every "show the Transactions list" deep-link so the Transactions
     /// stack pops any pushed detail back to the (filtered) root.
     private(set) var resetToken = UUID()
