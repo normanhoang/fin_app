@@ -27,7 +27,7 @@ struct TransactionsView: View {
         switch filter {
         case .all: true
         case .income: txn.category?.isIncome == true && txn.amount > 0
-        case .spending: txn.amount < 0 && txn.category?.isIncome != true
+        case .spending: txn.amount < 0 && txn.category?.isIncome != true && txn.category?.name != "Transfers"
         case .uncategorized: txn.category == nil
         case .category(let name): txn.category?.name == name
         }

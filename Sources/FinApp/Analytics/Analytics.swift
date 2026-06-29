@@ -35,10 +35,11 @@ enum Analytics {
             .reduce(Decimal(0)) { $0 + $1.amount }
     }
 
-    /// Outflows (positive magnitude) excluding income categories for the month.
+    /// Outflows (positive magnitude) excluding income and Transfers categories for the month.
+    /// Transfers move money between a user's own accounts — not real spending.
     static func monthlySpending(_ txns: [Transaction], inMonthOf date: Date, calendar: Calendar = .current) -> Decimal {
         inMonth(txns, of: date, calendar: calendar)
-            .filter { $0.amount < 0 && $0.category?.isIncome != true }
+            .filter { $0.amount < 0 && $0.category?.isIncome != true && $0.category?.name != "Transfers" }
             .reduce(Decimal(0)) { $0 - $1.amount }
     }
 
