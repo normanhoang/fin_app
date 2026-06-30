@@ -213,10 +213,11 @@ struct AccountDetailView: View {
                 ForEach(monthGroups, id: \.month) { group in
                     Section {
                         ForEach(group.txns) { txn in
-                            TransactionRow(transaction: txn)
-                                .contentShape(Rectangle())
-                                .onTapGesture { router.openTransaction(id: txn.id) }
-                                .accessibilityIdentifier("acctTxnRow-\(txn.id)")
+                            Button { router.openTransaction(id: txn.id) } label: {
+                                TransactionRow(transaction: txn)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("acctTxnRow-\(txn.id)")
                         }
                     } header: {
                         Text(group.month.formatted(.dateTime.month(.wide).year()))

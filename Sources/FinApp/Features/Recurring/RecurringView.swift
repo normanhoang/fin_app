@@ -174,10 +174,11 @@ struct RecurringDetailView: View {
                 ForEach(monthGroups, id: \.month) { group in
                     Section {
                         ForEach(group.txns) { txn in
-                            TransactionRow(transaction: txn)
-                                .contentShape(Rectangle())
-                                .onTapGesture { router.openTransaction(id: txn.id) }
-                                .accessibilityIdentifier("recurringTxnRow-\(txn.id)")
+                            Button { router.openTransaction(id: txn.id) } label: {
+                                TransactionRow(transaction: txn)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("recurringTxnRow-\(txn.id)")
                         }
                     } header: {
                         Text(group.month.formatted(.dateTime.month(.wide).year()))

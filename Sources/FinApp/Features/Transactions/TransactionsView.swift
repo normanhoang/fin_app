@@ -298,19 +298,7 @@ struct TransactionDetailView: View {
                 categories: categories,
                 selectedName: transaction.category?.name,
                 isUncategorizedSelected: transaction.category == nil,
-                onSelect: { selected in
-                    if let category = selected {
-                        // Remember this choice as a rule (applies to future syncs)
-                        // and apply it now to similar existing transactions.
-                        CategorizationEngine.learn(from: transaction, category: category, in: context)
-                        CategorizationEngine.categorizeAll(in: context)
-                    } else {
-                        // Clear the category and protect it from auto-recategorizing.
-                        transaction.category = nil
-                        transaction.categorizedByUser = true
-                        try? context.save()
-                    }
-                }
+                onSelect: { CategorizationEngine.assign($0, to: transaction, in: context) }
             )
             .presentationCompactAdaptation(.popover)
         }

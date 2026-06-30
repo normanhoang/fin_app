@@ -46,6 +46,21 @@ enum CategorizationEngine {
         return rule
     }
 
+    /// Assign (or clear) a transaction's category from a user action. A non-nil
+    /// category learns a rule and re-runs auto-categorization; nil clears the
+    /// category and protects it from auto-recategorizing.
+    @MainActor
+    static func assign(_ category: Category?, to txn: Transaction, in context: ModelContext) {
+        if let category {
+            learn(from: txn, category: category, in: context)
+            categorizeAll(in: context)
+        } else {
+            txn.category = nil
+            txn.categorizedByUser = true
+            try? context.save()
+        }
+    }
+
     /// Lowercase and drop tokens that contain digits or punctuation noise, so
     /// "COFFEE SHOP #42" and "COFFEE SHOP #99" collapse to "coffee shop".
     static func normalizeMerchant(_ raw: String) -> String {
