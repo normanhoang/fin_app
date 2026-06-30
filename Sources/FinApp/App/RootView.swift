@@ -22,6 +22,10 @@ struct RootView: View {
     }
 
     @State private var barHeight: CGFloat = 0
+    // Live offset for the interactive left-swipe slide on a subpage (<= 0), and
+    // the page width it animates across.
+    @State private var dragX: CGFloat = 0
+    @State private var pageWidth: CGFloat = 0
 
     var body: some View {
         // A horizontal paging ScrollView restores swipe-between-tabs WITHOUT the
@@ -42,10 +46,54 @@ struct RootView: View {
                         pageView(SettingsView(), AppTab.settings.rawValue)
                     }
                     .scrollTargetLayout()
+                    // Transient shift for the subpage left-swipe slide: moves the
+                    // current page left so the already-laid-out next page peeks in.
+                    .offset(x: dragX)
                 }
                 .scrollTargetBehavior(.paging)
                 // Pause tab paging while a detail is open so the native back-swipe pops.
                 .scrollDisabled(router.subpageOpen)
+                // Capture the page width so the slide can animate across exactly one page.
+                .background(GeometryReader { geo in
+                    Color.clear
+                        .onAppear { pageWidth = geo.size.width }
+                        .onChange(of: geo.size.width) { pageWidth = geo.size.width }
+                })
+                // With paging paused on a subpage, a LEFT-only interactive slide
+                // pages to the next tab (which clears the tab's path, closing the
+                // detail). simultaneousGesture keeps the native right back-swipe and
+                // the detail List's vertical scroll working; it never consumes the touch.
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { value in
+                            guard router.subpageOpen, router.selectedTab < Self.tabCount - 1 else { return }
+                            let dx = value.translation.width, dy = value.translation.height
+                            guard dx < 0, abs(dx) > abs(dy) else { dragX = 0; return }
+                            dragX = max(dx, -pageWidth)
+                        }
+                        .onEnded { value in
+                            guard router.subpageOpen, router.selectedTab < Self.tabCount - 1 else { dragX = 0; return }
+                            // Commit on either a past-30% drag or a fast leftward flick,
+                            // so a quick flick doesn't stall. Spring carries the finger's
+                            // velocity into the animation for a native, continuous feel.
+                            let commit = -value.translation.width > pageWidth * 0.3 || value.velocity.width < -350
+                            let spring = Animation.interactiveSpring(response: 0.3, dampingFraction: 0.82)
+                            if commit {
+                                withAnimation(spring) {
+                                    dragX = -pageWidth
+                                } completion: {
+                                    // scrollPosition jumps the viewport to the next page
+                                    // and we drop the manual shift in the same (non-animated)
+                                    // step, so there's no flash. The tab change also pops
+                                    // the open detail via each tab's onChange(of: selectedTab).
+                                    router.selectedTab += 1
+                                    dragX = 0
+                                }
+                            } else {
+                                withAnimation(spring) { dragX = 0 }
+                            }
+                        }
+                )
                 // scrollPosition is the single source of truth: it scrolls on
                 // programmatic tab changes (tab bar, Dashboard/Accounts deep-links)
                 // and updates the tab on swipe.

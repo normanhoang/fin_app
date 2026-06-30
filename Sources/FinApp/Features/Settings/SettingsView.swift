@@ -77,7 +77,13 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .fixLargeTitleInset(trigger: topReset)
             .onChange(of: router.selectedTab) {
-                if router.selectedTab == AppTab.settings.rawValue { topReset += 1 }
+                // Settings has no pushable subpage, so arriving here always clears
+                // subpageOpen — otherwise a stale `true` (e.g. arriving from another
+                // tab's open detail) would keep paging disabled and block swiping.
+                if router.selectedTab == AppTab.settings.rawValue {
+                    topReset += 1
+                    router.subpageOpen = false
+                }
             }
             .confirmationDialog("Clear all local data?", isPresented: $showClearConfirm, titleVisibility: .visible) {
                 Button("Clear all data", role: .destructive) { SampleData.wipeAll(in: context) }
