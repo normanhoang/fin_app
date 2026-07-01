@@ -28,6 +28,15 @@ Set via `SIMCTL_CHILD_<VAR>` for `simctl launch`, or `XCUIApplication.launchEnvi
 - `FINAPP_UITEST=1` — use an **in-memory** container + fresh sample data each launch
   (clean, deterministic; used by `FinAppUITests`).
 
+### Archive & export IPA (App Store)
+Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `project.yml`, then `xcodegen generate`.
+- Archive: `xcodebuild archive -scheme FinApp -destination 'generic/platform=iOS' -archivePath build/FinApp.xcarchive -allowProvisioningUpdates`
+- Export: `xcodebuild -exportArchive -archivePath build/FinApp.xcarchive -exportPath build/export -exportOptionsPlist exportOptions.plist -allowProvisioningUpdates`
+  → `build/export/FinApp.ipa` (method `app-store-connect`, automatic signing).
+- Gotcha: the export **auto-bumps `CFBundleVersion`** (App Store Connect exports manage the
+  build number by default), so the IPA's build number can differ from `project.yml`.
+- App Store assets (listing copy, privacy policy, support page, screenshots) live in `AppStore/`.
+
 ### Deploy to a physical device
 Build with `-destination 'platform=iOS,id=<UDID>' -allowProvisioningUpdates`
 (signs as "Apple Development"), then
