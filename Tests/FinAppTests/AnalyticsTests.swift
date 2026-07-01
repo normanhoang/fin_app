@@ -94,4 +94,24 @@ final class AnalyticsTests: XCTestCase {
         XCTAssertEqual(result.map(\.category?.name), ["Shopping", "Food"])
         XCTAssertEqual(result.map(\.total), [Decimal(string: "100.00"), Decimal(string: "50.00")])
     }
+
+    func testSpendingCategoriesIncludesZeroTotalCategories() {
+        let food = cat("Food")            // has spend
+        _ = cat("Shopping")               // no spend → $0 row
+        _ = cat("Transport")              // no spend → $0 row
+        _ = cat("Paycheck", income: true) // income → excluded
+        let hidden = cat("Bills"); hidden.isHidden = true // hidden → excluded
+        _ = cat("Transfers")              // internal movement → excluded
+        txn("-40.00", date(2026, 6, 5), category: food)
+        let txns = try! ctx.fetch(FetchDescriptor<Transaction>())
+        let cats = try! ctx.fetch(FetchDescriptor<FinApp.Category>())
+
+        let result = Analytics.spendingCategories(txns, categories: cats,
+                                                  inMonthOf: date(2026, 6, 1), calendar: cal)
+        // Food (40) first; the two $0 categories follow, alphabetically. Income,
+        // hidden, and Transfers are excluded.
+        XCTAssertEqual(result.map(\.category?.name), ["Food", "Shopping", "Transport"])
+        XCTAssertEqual(result.map(\.total),
+                       [Decimal(string: "40.00"), Decimal(0), Decimal(0)])
+    }
 }

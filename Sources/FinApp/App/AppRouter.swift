@@ -37,6 +37,10 @@ final class AppRouter {
     /// True while the active tab has a pushed subpage; pauses pager swiping so the
     /// native back-swipe pops instead of changing tabs.
     var subpageOpen = false
+    /// True while a subpage is actively capturing horizontal drags (e.g. scrubbing
+    /// the Net Worth chart), so the left-swipe-to-next-tab gesture stays out of the
+    /// way and the scrub isn't hijacked into a tab change.
+    var suppressPageSwipe = false
     /// Bumped on every "show the Transactions list" deep-link so the Transactions
     /// stack pops any pushed detail back to the (filtered) root.
     private(set) var resetToken = UUID()

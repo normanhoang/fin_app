@@ -66,13 +66,15 @@ struct RootView: View {
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 10)
                         .onChanged { value in
-                            guard router.subpageOpen, router.selectedTab < Self.tabCount - 1 else { return }
+                            guard router.subpageOpen, !router.suppressPageSwipe,
+                                  router.selectedTab < Self.tabCount - 1 else { return }
                             let dx = value.translation.width, dy = value.translation.height
                             guard dx < 0, abs(dx) > abs(dy) else { dragX = 0; return }
                             dragX = max(dx, -pageWidth)
                         }
                         .onEnded { value in
-                            guard router.subpageOpen, router.selectedTab < Self.tabCount - 1 else { dragX = 0; return }
+                            guard router.subpageOpen, !router.suppressPageSwipe,
+                                  router.selectedTab < Self.tabCount - 1 else { dragX = 0; return }
                             // Commit on either a past-30% drag or a fast leftward flick,
                             // so a quick flick doesn't stall. Spring carries the finger's
                             // velocity into the animation for a native, continuous feel.

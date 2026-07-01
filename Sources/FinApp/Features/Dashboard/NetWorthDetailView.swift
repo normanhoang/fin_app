@@ -22,6 +22,7 @@ enum NWRange: String, CaseIterable, Identifiable {
 }
 
 struct NetWorthDetailView: View {
+    @Environment(AppRouter.self) private var router
     @Query(sort: \NetWorthSnapshot.day) private var snapshots: [NetWorthSnapshot]
     @State private var range: NWRange = .sixMonths
     @State private var selectedDate: Date?
@@ -68,6 +69,10 @@ struct NetWorthDetailView: View {
         }
         .navigationTitle("Net Worth")
         .navigationBarTitleDisplayMode(.inline)
+        // While a scrub selection is active, the horizontal drag is the chart's —
+        // block the left-swipe-to-next-tab gesture so scrubbing can't page away.
+        .onChange(of: selectedDate) { router.suppressPageSwipe = selectedDate != nil }
+        .onDisappear { router.suppressPageSwipe = false }
     }
 
     private var rangePicker: some View {
@@ -160,6 +165,7 @@ struct NetWorthDetailView: View {
             .padding(.top, 28)
             .frame(height: 240)
             .padding(.vertical, 8)
+            .accessibilityIdentifier("netWorthChart")
         }
     }
 

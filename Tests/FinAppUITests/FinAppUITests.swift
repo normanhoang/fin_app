@@ -280,6 +280,29 @@ final class FinAppUITests: XCTestCase {
         XCTAssertFalse(popup.waitForExistence(timeout: 2), "Scrolling should dismiss the trend popup")
     }
 
+    // 10b. Scrubbing the Net Worth chart left must NOT page to the next tab — the
+    //      horizontal drag belongs to the chart while a scrub selection is active.
+    func testNetWorthScrubDoesNotPage() {
+        let app = launch(tab: 2)
+        let card = app.descendants(matching: .any).matching(identifier: "netWorthCard").firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 8), "Net Worth card not found")
+        card.tap()
+        XCTAssertTrue(app.navigationBars["Net Worth"].waitForExistence(timeout: 5),
+                      "Net Worth detail did not open")
+
+        let chart = app.descendants(matching: .any).matching(identifier: "netWorthChart").firstMatch
+        XCTAssertTrue(chart.waitForExistence(timeout: 5), "Net Worth chart not found")
+        // A leftward scrub across the chart — the exact motion that used to trigger
+        // the left-swipe-to-next-tab pager.
+        let start = chart.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+        let end = chart.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
+        start.press(forDuration: 0.15, thenDragTo: end)
+
+        XCTAssertTrue(app.navigationBars["Net Worth"].exists,
+                      "Scrubbing the chart paged away instead of staying on the detail")
+        snap(app, "net-worth-scrub")
+    }
+
     // 12. Leaving and returning to a tab scrolls it back to the top.
     func testTabChangeScrollsToTop() {
         let app = launch(tab: 2)

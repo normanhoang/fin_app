@@ -66,6 +66,27 @@ enum Analytics {
             .sorted { $0.total > $1.total }
     }
 
+    /// Spending categories for the month, including non-income categories with no
+    /// spend (as $0 rows) so the Dashboard can list every category. Hidden
+    /// categories and Transfers (internal movement, not spending) are excluded.
+    /// Sorted by total descending, then name ascending so $0 rows land at the
+    /// bottom in a stable order. The uncategorized row (if any) is preserved.
+    static func spendingCategories(_ txns: [Transaction], categories: [Category],
+                                   inMonthOf date: Date, calendar: Calendar = .current) -> [CategoryTotal] {
+        let spent = spendingByCategory(txns, inMonthOf: date, calendar: calendar)
+        let spentNames = Set(spent.compactMap { $0.category?.name })
+        let zeros = categories
+            .filter { !$0.isIncome && $0.name != "Transfers" && !spentNames.contains($0.name) }
+            .map { CategoryTotal(category: $0, total: 0) }
+        return (spent + zeros)
+            .filter { $0.category?.name != "Transfers" }
+            .filter { !($0.category?.isHidden ?? false) }
+            .sorted {
+                $0.total != $1.total ? $0.total > $1.total
+                                     : ($0.category?.name ?? "") < ($1.category?.name ?? "")
+            }
+    }
+
     /// Income/spending per month for the trailing `count` months ending in `date`'s month.
     static func monthlyTrend(_ txns: [Transaction], endingIn date: Date, count: Int, calendar: Calendar = .current) -> [MonthPoint] {
         guard let thisMonth = calendar.dateInterval(of: .month, for: date)?.start else { return [] }

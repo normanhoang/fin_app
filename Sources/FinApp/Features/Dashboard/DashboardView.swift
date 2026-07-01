@@ -100,11 +100,16 @@ struct DashboardView: View {
     private var netWorth: Decimal { Analytics.netWorth(accounts) }
     private var sparkValues: [Double] { snapshots.map { ($0.value as NSDecimalNumber).doubleValue } }
 
-    /// Percent change from the first to the latest snapshot, when we have history.
+    /// Percent change over the trailing 30 days: latest snapshot vs. the most recent
+    /// snapshot on or before 30 days ago. nil until we have that much history.
     private var delta: Double? {
-        guard let first = sparkValues.first, let last = sparkValues.last,
-              sparkValues.count >= 2, first != 0 else { return nil }
-        return (last - first) / abs(first)
+        guard let last = snapshots.last else { return nil }
+        let cutoff = calendar.date(byAdding: .day, value: -30, to: now) ?? now
+        guard let baseline = snapshots.last(where: { $0.day <= cutoff }) else { return nil }
+        let from = (baseline.value as NSDecimalNumber).doubleValue
+        let to = (last.value as NSDecimalNumber).doubleValue
+        guard from != 0 else { return nil }
+        return (to - from) / abs(from)
     }
 
     private var heroCard: some View {
@@ -151,6 +156,8 @@ struct DashboardView: View {
         return HStack(spacing: 3) {
             Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
             Text(value.formatted(.percent.precision(.fractionLength(1))))
+            Text("30d")
+                .foregroundStyle(Color.textSecondary)
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
         .foregroundStyle(up ? Color.positive : Color.negative)
@@ -188,13 +195,23 @@ struct DashboardView: View {
 
     private var topCategories: [Analytics.CategoryTotal] {
         // Transfers move money between your own accounts — not real spending.
-        Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
-            .filter { $0.category?.name != "Transfers" }
-            .filter { !($0.category?.isHidden ?? false) }
-            .filter { $0.category != nil || !hideUncategorized }
+        // Every non-hidden category shows, at $0 when there's no spend this month.
+        var rows = Analytics.spendingCategories(transactions, categories: categories,
+                                                inMonthOf: now, calendar: calendar)
+        if hideUncategorized {
+            rows.removeAll { $0.category == nil }
+        } else if !rows.contains(where: { $0.category == nil }) {
+            // Uncategorized is checked but had no spend this month — still show it at $0.
+            rows.append(Analytics.CategoryTotal(category: nil, total: 0))
+        }
+        return rows
     }
 
-    private var maxCategoryTotal: Decimal { topCategories.map(\.total).max() ?? 1 }
+    /// Guarded against divide-by-zero: with every category at $0 the max is 0.
+    private var maxCategoryTotal: Decimal {
+        let m = topCategories.map(\.total).max() ?? 0
+        return m > 0 ? m : 1
+    }
 
     private var categoryCard: some View {
         VStack(alignment: .leading, spacing: 16) {
