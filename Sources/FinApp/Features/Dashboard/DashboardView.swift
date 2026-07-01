@@ -285,9 +285,9 @@ struct DashboardView: View {
     /// Filter checkbox: filled when shown, half-filled when hidden but the category
     /// still has spend this month, empty when hidden with no spend.
     private func filterCheckbox(visible: Bool, hasSpend: Bool) -> some View {
-        let name = visible ? "checkmark.circle.fill" : (hasSpend ? "circle.lefthalf.filled" : "circle")
+        let name = visible ? "checkmark.circle.fill" : (hasSpend ? "circle.bottomhalf.filled" : "circle")
         return Image(systemName: name)
-            .foregroundStyle(visible ? Color.brand : Color.textSecondary)
+            .foregroundStyle(visible || hasSpend ? Color.brand : Color.textSecondary)
     }
 
     /// Toggle which categories appear in the Spending Categories list. Tapping a
