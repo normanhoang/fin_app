@@ -40,6 +40,15 @@ struct NetWorthDetailView: View {
         return minV ... (maxV * 1.18)
     }
 
+    /// Fractional change across the selected range; nil when <2 points or zero baseline.
+    private var rangeDelta: Double? {
+        guard let first = filtered.first, let last = filtered.last, first.day < last.day else { return nil }
+        let from = (first.value as NSDecimalNumber).doubleValue
+        guard from != 0 else { return nil }
+        let to = (last.value as NSDecimalNumber).doubleValue
+        return (to - from) / abs(from)
+    }
+
     /// Snapshot in `filtered` whose day is closest to the scrubbed x-position.
     private var selectedSnapshot: NetWorthSnapshot? {
         guard let selectedDate else { return nil }
@@ -60,6 +69,9 @@ struct NetWorthDetailView: View {
                 List {
                     Section {
                         rangePicker
+                        if let rangeDelta {
+                            HStack { Spacer(); deltaChip(rangeDelta) }
+                        }
                         chart
                     }
                     .listRowBackground(Color.surface)
@@ -94,6 +106,19 @@ struct NetWorthDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 2)
+    }
+
+    private func deltaChip(_ value: Double) -> some View {
+        let up = value >= 0
+        return HStack(spacing: 3) {
+            Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
+            Text(value.formatted(.percent.precision(.fractionLength(1))))
+        }
+        .font(.system(size: 12, weight: .semibold, design: .rounded))
+        .foregroundStyle(up ? Color.positive : Color.negative)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background((up ? Color.positive : Color.negative).opacity(0.12), in: Capsule())
     }
 
     @ViewBuilder
