@@ -68,11 +68,16 @@ struct NetWorthDetailView: View {
             } else {
                 List {
                     Section {
-                        rangePicker
-                        if let rangeDelta {
-                            HStack { Spacer(); deltaChip(rangeDelta) }
+                        // One row for picker + chip + chart so List draws no
+                        // separator between them. Even spacing keeps the chip
+                        // visually centered between the buttons and the graph.
+                        VStack(spacing: 12) {
+                            rangePicker
+                            if let rangeDelta {
+                                HStack { Spacer(); deltaChip(rangeDelta) }
+                            }
+                            chart
                         }
-                        chart
                     }
                     .listRowBackground(Color.surface)
                 }
@@ -177,6 +182,11 @@ struct NetWorthDetailView: View {
                             Text(day, format: .dateTime.month(.abbreviated).day())
                                 .font(.caption2)
                                 .fixedSize()
+                                // rotationEffect doesn't change the layout box, so
+                                // the tilted text pokes ~13pt above and below it and
+                                // gets clipped/crosses the axis. Vertical padding
+                                // grows the box so the chart reserves enough room.
+                                .padding(.vertical, 10)
                                 .rotationEffect(.degrees(-35))
                                 .foregroundStyle(Color.textSecondary)
                         }
@@ -187,9 +197,8 @@ struct NetWorthDetailView: View {
                 AxisGridLine().foregroundStyle(Color.hairline)
                 AxisValueLabel().foregroundStyle(Color.textSecondary)
             } }
-            .padding(.top, 28)
-            .frame(height: 240)
-            .padding(.vertical, 8)
+            .frame(height: 260)
+            .padding(.bottom, 8)
             .accessibilityIdentifier("netWorthChart")
         }
     }
