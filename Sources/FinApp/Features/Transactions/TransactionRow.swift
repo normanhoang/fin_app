@@ -55,7 +55,7 @@ struct TransactionRow: View {
             }
             Spacer()
             MoneyText(value: transaction.amount, size: 16, weight: .semibold,
-                      color: transaction.isInflow ? .positive : .textPrimary)
+                      color: balanceColor(transaction.amount))
         }
         .padding(.vertical, 2)
     }

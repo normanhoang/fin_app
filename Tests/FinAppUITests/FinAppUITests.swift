@@ -415,6 +415,38 @@ final class FinAppUITests: XCTestCase {
         snap(app, "filter-checkbox-states")
     }
 
+    // 14c. Hiding every category must not make the whole card (and its filter
+    //      button) disappear — otherwise there's no way to re-show categories.
+    func testCategoryCardSurvivesAllHidden() {
+        let app = launch(tab: 2)
+        let filter = app.buttons["categoryFilterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
+        while !filter.isHittable { app.swipeUp() }
+        filter.tap()
+
+        let anyToggle = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'catToggle-'"))
+        XCTAssertTrue(anyToggle.firstMatch.waitForExistence(timeout: 5), "Filter popup did not open")
+        // Hide every category + Uncategorized. Re-query the first still-"shown"
+        // toggle each pass (XCUITest auto-scrolls to it) until none remain — robust
+        // to the popover scrolling, unlike a fixed index loop.
+        var guardCount = 0
+        while guardCount < 50 {
+            let shown = app.buttons
+                .matching(NSPredicate(format: "identifier BEGINSWITH 'catToggle-' AND value == %@", "shown"))
+                .firstMatch
+            if !shown.waitForExistence(timeout: 1) { break }
+            shown.tap()
+            guardCount += 1
+        }
+        app.navigationBars["Dashboard"].tap() // dismiss the popover
+
+        XCTAssertTrue(app.buttons["categoryFilterButton"].waitForExistence(timeout: 3),
+                      "Filter button vanished when all categories hidden")
+        XCTAssertTrue(app.staticTexts["All categories hidden — tap the filter to show some."].exists,
+                      "Card body missing when all categories hidden")
+        snap(app, "categories-all-hidden")
+    }
+
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
     func testRecurringRowOpensDetail() {
         let app = launch(tab: 3) // Recurring

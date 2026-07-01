@@ -53,7 +53,7 @@ struct DashboardView: View {
                         VStack(spacing: 16) {
                             heroCard
                             monthRow
-                            if !topCategories.isEmpty { categoryCard }
+                            if !categories.isEmpty { categoryCard }
                             trendCard
                         }
                         .padding(.horizontal, 16)
@@ -250,6 +250,11 @@ struct DashboardView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("category-\(name)")
+            }
+            if topCategories.isEmpty {
+                Text("All categories hidden — tap the filter to show some.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.textSecondary)
             }
         }
         .cardStyle()

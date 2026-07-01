@@ -234,7 +234,7 @@ struct TransactionDetailView: View {
             Section {
                 LabeledContent("Amount") {
                     MoneyText(value: transaction.amount,
-                              color: transaction.isInflow ? .positive : .textPrimary)
+                              color: balanceColor(transaction.amount))
                 }
                 LabeledContent("Date", value: transaction.posted.formatted(date: .abbreviated, time: .omitted))
                 if let account = transaction.account {
