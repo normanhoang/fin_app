@@ -260,6 +260,7 @@ struct TransactionDetailView: View {
                             Text(cadence.rawValue.capitalized).tag(cadence)
                         }
                     }
+                    .tint(Color.textPrimary)
                     Button {
                         setRecurring()
                     } label: {

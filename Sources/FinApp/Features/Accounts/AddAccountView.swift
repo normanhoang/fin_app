@@ -25,6 +25,7 @@ struct AddAccountView: View {
                             Label(type.displayName, systemImage: type.icon).tag(type)
                         }
                     }
+                    .tint(Color.textPrimary)
                 }
                 .listRowBackground(Color.surface)
                 Section("Balance") {

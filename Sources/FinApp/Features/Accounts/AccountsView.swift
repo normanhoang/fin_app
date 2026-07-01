@@ -184,6 +184,7 @@ struct AccountDetailView: View {
                         Text(type.displayName).tag(type)
                     }
                 }
+                .tint(Color.textPrimary)
                 if account.isManual && account.accountType.isDebt {
                     Text("Debts are stored as negative balances (e.g. -1500).")
                         .font(.caption).foregroundStyle(Color.textSecondary)

@@ -138,6 +138,7 @@ struct RecurringDetailView: View {
                         Text(cadence.rawValue.capitalized).tag(cadence)
                     }
                 }
+                .tint(Color.textPrimary)
                 LabeledContent("Typical amount") {
                     TextField("0.00", text: $amountText)
                         .keyboardType(.decimalPad)
