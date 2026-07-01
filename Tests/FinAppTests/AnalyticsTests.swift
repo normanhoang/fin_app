@@ -36,6 +36,42 @@ final class AnalyticsTests: XCTestCase {
         return c
     }
 
+    @discardableResult
+    private func snap(_ value: String, daysAgo: Int, from ref: Date) -> NetWorthSnapshot {
+        let d = cal.date(byAdding: .day, value: -daysAgo, to: ref)!
+        let s = NetWorthSnapshot(day: cal.startOfDay(for: d), value: Decimal(string: value)!)
+        ctx.insert(s)
+        return s
+    }
+
+    private func snapshots() -> [NetWorthSnapshot] {
+        (try! ctx.fetch(FetchDescriptor<NetWorthSnapshot>())).sorted { $0.day < $1.day }
+    }
+
+    func testRecentChangeUsesFullHistoryWhenYoungerThan30Days() {
+        let now = date(2026, 6, 30)
+        snap("100.00", daysAgo: 5, from: now)
+        snap("110.00", daysAgo: 0, from: now)
+        let result = Analytics.recentChange(snapshots(), asOf: now, calendar: cal)
+        XCTAssertEqual(result?.days, 5)
+        XCTAssertEqual(result!.percent, 0.10, accuracy: 0.0001)
+    }
+
+    func testRecentChangeCapsSpanAt30DaysWithLongHistory() {
+        let now = date(2026, 6, 30)
+        for d in stride(from: 40, through: 0, by: -1) {
+            snap(String(1000 + (40 - d)), daysAgo: d, from: now) // rising ~1 per day
+        }
+        let result = Analytics.recentChange(snapshots(), asOf: now, calendar: cal)
+        XCTAssertEqual(result?.days, 30, "span should cap at the 30-day window")
+    }
+
+    func testRecentChangeNilWithSingleSnapshot() {
+        let now = date(2026, 6, 30)
+        snap("100.00", daysAgo: 0, from: now)
+        XCTAssertNil(Analytics.recentChange(snapshots(), asOf: now, calendar: cal))
+    }
+
     func testNetWorthSumsBalancesIncludingNegative() {
         _ = account("1000.00"); _ = account("-250.50"); _ = account("23935.35")
         let accounts = try! ctx.fetch(FetchDescriptor<Account>())

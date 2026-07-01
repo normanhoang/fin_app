@@ -87,6 +87,25 @@ enum Analytics {
             }
     }
 
+    /// Net-worth change over the trailing `window` days: latest snapshot vs. the most
+    /// recent snapshot on or before `window` days ago. Before that much history exists,
+    /// falls back to the earliest snapshot so the change still shows. Returns the
+    /// fractional change and the span in days (capped at `window`). nil with <2
+    /// snapshots, a flat span, or a zero baseline. `snapshots` must be day-ascending.
+    static func recentChange(_ snapshots: [NetWorthSnapshot], asOf date: Date,
+                             window: Int = 30, calendar: Calendar = .current)
+        -> (percent: Double, days: Int)? {
+        guard snapshots.count >= 2, let last = snapshots.last else { return nil }
+        let cutoff = calendar.date(byAdding: .day, value: -window, to: date) ?? date
+        let baseline = snapshots.last(where: { $0.day <= cutoff }) ?? snapshots.first!
+        guard baseline.day < last.day else { return nil }
+        let from = (baseline.value as NSDecimalNumber).doubleValue
+        let to = (last.value as NSDecimalNumber).doubleValue
+        guard from != 0 else { return nil }
+        let span = calendar.dateComponents([.day], from: baseline.day, to: last.day).day ?? 0
+        return ((to - from) / abs(from), min(window, span))
+    }
+
     /// Income/spending per month for the trailing `count` months ending in `date`'s month.
     static func monthlyTrend(_ txns: [Transaction], endingIn date: Date, count: Int, calendar: Calendar = .current) -> [MonthPoint] {
         guard let thisMonth = calendar.dateInterval(of: .month, for: date)?.start else { return [] }

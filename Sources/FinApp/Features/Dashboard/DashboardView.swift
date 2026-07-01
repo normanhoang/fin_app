@@ -100,16 +100,10 @@ struct DashboardView: View {
     private var netWorth: Decimal { Analytics.netWorth(accounts) }
     private var sparkValues: [Double] { snapshots.map { ($0.value as NSDecimalNumber).doubleValue } }
 
-    /// Percent change over the trailing 30 days: latest snapshot vs. the most recent
-    /// snapshot on or before 30 days ago. nil until we have that much history.
-    private var delta: Double? {
-        guard let last = snapshots.last else { return nil }
-        let cutoff = calendar.date(byAdding: .day, value: -30, to: now) ?? now
-        guard let baseline = snapshots.last(where: { $0.day <= cutoff }) else { return nil }
-        let from = (baseline.value as NSDecimalNumber).doubleValue
-        let to = (last.value as NSDecimalNumber).doubleValue
-        guard from != 0 else { return nil }
-        return (to - from) / abs(from)
+    /// Trailing 30-day net-worth change (falls back to full history when younger
+    /// than 30 days). Carries the actual span so the chip can label it honestly.
+    private var delta: (percent: Double, days: Int)? {
+        Analytics.recentChange(snapshots, asOf: now, calendar: calendar)
     }
 
     private var heroCard: some View {
@@ -118,7 +112,7 @@ struct DashboardView: View {
                 HStack(alignment: .firstTextBaseline) {
                     SectionLabel("Net worth")
                     Spacer()
-                    if let delta { deltaChip(delta) }
+                    if let delta { deltaChip(delta.percent, days: delta.days) }
                 }
                 MoneyText(value: netWorth, size: 40, weight: .bold,
                           color: netWorth < 0 ? .negative : .textPrimary)
@@ -151,12 +145,12 @@ struct DashboardView: View {
         .accessibilityIdentifier("netWorthCard")
     }
 
-    private func deltaChip(_ value: Double) -> some View {
+    private func deltaChip(_ value: Double, days: Int) -> some View {
         let up = value >= 0
         return HStack(spacing: 3) {
             Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
             Text(value.formatted(.percent.precision(.fractionLength(1))))
-            Text("30d")
+            Text(days >= 30 ? "30d" : "\(days)d")
                 .foregroundStyle(Color.textSecondary)
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -273,6 +267,24 @@ struct DashboardView: View {
         .frame(height: 4)
     }
 
+    /// This-month spend keyed by category name (uncategorized under ""). Flags
+    /// hidden categories that still had real spend this month.
+    private var monthSpendByName: [String: Decimal] {
+        var map: [String: Decimal] = [:]
+        for t in Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar) {
+            map[t.category?.name ?? ""] = t.total
+        }
+        return map
+    }
+
+    /// Filter checkbox: filled when shown, half-filled when hidden but the category
+    /// still has spend this month, empty when hidden with no spend.
+    private func filterCheckbox(visible: Bool, hasSpend: Bool) -> some View {
+        let name = visible ? "checkmark.circle.fill" : (hasSpend ? "circle.lefthalf.filled" : "circle")
+        return Image(systemName: name)
+            .foregroundStyle(visible ? Color.brand : Color.textSecondary)
+    }
+
     /// Toggle which categories appear in the Spending Categories list. Tapping a
     /// row flips `isHidden` (SwiftData autosaves); the list updates live behind the
     /// popover, and tapping outside dismisses it.
@@ -281,6 +293,7 @@ struct DashboardView: View {
             SectionLabel("Show Categories")
             ScrollView {
                 VStack(spacing: 4) {
+                    let spend = monthSpendByName
                     let uncatVisible = !hideUncategorized
                     Button {
                         hideUncategorized.toggle()
@@ -293,8 +306,7 @@ struct DashboardView: View {
                             Text("Uncategorized")
                                 .foregroundStyle(Color.textPrimary)
                             Spacer(minLength: 16)
-                            Image(systemName: uncatVisible ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(uncatVisible ? Color.brand : Color.textSecondary)
+                            filterCheckbox(visible: uncatVisible, hasSpend: (spend[""] ?? 0) > 0)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
@@ -304,6 +316,7 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("catToggle-Uncategorized")
+                    .accessibilityValue(uncatVisible ? "shown" : ((spend[""] ?? 0) > 0 ? "half" : "empty"))
                     ForEach(categories) { category in
                         let visible = !category.isHidden
                         Button {
@@ -317,8 +330,7 @@ struct DashboardView: View {
                                 Text(category.name)
                                     .foregroundStyle(Color.textPrimary)
                                 Spacer(minLength: 16)
-                                Image(systemName: visible ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(visible ? Color.brand : Color.textSecondary)
+                                filterCheckbox(visible: visible, hasSpend: (spend[category.name] ?? 0) > 0)
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
@@ -328,6 +340,7 @@ struct DashboardView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("catToggle-\(category.name)")
+                        .accessibilityValue(visible ? "shown" : ((spend[category.name] ?? 0) > 0 ? "half" : "empty"))
                     }
                 }
             }

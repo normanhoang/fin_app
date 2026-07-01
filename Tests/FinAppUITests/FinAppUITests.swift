@@ -389,6 +389,32 @@ final class FinAppUITests: XCTestCase {
         snap(app, "category-hidden")
     }
 
+    // 14b. Filter checkbox is half-filled for a hidden category that still has
+    //      current-month spend, empty for a hidden category with none. (Fresh
+    //      sample dates the recurring Netflix/Spotify charges to today →
+    //      Subscriptions has this-month spend; Bars has none.)
+    func testFilterCheckboxReflectsSpend() {
+        let app = launch(tab: 2)
+        let filter = app.buttons["categoryFilterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
+        while !filter.isHittable { app.swipeUp() }
+        filter.tap()
+
+        let subs = app.buttons["catToggle-Subscriptions"]
+        XCTAssertTrue(subs.waitForExistence(timeout: 5), "Filter popup did not open")
+        XCTAssertEqual(subs.value as? String, "shown")
+        subs.tap()
+        XCTAssertEqual(subs.value as? String, "half",
+                       "Hidden category with current-month spend should be half-filled")
+
+        let bars = app.buttons["catToggle-Bars"]
+        XCTAssertEqual(bars.value as? String, "shown")
+        bars.tap()
+        XCTAssertEqual(bars.value as? String, "empty",
+                       "Hidden category with no spend should be empty")
+        snap(app, "filter-checkbox-states")
+    }
+
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
     func testRecurringRowOpensDetail() {
         let app = launch(tab: 3) // Recurring
