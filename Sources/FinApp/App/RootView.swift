@@ -69,17 +69,29 @@ struct RootView: View {
                             guard router.subpageOpen, !router.suppressPageSwipe,
                                   router.selectedTab < Self.tabCount - 1 else { return }
                             let dx = value.translation.width, dy = value.translation.height
-                            guard dx < 0, abs(dx) > abs(dy) else { dragX = 0; return }
-                            dragX = max(dx, -pageWidth)
+                            guard dx < 0 else { dragX = 0; return }
+                            // Horizontal-dominance gate only until the slide engages;
+                            // dropping it mid-slide would snap the page back on any
+                            // momentarily-vertical wobble.
+                            guard dragX < 0 || abs(dx) > abs(dy) else { return }
+                            // +10 offsets the gesture's activation distance so the
+                            // slide starts from 0 instead of jumping to -10pt.
+                            dragX = min(max(dx + 10, -pageWidth), 0)
                         }
                         .onEnded { value in
                             guard router.subpageOpen, !router.suppressPageSwipe,
                                   router.selectedTab < Self.tabCount - 1 else { dragX = 0; return }
                             // Commit on either a past-30% drag or a fast leftward flick,
-                            // so a quick flick doesn't stall. Spring carries the finger's
-                            // velocity into the animation for a native, continuous feel.
+                            // so a quick flick doesn't stall.
                             let commit = -value.translation.width > pageWidth * 0.3 || value.velocity.width < -350
-                            let spring = Animation.interactiveSpring(response: 0.3, dampingFraction: 0.82)
+                            // Seed the spring with the finger's release velocity
+                            // (normalized to the remaining travel, per interpolatingSpring's
+                            // contract) so finger-up hands off without a hitch.
+                            let target: CGFloat = commit ? -pageWidth : 0
+                            let remaining = target - dragX
+                            let v = remaining != 0 ? value.velocity.width / remaining : 0
+                            let spring = Animation.interpolatingSpring(stiffness: 180, damping: 22,
+                                                                       initialVelocity: v)
                             if commit {
                                 withAnimation(spring) {
                                     dragX = -pageWidth
