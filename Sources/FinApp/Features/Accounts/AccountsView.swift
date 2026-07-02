@@ -191,20 +191,22 @@ struct AccountDetailView: View {
                 }
             }
             .listRowBackground(Color.surface)
-            if account.isManual {
-                Section {
-                    Button(role: .destructive) {
-                        // Pop first, then delete once the view is gone, so the
-                        // detail never re-renders against a deleted model.
-                        pendingDelete = true
-                        dismiss()
-                    } label: {
-                        Label("Delete Account", systemImage: "trash")
-                    }
-                    .accessibilityIdentifier("deleteAccountButton")
+            Section {
+                Button(role: .destructive) {
+                    // Pop first, then delete once the view is gone, so the
+                    // detail never re-renders against a deleted model.
+                    pendingDelete = true
+                    dismiss()
+                } label: {
+                    Label("Delete Account", systemImage: "trash")
                 }
-                .listRowBackground(Color.surface)
+                .accessibilityIdentifier("deleteAccountButton")
+            } footer: {
+                if !account.isManual {
+                    Text("A deleted account comes back on the next sync if it's still in your SimpleFin connection.")
+                }
             }
+            .listRowBackground(Color.surface)
             if transactions.isEmpty {
                 Section("Transactions") {
                     Text("No transactions in the synced window.").foregroundStyle(Color.textSecondary)
@@ -215,7 +217,11 @@ struct AccountDetailView: View {
                     Section {
                         ForEach(group.txns) { txn in
                             Button { router.openTransaction(id: txn.id) } label: {
+                                // contentShape makes the transparent gaps (Spacer,
+                                // padding) hit-testable — plain buttons only hit
+                                // opaque pixels otherwise.
                                 TransactionRow(transaction: txn)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("acctTxnRow-\(txn.id)")

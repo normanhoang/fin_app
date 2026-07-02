@@ -145,6 +145,19 @@ struct RecurringDetailView: View {
                         .multilineTextAlignment(.trailing)
                         .accessibilityIdentifier("recurringAmountField")
                 }
+                // Editing marks the date user-set, so detection won't overwrite it
+                // until a new charge posts on/after it (see RecurringDetector.refresh).
+                DatePicker("Next payment",
+                           selection: Binding(
+                               get: { bill.nextDue ?? Date() },
+                               set: {
+                                   bill.nextDue = $0
+                                   bill.nextDueSetByUser = true
+                                   try? context.save()
+                               }
+                           ),
+                           displayedComponents: .date)
+                    .accessibilityIdentifier("recurringNextDuePicker")
                 if !bill.confirmed {
                     Button {
                         bill.confirmed = true
@@ -176,7 +189,11 @@ struct RecurringDetailView: View {
                     Section {
                         ForEach(group.txns) { txn in
                             Button { router.openTransaction(id: txn.id) } label: {
+                                // contentShape makes the transparent gaps (Spacer,
+                                // padding) hit-testable — plain buttons only hit
+                                // opaque pixels otherwise.
                                 TransactionRow(transaction: txn)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("recurringTxnRow-\(txn.id)")
