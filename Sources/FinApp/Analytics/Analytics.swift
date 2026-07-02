@@ -107,15 +107,28 @@ enum Analytics {
     }
 
     /// Income/spending per month for the trailing `count` months ending in `date`'s month.
+    /// One pass over `txns`, bucketing by month start — not a filter per month.
     static func monthlyTrend(_ txns: [Transaction], endingIn date: Date, count: Int, calendar: Calendar = .current) -> [MonthPoint] {
         guard let thisMonth = calendar.dateInterval(of: .month, for: date)?.start else { return [] }
-        return (0..<count).reversed().compactMap { offset -> MonthPoint? in
-            guard let month = calendar.date(byAdding: .month, value: -offset, to: thisMonth) else { return nil }
-            return MonthPoint(
-                month: month,
-                income: monthlyIncome(txns, inMonthOf: month, calendar: calendar),
-                spending: monthlySpending(txns, inMonthOf: month, calendar: calendar)
-            )
+        let months: [Date] = (0..<count).reversed().compactMap {
+            calendar.date(byAdding: .month, value: -$0, to: thisMonth)
+        }
+        guard let earliest = months.first,
+              let end = calendar.dateInterval(of: .month, for: date)?.end else { return [] }
+
+        // Same per-transaction tests as monthlyIncome/monthlySpending.
+        var buckets: [Date: (income: Decimal, spending: Decimal)] = [:]
+        for txn in txns where txn.posted >= earliest && txn.posted < end {
+            guard let month = calendar.dateInterval(of: .month, for: txn.posted)?.start else { continue }
+            if txn.category?.isIncome == true, txn.amount > 0 {
+                buckets[month, default: (0, 0)].income += txn.amount
+            } else if txn.amount < 0, txn.category?.isIncome != true, txn.category?.name != "Transfers" {
+                buckets[month, default: (0, 0)].spending -= txn.amount
+            }
+        }
+        return months.map { month in
+            let b = buckets[month] ?? (0, 0)
+            return MonthPoint(month: month, income: b.income, spending: b.spending)
         }
     }
 }

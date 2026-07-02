@@ -46,14 +46,26 @@ enum CategorizationEngine {
         return rule
     }
 
+    /// Apply one rule to every transaction it matches (skipping user-set ones).
+    /// Used after `learn` so a manual assignment reaches the merchant's other
+    /// charges without re-running every rule against the whole store.
+    @MainActor
+    static func apply(_ rule: CategoryRule, in context: ModelContext) {
+        let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        for txn in txns where !txn.categorizedByUser && rule.matches(txn.matchText) {
+            txn.category = rule.category
+        }
+        try? context.save()
+    }
+
     /// Assign (or clear) a transaction's category from a user action. A non-nil
-    /// category learns a rule and re-runs auto-categorization; nil clears the
-    /// category and protects it from auto-recategorizing.
+    /// category learns a rule and applies just that rule to the merchant's other
+    /// charges; nil clears the category and protects it from auto-recategorizing.
     @MainActor
     static func assign(_ category: Category?, to txn: Transaction, in context: ModelContext) {
         if let category {
-            learn(from: txn, category: category, in: context)
-            categorizeAll(in: context)
+            let rule = learn(from: txn, category: category, in: context)
+            apply(rule, in: context)
         } else {
             txn.category = nil
             txn.categorizedByUser = true

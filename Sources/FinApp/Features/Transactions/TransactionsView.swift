@@ -14,10 +14,11 @@ struct TransactionsView: View {
     private var filtered: [Transaction] {
         var result = transactions.filter { matches(router.txnFilter, $0) }
         if !search.isEmpty {
-            let needle = search.lowercased()
+            // Case-insensitive range search avoids allocating a lowercased copy
+            // of every payee on every keystroke.
             result = result.filter {
-                ($0.payee ?? $0.detail).lowercased().contains(needle)
-                || ($0.category?.name.lowercased().contains(needle) ?? false)
+                ($0.payee ?? $0.detail).range(of: search, options: .caseInsensitive) != nil
+                || ($0.category?.name.range(of: search, options: .caseInsensitive) != nil)
             }
         }
         return result
@@ -118,13 +119,21 @@ struct TransactionsView: View {
         }
     }
 
-    /// Transactions grouped by month, newest month first.
+    /// Transactions grouped by month, newest month first. `filtered` preserves the
+    /// query's posted-descending order, so groups build in one linear pass —
+    /// no dictionary or re-sort.
     private var monthGroups: [(month: Date, txns: [Transaction])] {
         let cal = Calendar.current
-        let grouped = Dictionary(grouping: filtered) {
-            cal.dateInterval(of: .month, for: $0.posted)?.start ?? $0.posted
+        var groups: [(month: Date, txns: [Transaction])] = []
+        for txn in filtered {
+            let month = cal.dateInterval(of: .month, for: txn.posted)?.start ?? txn.posted
+            if groups.last?.month == month {
+                groups[groups.count - 1].txns.append(txn)
+            } else {
+                groups.append((month: month, txns: [txn]))
+            }
         }
-        return grouped.map { (month: $0.key, txns: $0.value) }.sorted { $0.month > $1.month }
+        return groups
     }
 
     /// Honor a request (from Dashboard/Accounts) to open a specific transaction.
@@ -151,6 +160,7 @@ struct TransactionsView: View {
                         Image(systemName: "xmark.circle.fill").foregroundStyle(Color.textSecondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Clear search")
                 }
             }
             .padding(10)
@@ -165,6 +175,7 @@ struct TransactionsView: View {
                     .foregroundStyle(Color.brand)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Filter by category")
             .accessibilityIdentifier("filterButton")
             .popover(isPresented: $showFilterPicker) {
                 CategoryPickerPopup(

@@ -201,14 +201,14 @@ struct DashboardView: View {
         return rows
     }
 
-    /// Guarded against divide-by-zero: with every category at $0 the max is 0.
-    private var maxCategoryTotal: Decimal {
-        let m = topCategories.map(\.total).max() ?? 0
-        return m > 0 ? m : 1
-    }
-
     private var categoryCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        // Compute the totals once per render and hand them down — recomputing the
+        // full aggregation for the max and again per row multiplied the work.
+        let cats = topCategories
+        let maxTotalRaw = cats.map(\.total).max() ?? 0
+        // Guarded against divide-by-zero: with every category at $0 the max is 0.
+        let maxTotal = maxTotalRaw > 0 ? maxTotalRaw : 1
+        return VStack(alignment: .leading, spacing: 16) {
             HStack {
                 SectionLabel("Spending Categories")
                 Spacer()
@@ -218,13 +218,14 @@ struct DashboardView: View {
                         .foregroundStyle(Color.brand)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Show or hide categories")
                 .accessibilityIdentifier("categoryFilterButton")
                 .popover(isPresented: $showCategoryFilter) {
                     categoryFilterPopup
                         .presentationCompactAdaptation(.popover)
                 }
             }
-            ForEach(topCategories) { item in
+            ForEach(cats) { item in
                 let color = Color(hex: item.category?.colorHex ?? "#8E8E93")
                 let name = item.category?.name ?? "Uncategorized"
                 Button {
@@ -244,14 +245,14 @@ struct DashboardView: View {
                             Spacer()
                             MoneyText(value: item.total, size: 16, weight: .medium, color: .textSecondary)
                         }
-                        shareBar(item.total, color)
+                        shareBar(item.total, color, maxTotal: maxTotal)
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("category-\(name)")
             }
-            if topCategories.isEmpty {
+            if cats.isEmpty {
                 Text("All categories hidden — tap the filter to show some.")
                     .font(.subheadline)
                     .foregroundStyle(Color.textSecondary)
@@ -260,8 +261,8 @@ struct DashboardView: View {
         .cardStyle()
     }
 
-    private func shareBar(_ total: Decimal, _ color: Color) -> some View {
-        let fraction = max(0.04, NSDecimalNumber(decimal: total / maxCategoryTotal).doubleValue)
+    private func shareBar(_ total: Decimal, _ color: Color, maxTotal: Decimal) -> some View {
+        let fraction = max(0.04, NSDecimalNumber(decimal: total / maxTotal).doubleValue)
         return GeometryReader { geo in
             Capsule().fill(Color.hairline)
                 .overlay(alignment: .leading) {
@@ -487,8 +488,9 @@ struct DashboardView: View {
     }
 
     private func popupPosition(for point: Analytics.MonthPoint) -> CGPoint {
-        let count = max(trend.count, 1)
-        let idx = trend.firstIndex { calendar.isDate($0.month, equalTo: point.month, toGranularity: .month) } ?? 0
+        let points = trend
+        let count = max(points.count, 1)
+        let idx = points.firstIndex { calendar.isDate($0.month, equalTo: point.month, toGranularity: .month) } ?? 0
         let x = trendPlot.minX + (CGFloat(idx) + 0.5) / CGFloat(count) * trendPlot.width
         let clampedX = min(max(x, trendPlot.minX + 54), trendPlot.maxX - 54)
         return CGPoint(x: clampedX, y: trendPlot.minY - 34)

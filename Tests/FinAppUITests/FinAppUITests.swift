@@ -235,7 +235,12 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(account.waitForExistence(timeout: 8), "Account row not found")
         account.tap()
 
+        // The row may sit below the fold (List rows are created lazily), so
+        // scroll until it exists and is hittable.
         let txn = app.descendants(matching: .any).matching(identifier: "acctTxnRow-s-tx-1").firstMatch
+        for _ in 0..<6 where !(txn.exists && txn.isHittable) {
+            app.swipeUp()
+        }
         XCTAssertTrue(txn.waitForExistence(timeout: 5), "No account transactions")
         txn.tap()
 

@@ -39,6 +39,23 @@ final class CategorizationEngineTests: XCTestCase {
         XCTAssertFalse(t2.categorizedByUser, "Propagated category is a rule match, not a manual set")
     }
 
+    func testAssignPropagatesToSameMerchantOnly() {
+        let dining = category("Dining")
+        let t1 = Transaction(id: "1", posted: Date(), amount: -5, detail: "STARBUCKS #123", payee: "STARBUCKS #123")
+        let t2 = Transaction(id: "2", posted: Date(), amount: -6, detail: "STARBUCKS #999", payee: "STARBUCKS #999")
+        let other = Transaction(id: "3", posted: Date(), amount: -7, detail: "SHELL GAS", payee: "SHELL GAS")
+        let userSet = Transaction(id: "4", posted: Date(), amount: -8, detail: "STARBUCKS #555",
+                                  payee: "STARBUCKS #555", categorizedByUser: true)
+        [t1, t2, other, userSet].forEach { ctx.insert($0) }
+
+        CategorizationEngine.assign(dining, to: t1, in: ctx)
+
+        XCTAssertEqual(t1.category, dining)
+        XCTAssertEqual(t2.category, dining, "Scoped apply must reach the merchant's other charges")
+        XCTAssertNil(other.category, "Unrelated merchants stay untouched")
+        XCTAssertNil(userSet.category, "User-set transactions are never overwritten")
+    }
+
     func testMatchingRuleAssignsCategory() {
         let food = category("Food")
         let rules = [rule("coffee", food)]

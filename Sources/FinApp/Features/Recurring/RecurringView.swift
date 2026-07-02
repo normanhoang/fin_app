@@ -115,11 +115,10 @@ struct RecurringDetailView: View {
     @State private var amountText = ""
     @State private var showCategoryPicker = false
 
-    private var matched: [Transaction] {
-        allTransactions.filter {
-            CategorizationEngine.normalizeMerchant($0.payee ?? $0.detail) == bill.merchantName
-        }
-    }
+    /// This merchant's past charges, computed once on appear — normalizing every
+    /// transaction is too expensive to re-run on each body evaluation, and the
+    /// set can't change while the detail is open.
+    @State private var matched: [Transaction] = []
 
     private var monthGroups: [(month: Date, txns: [Transaction])] {
         let cal = Calendar.current
@@ -209,7 +208,12 @@ struct RecurringDetailView: View {
         .screenBackground()
         .navigationTitle(bill.merchantName.capitalized)
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { amountText = NSDecimalNumber(decimal: bill.expectedAmount).stringValue }
+        .onAppear {
+            amountText = NSDecimalNumber(decimal: bill.expectedAmount).stringValue
+            matched = allTransactions.filter {
+                CategorizationEngine.normalizeMerchant($0.payee ?? $0.detail) == bill.merchantName
+            }
+        }
         .onChange(of: amountText) { applyAmount() }
         .onChange(of: bill.cadenceRaw) { try? context.save() }
     }
@@ -262,9 +266,12 @@ struct RecurringDetailView: View {
     private func setCategory(_ category: Category) {
         bill.category = category
         if let sample = matched.first {
-            CategorizationEngine.learn(from: sample, category: category, in: context)
+            // Apply just the learned rule to this merchant's other charges —
+            // no need to re-run every rule against the whole store.
+            let rule = CategorizationEngine.learn(from: sample, category: category, in: context)
+            CategorizationEngine.apply(rule, in: context)
+        } else {
+            try? context.save()
         }
-        CategorizationEngine.categorizeAll(in: context)
-        try? context.save()
     }
 }

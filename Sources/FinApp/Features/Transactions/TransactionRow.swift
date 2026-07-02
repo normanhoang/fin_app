@@ -4,8 +4,6 @@ import SwiftData
 struct TransactionRow: View {
     let transaction: Transaction
 
-    @Query(sort: \Category.name) private var categories: [Category]
-    @Environment(\.modelContext) private var context
     @State private var showCategoryPicker = false
 
     private var categoryColor: Color { Color(hex: transaction.category?.colorHex ?? "#8E8E93") }
@@ -27,15 +25,12 @@ struct TransactionRow: View {
                 .frame(width: 38, height: 38)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Change category")
             .accessibilityIdentifier("categoryIcon-\(transaction.id)")
             .popover(isPresented: $showCategoryPicker) {
-                CategoryPickerPopup(
-                    categories: categories,
-                    selectedName: transaction.category?.name,
-                    isUncategorizedSelected: transaction.category == nil,
-                    onSelect: { CategorizationEngine.assign($0, to: transaction, in: context) }
-                )
-                .presentationCompactAdaptation(.popover)
+                // The category @Query lives in this host, which only exists while
+                // the popover is open — so scrolling rows never runs the query.
+                CategoryPickerHost(transaction: transaction)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(transaction.payee ?? transaction.detail)
@@ -54,9 +49,26 @@ struct TransactionRow: View {
                 .foregroundStyle(Color.textSecondary)
             }
             Spacer()
-            MoneyText(value: transaction.amount, size: 16, weight: .semibold,
-                      color: balanceColor(transaction.amount))
+            MoneyText(value: transaction.amount, code: transaction.account?.currency ?? "USD",
+                      size: 16, weight: .semibold, color: balanceColor(transaction.amount))
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// Hosts the category picker's @Query so it only runs while the popover is open.
+private struct CategoryPickerHost: View {
+    let transaction: Transaction
+    @Query(sort: \Category.name) private var categories: [Category]
+    @Environment(\.modelContext) private var context
+
+    var body: some View {
+        CategoryPickerPopup(
+            categories: categories,
+            selectedName: transaction.category?.name,
+            isUncategorizedSelected: transaction.category == nil,
+            onSelect: { CategorizationEngine.assign($0, to: transaction, in: context) }
+        )
+        .presentationCompactAdaptation(.popover)
     }
 }
