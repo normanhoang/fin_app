@@ -8,8 +8,10 @@ import SwiftData
 /// Existing rows are preloaded into id-keyed maps in one fetch each, rather than
 /// a per-item predicated fetch — simpler, faster, and avoids `#Predicate`.
 enum SyncService {
+    /// Throws if the final save fails — callers must surface it, since a failed
+    /// save after the prune deletes below would silently diverge from the store.
     @MainActor
-    static func sync(accounts dtos: [AccountDTO], pruneMissing: Bool = false, into context: ModelContext) {
+    static func sync(accounts dtos: [AccountDTO], pruneMissing: Bool = false, into context: ModelContext) throws {
         let existingAccounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
         let existingTxns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         let accountsByID = Dictionary(existingAccounts.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -33,7 +35,7 @@ enum SyncService {
                 context.delete(account)
             }
         }
-        try? context.save()
+        try context.save()
     }
 
     /// Per-account correction: Bank of America Checking reports the real balance in

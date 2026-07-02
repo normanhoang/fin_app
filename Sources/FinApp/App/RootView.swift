@@ -2,7 +2,6 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(SyncCoordinator.self) private var coordinator
-    @Environment(\.modelContext) private var context
     @State private var router = AppRouter(selectedTab: Self.initialTab)
 
     static let tabCount = 5
@@ -150,9 +149,8 @@ struct RootView: View {
         // Dismiss the keyboard when changing pages (tab tap or swipe).
         .onChange(of: router.selectedTab) { Keyboard.dismiss() }
         .task {
-            // Collapse any pre-existing duplicate recurring bills, then auto-sync
-            // on open (throttled; skipped if not connected).
-            RecurringStore.dedupe(in: context)
+            // Auto-sync on open (throttled; skipped if not connected). Recurring
+            // dedupe runs after every sync inside RecurringDetector.refresh.
             if coordinator.isConnected { await coordinator.syncIfStale() }
         }
     }

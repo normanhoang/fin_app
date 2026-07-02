@@ -13,5 +13,8 @@ enum NetWorthSnapshotService {
         } else {
             context.insert(NetWorthSnapshot(day: day, value: value))
         }
+        // Persist explicitly — this runs last in the sync pipeline, so there's
+        // no later save to piggyback on.
+        try? context.save()
     }
 }

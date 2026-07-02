@@ -42,7 +42,7 @@ final class SyncServiceTests: XCTestCase {
         let ctx = makeContext()
         let dto = account(txns: [tx(id: "t1", amount: "-10.00"), tx(id: "t2", amount: "-20.00")])
 
-        SyncService.sync(accounts: [dto], into: ctx)
+        try SyncService.sync(accounts: [dto], into: ctx)
 
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).count, 1)
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Transaction>()).count, 2)
@@ -56,8 +56,8 @@ final class SyncServiceTests: XCTestCase {
             balance: Decimal(string: "10.00")!, availableBalance: Decimal(string: "1234.00")!,
             balanceDate: Date(), transactions: []
         )
-        SyncService.sync(accounts: [dto], into: ctx)
-        SyncService.sync(accounts: [dto], into: ctx) // idempotent
+        try SyncService.sync(accounts: [dto], into: ctx)
+        try SyncService.sync(accounts: [dto], into: ctx) // idempotent
 
         let acct = try ctx.fetch(FetchDescriptor<Account>()).first
         XCTAssertEqual(acct?.balance, Decimal(string: "1234.00"), "Balance should show the available value")
@@ -71,7 +71,7 @@ final class SyncServiceTests: XCTestCase {
             balance: Decimal(string: "10.00")!, availableBalance: Decimal(string: "1234.00")!,
             balanceDate: Date(), transactions: []
         )
-        SyncService.sync(accounts: [dto], into: ctx)
+        try SyncService.sync(accounts: [dto], into: ctx)
         let acct = try ctx.fetch(FetchDescriptor<Account>()).first
         XCTAssertEqual(acct?.balance, Decimal(string: "10.00"))
     }
@@ -80,8 +80,8 @@ final class SyncServiceTests: XCTestCase {
         let ctx = makeContext()
         let dto = account(txns: [tx(id: "t1", amount: "-10.00")])
 
-        SyncService.sync(accounts: [dto], into: ctx)
-        SyncService.sync(accounts: [dto], into: ctx)
+        try SyncService.sync(accounts: [dto], into: ctx)
+        try SyncService.sync(accounts: [dto], into: ctx)
 
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).count, 1)
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Transaction>()).count, 1)
@@ -89,9 +89,9 @@ final class SyncServiceTests: XCTestCase {
 
     func testPendingBecomesPostedUpdatesInPlace() throws {
         let ctx = makeContext()
-        SyncService.sync(accounts: [account(txns: [tx(id: "t1", amount: "-9.99", pending: true)])], into: ctx)
+        try SyncService.sync(accounts: [account(txns: [tx(id: "t1", amount: "-9.99", pending: true)])], into: ctx)
         // Same transaction id resyncs, now posted with finalized amount.
-        SyncService.sync(accounts: [account(txns: [tx(id: "t1", amount: "-10.50", pending: false)])], into: ctx)
+        try SyncService.sync(accounts: [account(txns: [tx(id: "t1", amount: "-10.50", pending: false)])], into: ctx)
 
         let txns = try ctx.fetch(FetchDescriptor<Transaction>())
         XCTAssertEqual(txns.count, 1)
@@ -101,11 +101,11 @@ final class SyncServiceTests: XCTestCase {
 
     func testPruneRemovesSyncedAccountMissingFromResponse() throws {
         let ctx = makeContext()
-        SyncService.sync(accounts: [account(id: "a1", txns: [tx(id: "t1", amount: "-5.00")]),
+        try SyncService.sync(accounts: [account(id: "a1", txns: [tx(id: "t1", amount: "-5.00")]),
                                     account(id: "a2", txns: [tx(id: "t2", amount: "-6.00")])],
                          into: ctx)
 
-        SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: true, into: ctx)
+        try SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: true, into: ctx)
 
         let accts = try ctx.fetch(FetchDescriptor<Account>())
         XCTAssertEqual(accts.map(\.id), ["a1"])
@@ -115,10 +115,10 @@ final class SyncServiceTests: XCTestCase {
 
     func testPruneSkippedWhenNotRequested() throws {
         let ctx = makeContext()
-        SyncService.sync(accounts: [account(id: "a1", txns: []), account(id: "a2", txns: [])], into: ctx)
+        try SyncService.sync(accounts: [account(id: "a1", txns: []), account(id: "a2", txns: [])], into: ctx)
 
         // e.g. the response carried provider errors — caller passes pruneMissing: false.
-        SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: false, into: ctx)
+        try SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: false, into: ctx)
 
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).count, 2)
     }
@@ -130,7 +130,7 @@ final class SyncServiceTests: XCTestCase {
                            balanceDate: Date(), isManual: true))
         try ctx.save()
 
-        SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: true, into: ctx)
+        try SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: true, into: ctx)
 
         let ids = try ctx.fetch(FetchDescriptor<Account>()).map(\.id).sorted()
         XCTAssertEqual(ids, ["a1", "manual-1"])
@@ -138,8 +138,8 @@ final class SyncServiceTests: XCTestCase {
 
     func testUpdatesAccountBalance() throws {
         let ctx = makeContext()
-        SyncService.sync(accounts: [account(balance: "100.00", txns: [])], into: ctx)
-        SyncService.sync(accounts: [account(balance: "250.00", txns: [])], into: ctx)
+        try SyncService.sync(accounts: [account(balance: "100.00", txns: [])], into: ctx)
+        try SyncService.sync(accounts: [account(balance: "250.00", txns: [])], into: ctx)
 
         let accts = try ctx.fetch(FetchDescriptor<Account>())
         XCTAssertEqual(accts.count, 1)
