@@ -26,6 +26,9 @@ struct RootView: View {
     // the page width it animates across.
     @State private var dragX: CGFloat = 0
     @State private var pageWidth: CGFloat = 0
+    // Set at swipe-commit so the tab bar highlights the destination immediately;
+    // router.selectedTab only changes when the slide animation completes.
+    @State private var pendingTab: Int?
 
     var body: some View {
         // A horizontal paging ScrollView restores swipe-between-tabs WITHOUT the
@@ -82,8 +85,11 @@ struct RootView: View {
                             guard router.subpageOpen, !router.suppressPageSwipe,
                                   router.selectedTab < Self.tabCount - 1 else { dragX = 0; return }
                             // Commit on either a past-30% drag or a fast leftward flick,
-                            // so a quick flick doesn't stall.
-                            let commit = -value.translation.width > pageWidth * 0.3 || value.velocity.width < -350
+                            // so a quick flick doesn't stall. Require the slide to have
+                            // engaged (dragX < 0) first, so a vertical swipe that drifts
+                            // slightly left — which never passes onChanged's dominance gate —
+                            // can't page via the velocity path alone.
+                            let commit = dragX < 0 && (-value.translation.width > pageWidth * 0.3 || value.velocity.width < -350)
                             // Seed the spring with the finger's release velocity
                             // (normalized to the remaining travel, per interpolatingSpring's
                             // contract) so finger-up hands off without a hitch.
@@ -93,6 +99,9 @@ struct RootView: View {
                             let spring = Animation.interpolatingSpring(stiffness: 180, damping: 22,
                                                                        initialVelocity: v)
                             if commit {
+                                // Highlight the destination tab in the bar right away;
+                                // the real tab change waits for the slide to finish.
+                                pendingTab = router.selectedTab + 1
                                 withAnimation(spring) {
                                     dragX = -pageWidth
                                 } completion: {
@@ -101,6 +110,7 @@ struct RootView: View {
                                     // step, so there's no flash. The tab change also pops
                                     // the open detail via each tab's onChange(of: selectedTab).
                                     router.selectedTab += 1
+                                    pendingTab = nil
                                     dragX = 0
                                 }
                             } else {
@@ -121,7 +131,12 @@ struct RootView: View {
                 .onAppear { proxy.scrollTo(router.selectedTab) }
             }
 
-            CustomTabBar(selection: $router.selectedTab)
+            // The bar shows pendingTab during a subpage swipe-commit so the
+            // highlight moves with the gesture, not after the slide animation.
+            CustomTabBar(selection: Binding(
+                get: { pendingTab ?? router.selectedTab },
+                set: { router.selectedTab = $0 }
+            ))
                 .background(GeometryReader { geo in
                     Color.clear.preference(key: BarHeightKey.self, value: geo.size.height)
                 })
