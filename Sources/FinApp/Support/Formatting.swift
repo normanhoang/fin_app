@@ -8,18 +8,37 @@ enum Money {
     }
 }
 
-extension Color {
-    /// Build a Color from a "#RRGGBB" hex string; falls back to gray.
-    init(hex: String) {
+/// Memoizes parsed hex colors — category colors are re-resolved on every row
+/// render, and the palette is a handful of strings.
+private final class HexColorCache: @unchecked Sendable {
+    static let shared = HexColorCache()
+    private let lock = NSLock()
+    private var colors: [String: Color] = [:]
+
+    func color(for hex: String) -> Color {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = colors[hex] { return cached }
+        let parsed = Self.parse(hex)
+        colors[hex] = parsed
+        return parsed
+    }
+
+    /// Parse a "#RRGGBB" hex string; falls back to gray.
+    private static func parse(_ hex: String) -> Color {
         let cleaned = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        guard let int = UInt64(cleaned, radix: 16), cleaned.count == 6 else {
-            self = .gray
-            return
-        }
-        self = Color(
+        guard let int = UInt64(cleaned, radix: 16), cleaned.count == 6 else { return .gray }
+        return Color(
             red: Double((int >> 16) & 0xFF) / 255,
             green: Double((int >> 8) & 0xFF) / 255,
             blue: Double(int & 0xFF) / 255
         )
+    }
+}
+
+extension Color {
+    /// Build a Color from a "#RRGGBB" hex string; falls back to gray. Cached.
+    init(hex: String) {
+        self = HexColorCache.shared.color(for: hex)
     }
 }

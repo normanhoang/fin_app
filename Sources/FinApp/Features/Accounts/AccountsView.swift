@@ -63,6 +63,7 @@ struct AccountsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingAdd = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add account")
                         .accessibilityIdentifier("addAccountButton")
                 }
             }
