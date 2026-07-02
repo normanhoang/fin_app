@@ -41,6 +41,32 @@ enum SampleData {
                                 detail: r.0, payee: r.1, account: r.3)
             context.insert(t)
         }
+
+        // Month-to-date rows pinned to days of the CURRENT month (capped at today),
+        // so the Dashboard's month tiles are never empty — even on the 1st, when
+        // every day-ago offset above lands in the previous month.
+        let startOfMonth = cal.dateInterval(of: .month, for: Date())!.start
+        func monthDay(_ dayOfMonth: Int) -> Date {
+            let target = cal.date(byAdding: .day, value: dayOfMonth - 1, to: startOfMonth)!
+            return Swift.min(target, Date())
+        }
+        let monthRows: [(String, String, String, Account, Int)] = [
+            ("Payroll Direct Deposit", "ACME PAYROLL", "2600.00", checking, 1),
+            ("Rent", "Property Mgmt", "-1850.00", checking, 1),
+            ("Whole Foods Market", "Whole Foods", "-118.62", card, 2),
+            ("PG&E Utility", "PG&E", "-131.07", checking, 5),
+            ("Starbucks", "Starbucks", "-7.15", card, 6),
+            ("Uber Trip", "Uber", "-19.80", card, 8),
+            ("Amazon Marketplace", "Amazon", "-64.25", card, 10),
+            ("Payroll Direct Deposit", "ACME PAYROLL", "2600.00", checking, 15),
+            ("Trader Joe's", "Trader Joe", "-83.44", card, 17),
+            ("Doordash", "DoorDash", "-28.60", card, 21),
+        ]
+        for (i, r) in monthRows.enumerated() {
+            let t = Transaction(id: "s-mtx-\(i)", posted: monthDay(r.4), amount: Decimal(string: r.2)!,
+                                detail: r.0, payee: r.1, account: r.3)
+            context.insert(t)
+        }
         try? context.save()
         CategorizationEngine.categorizeAll(in: context)
 
