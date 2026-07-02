@@ -26,6 +26,9 @@ struct NetWorthDetailView: View {
     @Query(sort: \NetWorthSnapshot.day) private var snapshots: [NetWorthSnapshot]
     @State private var range: NWRange = .sixMonths
     @State private var selectedDate: Date?
+    /// True while a finger is down on the chart, so page swiping is blocked from
+    /// touch-down — not just once a scrub selection engages.
+    @State private var chartTouch = false
 
     private var filtered: [NetWorthSnapshot] {
         guard let start = range.start() else { return snapshots }
@@ -86,10 +89,15 @@ struct NetWorthDetailView: View {
         }
         .navigationTitle("Net Worth")
         .navigationBarTitleDisplayMode(.inline)
-        // While a scrub selection is active, the horizontal drag is the chart's —
-        // block the left-swipe-to-next-tab gesture so scrubbing can't page away.
-        .onChange(of: selectedDate) { router.suppressPageSwipe = selectedDate != nil }
+        // While a finger is on the chart or a scrub selection is active, the
+        // horizontal drag is the chart's — block the left-swipe-to-next-tab
+        // gesture so scrubbing can't page away.
+        .onChange(of: selectedDate) { updateSuppress() }
         .onDisappear { router.suppressPageSwipe = false }
+    }
+
+    private func updateSuppress() {
+        router.suppressPageSwipe = chartTouch || selectedDate != nil
     }
 
     private var rangePicker: some View {
@@ -199,6 +207,21 @@ struct NetWorthDetailView: View {
             } }
             .frame(height: 260)
             .padding(.bottom, 8)
+            // Block page swiping from the moment a touch moves on the chart —
+            // waiting for chartXSelection to engage lets the pager grab the
+            // first ~10pt and slide the page. simultaneousGesture keeps the
+            // scrub and vertical List scroll working.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        chartTouch = true
+                        updateSuppress()
+                    }
+                    .onEnded { _ in
+                        chartTouch = false
+                        updateSuppress()
+                    }
+            )
             .accessibilityIdentifier("netWorthChart")
         }
     }

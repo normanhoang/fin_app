@@ -284,8 +284,10 @@ struct DashboardView: View {
 
     /// Filter checkbox: filled when shown, half-filled when hidden but the category
     /// still has spend this month, empty when hidden with no spend.
+    /// SF Symbols quirk: `circle.tophalf.filled` renders with the BOTTOM half solid
+    /// (and vice versa) — this is the bottom-solid look, verified by rendering.
     private func filterCheckbox(visible: Bool, hasSpend: Bool) -> some View {
-        let name = visible ? "checkmark.circle.fill" : (hasSpend ? "circle.bottomhalf.filled" : "circle")
+        let name = visible ? "checkmark.circle.fill" : (hasSpend ? "circle.tophalf.filled" : "circle")
         return Image(systemName: name)
             .foregroundStyle(visible || hasSpend ? Color.brand : Color.textSecondary)
     }
