@@ -99,6 +99,43 @@ final class SyncServiceTests: XCTestCase {
         XCTAssertEqual(txns.first?.amount, Decimal(string: "-10.50"))
     }
 
+    func testPruneRemovesSyncedAccountMissingFromResponse() throws {
+        let ctx = makeContext()
+        SyncService.sync(accounts: [account(id: "a1", txns: [tx(id: "t1", amount: "-5.00")]),
+                                    account(id: "a2", txns: [tx(id: "t2", amount: "-6.00")])],
+                         into: ctx)
+
+        SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: true, into: ctx)
+
+        let accts = try ctx.fetch(FetchDescriptor<Account>())
+        XCTAssertEqual(accts.map(\.id), ["a1"])
+        // a2's transactions cascade away; a1's remain.
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<Transaction>()).map(\.id), ["t1"])
+    }
+
+    func testPruneSkippedWhenNotRequested() throws {
+        let ctx = makeContext()
+        SyncService.sync(accounts: [account(id: "a1", txns: []), account(id: "a2", txns: [])], into: ctx)
+
+        // e.g. the response carried provider errors — caller passes pruneMissing: false.
+        SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: false, into: ctx)
+
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).count, 2)
+    }
+
+    func testPruneLeavesManualAccountsAlone() throws {
+        let ctx = makeContext()
+        ctx.insert(Account(id: "manual-1", org: "", name: "Cash", currency: "USD",
+                           balance: 50, availableBalance: nil,
+                           balanceDate: Date(), isManual: true))
+        try ctx.save()
+
+        SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: true, into: ctx)
+
+        let ids = try ctx.fetch(FetchDescriptor<Account>()).map(\.id).sorted()
+        XCTAssertEqual(ids, ["a1", "manual-1"])
+    }
+
     func testUpdatesAccountBalance() throws {
         let ctx = makeContext()
         SyncService.sync(accounts: [account(balance: "100.00", txns: [])], into: ctx)

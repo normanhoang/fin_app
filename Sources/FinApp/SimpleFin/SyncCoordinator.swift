@@ -69,7 +69,10 @@ final class SyncCoordinator {
             CategorySeed.seedIfNeeded(in: context)
             CategorySeed.ensureMissing(in: context)
             let response = try await client.fetchAccounts(accessURL: accessURL, since: nextSyncStartDate())
-            SyncService.sync(accounts: response.accounts, into: context)
+            // Prune accounts removed from the connection only on a clean response —
+            // a provider error can mean a bank's accounts are temporarily missing.
+            SyncService.sync(accounts: response.accounts,
+                             pruneMissing: response.errors.isEmpty, into: context)
             CategorizationEngine.categorizeAll(in: context)
             RecurringDetector.refresh(in: context)
             recordNetWorthSnapshot()

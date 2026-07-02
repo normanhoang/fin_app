@@ -9,7 +9,7 @@ import SwiftData
 /// a per-item predicated fetch — simpler, faster, and avoids `#Predicate`.
 enum SyncService {
     @MainActor
-    static func sync(accounts dtos: [AccountDTO], into context: ModelContext) {
+    static func sync(accounts dtos: [AccountDTO], pruneMissing: Bool = false, into context: ModelContext) {
         let existingAccounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
         let existingTxns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         let accountsByID = Dictionary(existingAccounts.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -20,6 +20,17 @@ enum SyncService {
             applyBalanceCorrection(account)
             for txDTO in dto.transactions {
                 upsertTransaction(txDTO, existing: txnsByID[txDTO.id], account: account, in: context)
+            }
+        }
+        // A synced account no longer in the response was removed from the SimpleFin
+        // connection — delete it (transactions cascade) so its stale balance stops
+        // counting toward net worth. Callers pass pruneMissing only when the response
+        // reported no provider errors, so a bank outage never wipes data. Manual
+        // accounts are never in the response and are never pruned.
+        if pruneMissing {
+            let dtoIDs = Set(dtos.map(\.id))
+            for account in existingAccounts where !account.isManual && !dtoIDs.contains(account.id) {
+                context.delete(account)
             }
         }
         try? context.save()
