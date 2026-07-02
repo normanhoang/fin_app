@@ -5,7 +5,7 @@ struct AccountsView: View {
     @Environment(AppRouter.self) private var router
     @Query(sort: \Account.name) private var accounts: [Account]
     @State private var showingAdd = false
-    @State private var path: [Account] = []
+    @State private var path = NavigationPath()
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
 
@@ -60,6 +60,7 @@ struct AccountsView: View {
             .navigationTitle("Accounts")
             .fixLargeTitleInset(trigger: topReset)
             .navigationDestination(for: Account.self) { AccountDetailView(account: $0) }
+            .navigationDestination(for: Transaction.self) { TransactionDetailView(transaction: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingAdd = true } label: { Image(systemName: "plus") }
@@ -73,7 +74,7 @@ struct AccountsView: View {
             if router.selectedTab == AppTab.accounts.rawValue {
                 router.subpageOpen = !path.isEmpty
                 topReset += 1
-            } else { path = [] }
+            } else { path = NavigationPath() }
         }
         .onChange(of: path) {
             if router.selectedTab == AppTab.accounts.rawValue { router.subpageOpen = !path.isEmpty }
@@ -140,7 +141,6 @@ func balanceColor(_ value: Decimal) -> Color {
 struct AccountDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Environment(AppRouter.self) private var router
     @Bindable var account: Account
     @State private var editedName = ""
     @State private var balanceText = ""
@@ -217,14 +217,9 @@ struct AccountDetailView: View {
                 ForEach(monthGroups, id: \.month) { group in
                     Section {
                         ForEach(group.txns) { txn in
-                            Button { router.openTransaction(id: txn.id) } label: {
-                                // contentShape makes the transparent gaps (Spacer,
-                                // padding) hit-testable — plain buttons only hit
-                                // opaque pixels otherwise.
+                            NavigationLink(value: txn) {
                                 TransactionRow(transaction: txn)
-                                    .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
                             .accessibilityIdentifier("acctTxnRow-\(txn.id)")
                         }
                     } header: {

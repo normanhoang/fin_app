@@ -138,12 +138,50 @@ final class FinAppUITests: XCTestCase {
         setBtn.tap()
 
         app.buttons["tab-Recurring"].tap()
-        // A confirmed bill lands under the "Upcoming" section; the empty state
+        // The tab defaults to the calendar; switch to the list, where a
+        // confirmed bill lands under the "Upcoming" section; the empty state
         // ("No Recurring Bills") must be gone.
+        let toggle = app.buttons["recurringModeToggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "Mode toggle not shown")
+        toggle.tap()
         let upcoming = app.staticTexts["Upcoming"].waitForExistence(timeout: 5)
         snap(app, "recurring-after-set")
         XCTAssertTrue(upcoming, "Upcoming section not shown after Set as Recurring")
         XCTAssertFalse(app.staticTexts["No Recurring Bills"].exists, "Recurring tab still empty")
+        toggle.tap() // restore the default calendar mode (it persists via AppStorage)
+    }
+
+    // A confirmed bill shows up under its due day on the Recurring calendar.
+    func testRecurringCalendarShowsBillOnDueDay() {
+        let app = launch(tab: 1)
+        let row = firstTxnRow(app)
+        XCTAssertTrue(row.waitForExistence(timeout: 8))
+        row.tap()
+        let setBtn = app.buttons["Set as Recurring"]
+        XCTAssertTrue(setBtn.waitForExistence(timeout: 5))
+        setBtn.tap()
+
+        app.buttons["tab-Recurring"].tap()
+        // Force calendar mode (a previous test may have persisted list mode).
+        if !app.buttons["calNextMonth"].waitForExistence(timeout: 3) {
+            app.buttons["recurringModeToggle"].tap()
+        }
+
+        // setRecurring projects nextDue = today + 30 days (monthly default).
+        let cal = Calendar.current
+        let due = cal.date(byAdding: .day, value: 30, to: .now)!
+        if !cal.isDate(due, equalTo: .now, toGranularity: .month) {
+            app.buttons["calNextMonth"].tap()
+        }
+        let dayBtn = app.buttons["calDay-\(cal.component(.day, from: due))"]
+        XCTAssertTrue(dayBtn.waitForExistence(timeout: 5), "Due day cell not found")
+        dayBtn.tap()
+
+        XCTAssertTrue(app.staticTexts[due.formatted(.dateTime.weekday(.wide).month().day())]
+            .waitForExistence(timeout: 5), "Selected-day header not shown")
+        XCTAssertFalse(app.staticTexts["Nothing due this day."].exists,
+                       "Confirmed bill not listed on its due day")
+        snap(app, "recurring-calendar-due-day")
     }
 
     // 5. Tapping a Dashboard category drills into a filtered Transactions list.
@@ -228,8 +266,9 @@ final class FinAppUITests: XCTestCase {
         snap(app, "refilter-pops-detail")
     }
 
-    // 9. Tapping a transaction inside an account opens it in the Transactions tab.
-    func testAccountTransactionOpensInTransactions() {
+    // 9. Tapping a transaction inside an account pushes the detail onto the
+    //    Accounts stack, and going back returns to the account subpage.
+    func testAccountTransactionPushesDetailAndBackReturns() {
         let app = launch(tab: 0)
         let account = app.descendants(matching: .any).matching(identifier: "accountRow-s-card").firstMatch
         XCTAssertTrue(account.waitForExistence(timeout: 8), "Account row not found")
@@ -245,7 +284,16 @@ final class FinAppUITests: XCTestCase {
         txn.tap()
 
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch
-            .waitForExistence(timeout: 5), "Transaction detail did not open in the Transactions tab")
+            .waitForExistence(timeout: 5), "Transaction detail did not open")
+
+        // The back-swipe (interactive pop) must return to the account subpage,
+        // not to the Transactions tab. Assert on the nav bar — the name field
+        // is a lazy List row that sits above the fold after the scroll above.
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.5))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: end)
+        XCTAssertTrue(app.navigationBars["Rewards Card"].waitForExistence(timeout: 5),
+                      "Back-swipe did not return to the account subpage")
     }
 
     // 7. Swiping across the app must not crash (regression for the page-style
