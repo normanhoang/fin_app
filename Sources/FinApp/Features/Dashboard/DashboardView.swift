@@ -242,7 +242,7 @@ struct DashboardView: View {
                         .foregroundStyle(autoCategories ? .white : Color.brand)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(autoCategories ? Color.brand : Color.brand.opacity(0.12), in: Capsule())
+                        .background(autoCategories ? Color.brand.opacity(0.7) : Color.brand.opacity(0.12), in: Capsule())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Automatically show only categories with spending")
