@@ -640,6 +640,32 @@ final class FinAppUITests: XCTestCase {
         snap(app, "collapse-all-expanded")
     }
 
+    // 8c. Rapid taps on the sort and collapse-all toolbar buttons must each
+    //     register (repro: taps landing mid-animation/rebuild were dropped, so
+    //     an even number of fast taps could leave the button in the toggled
+    //     state). Parity check via each button's accessibilityLabel.
+    func testRapidToolbarTapsAllRegister() {
+        let app = launch(tab: 0) // Accounts
+        XCTAssertTrue(app.buttons["accountSortToggle"].waitForExistence(timeout: 8),
+                      "Sort toggle not found")
+
+        // Sort: starts "Sorted alphabetically". 8 fast taps → back to start.
+        let sort = app.buttons["accountSortToggle"]
+        let sortCoord = sort.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        for _ in 0..<8 { sortCoord.tap() }
+        XCTAssertTrue(app.buttons["accountSortToggle"]
+            .label == "Sorted alphabetically",
+            "Sort button lost a rapid tap (label: \(app.buttons["accountSortToggle"].label))")
+
+        // Collapse-all: starts "Collapse all" (expanded). 8 fast taps → back.
+        let collapse = app.buttons["accountCollapseAllToggle"]
+        let colCoord = collapse.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        for _ in 0..<8 { colCoord.tap() }
+        XCTAssertTrue(app.buttons["accountCollapseAllToggle"]
+            .label == "Collapse all",
+            "Collapse-all lost a rapid tap (label: \(app.buttons["accountCollapseAllToggle"].label))")
+    }
+
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
     func testRecurringRowOpensDetail() {
         let app = launch(tab: 3) // Recurring
