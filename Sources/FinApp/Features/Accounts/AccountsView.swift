@@ -25,9 +25,10 @@ struct AccountsView: View {
         Dictionary(grouping: accounts.filter { $0.accountType.isDebt == debt }, by: \.accountType)
             .map { type, accts in
                 TypeGroup(type: type, accounts: accts.sorted {
-                    sortByAmount
-                        ? $0.balance > $1.balance
-                        : $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+                    if sortByAmount && $0.balance.magnitude != $1.balance.magnitude {
+                        return $0.balance.magnitude > $1.balance.magnitude
+                    }
+                    return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
                 })
             }
             .sorted { $0.type.sortIndex < $1.type.sortIndex }
@@ -64,6 +65,7 @@ struct AccountsView: View {
                     .listRowSeparatorTint(Color.hairline)
                     .screenBackground()
                     .id(topReset)
+                    .animation(.easeInOut(duration: 0.25), value: collapsedTypes)
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
@@ -84,9 +86,7 @@ struct AccountsView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        withAnimation {
-                            collapsedTypes = allCollapsed ? [] : allTypes
-                        }
+                        collapsedTypes = allCollapsed ? [] : allTypes
                     } label: {
                         Image(systemName: "chevron.down")
                             .rotationEffect(.degrees(allCollapsed ? -90 : 0))
@@ -160,12 +160,10 @@ struct AccountsView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    withAnimation {
-                        if collapsedTypes.contains(group.type) {
-                            collapsedTypes.remove(group.type)
-                        } else {
-                            collapsedTypes.insert(group.type)
-                        }
+                    if collapsedTypes.contains(group.type) {
+                        collapsedTypes.remove(group.type)
+                    } else {
+                        collapsedTypes.insert(group.type)
                     }
                 }
                 .accessibilityIdentifier("accountGroupHeader-\(group.type.rawValue)")
