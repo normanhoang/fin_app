@@ -105,7 +105,8 @@ struct TransactionsView: View {
                 .sheet(isPresented: $showFilterSheet) {
                     TransactionFilterSheet(
                         filter: Binding(get: { router.txnFilter }, set: { router.txnFilter = $0 }),
-                        categories: categories
+                        categories: categories,
+                        months: availableMonths
                     )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
@@ -149,6 +150,20 @@ struct TransactionsView: View {
         if router.selectedTab == AppTab.transactions.rawValue {
             router.subpageOpen = !path.isEmpty
         }
+    }
+
+    /// Distinct month-starts with at least one transaction, newest first —
+    /// computed over ALL transactions (not `filtered`) so the sheet's month
+    /// stepper isn't narrowed by the other active facets. Same linear-pass
+    /// trick as `monthGroups`: the query is already posted-descending.
+    private var availableMonths: [Date] {
+        let cal = Calendar.current
+        var months: [Date] = []
+        for txn in transactions {
+            let month = cal.dateInterval(of: .month, for: txn.posted)?.start ?? txn.posted
+            if months.last != month { months.append(month) }
+        }
+        return months
     }
 
     /// Transactions grouped by month, newest month first. `filtered` preserves the

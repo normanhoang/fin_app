@@ -7,6 +7,9 @@ import SwiftUI
 struct TransactionFilterSheet: View {
     @Binding var filter: TransactionFilterState
     let categories: [Category]
+    /// Month-starts that actually have transactions, newest first; stepping is
+    /// clamped to this list so empty months can't be selected.
+    let months: [Date]
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -67,6 +70,7 @@ struct TransactionFilterSheet: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color.brand)
+            .disabled(!canStep(by: -1))
             .accessibilityLabel("Previous month")
             .accessibilityIdentifier("filterMonthBack")
 
@@ -80,6 +84,7 @@ struct TransactionFilterSheet: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color.brand)
+            .disabled(!canStep(by: 1))
             .accessibilityLabel("Next month")
             .accessibilityIdentifier("filterMonthForward")
 
@@ -93,12 +98,22 @@ struct TransactionFilterSheet: View {
         }
     }
 
-    /// From "All time", a chevron tap seeds the current month; otherwise steps.
+    /// `months` is newest-first, so stepping back in time means moving to a
+    /// higher index. From "All time", stepping back enters at the newest month.
+    private func targetIndex(by value: Int) -> Int? {
+        guard !months.isEmpty else { return nil }
+        guard let current = filter.month, let idx = months.firstIndex(of: current) else {
+            return value < 0 ? 0 : nil
+        }
+        let next = idx - value
+        return months.indices.contains(next) ? next : nil
+    }
+
+    private func canStep(by value: Int) -> Bool { targetIndex(by: value) != nil }
+
     private func step(by value: Int) {
-        let cal = Calendar.current
-        let current = filter.month ?? cal.dateInterval(of: .month, for: .now)?.start ?? .now
-        let base = filter.month == nil ? current : cal.date(byAdding: .month, value: value, to: current) ?? current
-        filter.month = cal.dateInterval(of: .month, for: base)?.start ?? base
+        guard let idx = targetIndex(by: value) else { return }
+        filter.month = months[idx]
     }
 
     private func toggleRow(name: String, icon: String, color: Color,

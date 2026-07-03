@@ -146,6 +146,30 @@ final class FinAppUITests: XCTestCase {
         snap(app, "filter-from-button")
     }
 
+    // 3e. Month stepper only visits months that have entries: forward is dead
+    // at "All time", back walks to the oldest month with data then disables.
+    func testMonthStepperBoundedByData() {
+        let app = launch(tab: 1)
+        let filter = app.buttons["filterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
+        filter.tap()
+
+        let back = app.buttons["filterMonthBack"]
+        let forward = app.buttons["filterMonthForward"]
+        let label = app.staticTexts["filterMonthLabel"]
+        XCTAssertTrue(back.waitForExistence(timeout: 5), "Month row missing")
+        XCTAssertEqual(label.label, "All time")
+        XCTAssertFalse(forward.isEnabled, "Forward should be disabled at All time")
+
+        back.tap()
+        XCTAssertNotEqual(label.label, "All time", "Back from All time should enter the newest month")
+
+        var steps = 0
+        while back.isEnabled && steps < 24 { back.tap(); steps += 1 }
+        XCTAssertFalse(back.isEnabled, "Back should disable at the oldest month with entries")
+        XCTAssertTrue(forward.isEnabled, "Forward should re-enable once off the newest month")
+    }
+
     // 3d. Multiple categories can be selected; the chip summarizes the count,
     // and Clear All removes the filter without dismissing the sheet.
     func testMultiSelectAndClearAllFilters() {
