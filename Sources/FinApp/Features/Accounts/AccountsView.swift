@@ -8,6 +8,10 @@ struct AccountsView: View {
     @State private var path = NavigationPath()
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
+    /// Type groups the user has collapsed; empty = all expanded (default).
+    @State private var collapsedTypes: Set<AccountType> = []
+    /// Sort accounts within each type group by amount (highest first) instead of name.
+    @AppStorage("accountsSortByAmount") private var sortByAmount = false
 
     /// Accounts of one type, kept together as a subsection.
     private struct TypeGroup: Identifiable {
@@ -21,7 +25,9 @@ struct AccountsView: View {
         Dictionary(grouping: accounts.filter { $0.accountType.isDebt == debt }, by: \.accountType)
             .map { type, accts in
                 TypeGroup(type: type, accounts: accts.sorted {
-                    $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+                    sortByAmount
+                        ? $0.balance > $1.balance
+                        : $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
                 })
             }
             .sorted { $0.type.sortIndex < $1.type.sortIndex }
@@ -63,6 +69,18 @@ struct AccountsView: View {
             .navigationDestination(for: Transaction.self) { TransactionDetailView(transaction: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button { sortByAmount.toggle() } label: {
+                        Image(systemName: sortByAmount ? "arrow.down.circle" : "textformat.abc")
+                    }
+                    .accessibilityLabel(sortByAmount ? "Sorted by amount" : "Sorted alphabetically")
+                    .accessibilityIdentifier("accountSortToggle")
+                }
+                if #available(iOS 26.0, *) {
+                    // Split the sort toggle into its own glass pill instead of
+                    // sharing one capsule with the + button.
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { showingAdd = true } label: { Image(systemName: "plus") }
                         .accessibilityLabel("Add account")
                         .accessibilityIdentifier("addAccountButton")
@@ -83,12 +101,14 @@ struct AccountsView: View {
 
     private func typeSection(_ group: TypeGroup, groupTitle: String, groupTotal: Decimal, showEyebrow: Bool) -> some View {
         Section {
-            ForEach(group.accounts) { account in
-                NavigationLink(value: account) {
-                    row(account)
+            if !collapsedTypes.contains(group.type) {
+                ForEach(group.accounts) { account in
+                    NavigationLink(value: account) {
+                        row(account)
+                    }
+                    .listRowBackground(Color.surface)
+                    .accessibilityIdentifier("accountRow-\(account.id)")
                 }
-                .listRowBackground(Color.surface)
-                .accessibilityIdentifier("accountRow-\(account.id)")
             }
         } header: {
             VStack(alignment: .leading, spacing: 8) {
@@ -108,6 +128,10 @@ struct AccountsView: View {
                     .padding(.top, 8)
                 }
                 HStack {
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.textSecondary)
+                        .rotationEffect(.degrees(collapsedTypes.contains(group.type) ? -90 : 0))
                     Text(group.type.displayName)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.textSecondary)
@@ -115,6 +139,17 @@ struct AccountsView: View {
                     MoneyText(value: group.subtotal, size: 14, weight: .semibold,
                               color: balanceColor(group.subtotal))
                 }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation {
+                        if collapsedTypes.contains(group.type) {
+                            collapsedTypes.remove(group.type)
+                        } else {
+                            collapsedTypes.insert(group.type)
+                        }
+                    }
+                }
+                .accessibilityIdentifier("accountGroupHeader-\(group.type.rawValue)")
             }
             .textCase(nil)
         }

@@ -254,12 +254,13 @@ private struct CalendarMonthCard: View {
                 Text("\(day)")
                     .font(.system(.footnote, design: .rounded,
                                   weight: isSelected || isToday ? .bold : .regular))
-                    .foregroundStyle(isSelected ? Color.appBackground : Color.textPrimary)
+                    .foregroundStyle(isSelected ? .white : Color.textPrimary)
                     .frame(width: 28, height: 28)
                     .background {
                         if isSelected {
-                            Circle().fill(Color.brand)
-                        } else if isToday {
+                            Circle().fill(Color.brand.opacity(0.7))
+                        }
+                        if isToday {
                             Circle().strokeBorder(Color.brand, lineWidth: 1.5)
                         }
                     }
