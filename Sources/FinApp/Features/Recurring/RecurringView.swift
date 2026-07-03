@@ -50,6 +50,8 @@ struct RecurringView: View {
             if router.selectedTab == AppTab.recurring.rawValue {
                 router.subpageOpen = !path.isEmpty
                 topReset += 1
+                displayedMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
+                selectedDay = Calendar.current.startOfDay(for: .now)
             } else { path = [] }
         }
         .onChange(of: path) {

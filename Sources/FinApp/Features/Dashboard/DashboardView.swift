@@ -297,8 +297,19 @@ struct DashboardView: View {
     /// row flips `isHidden` (SwiftData autosaves); the list updates live behind the
     /// popover, and tapping outside dismisses it.
     private var categoryFilterPopup: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel("Show Categories")
+        let listed = categories.filter { $0.name != "Transfers" }
+        let allVisible = !hideUncategorized && listed.allSatisfy { !$0.isHidden }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                SectionLabel("Show Categories")
+                Spacer()
+                Button(allVisible ? "Deselect All" : "Select All") {
+                    hideUncategorized = allVisible
+                    for category in listed { category.isHidden = allVisible }
+                }
+                .font(.caption)
+                .accessibilityIdentifier("catSelectAll")
+            }
             ScrollView {
                 VStack(spacing: 4) {
                     let spend = monthSpendByName
@@ -325,7 +336,7 @@ struct DashboardView: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("catToggle-Uncategorized")
                     .accessibilityValue(uncatVisible ? "shown" : ((spend[""] ?? 0) > 0 ? "half" : "empty"))
-                    ForEach(categories) { category in
+                    ForEach(listed) { category in
                         let visible = !category.isHidden
                         Button {
                             category.isHidden.toggle()
