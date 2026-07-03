@@ -73,6 +73,16 @@ struct AccountsView: View {
             .navigationDestination(for: Transaction.self) { TransactionDetailView(transaction: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button { sortByAmount.toggle() } label: {
+                        Image(systemName: sortByAmount ? "arrow.down.circle" : "textformat.abc")
+                    }
+                    .accessibilityLabel(sortByAmount ? "Sorted by amount" : "Sorted alphabetically")
+                    .accessibilityIdentifier("accountSortToggle")
+                }
+                if #available(iOS 26.0, *) {
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         withAnimation {
                             collapsedTypes = allCollapsed ? [] : allTypes
@@ -83,16 +93,6 @@ struct AccountsView: View {
                     }
                     .accessibilityLabel(allCollapsed ? "Expand all" : "Collapse all")
                     .accessibilityIdentifier("accountCollapseAllToggle")
-                }
-                if #available(iOS 26.0, *) {
-                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { sortByAmount.toggle() } label: {
-                        Image(systemName: sortByAmount ? "arrow.down.circle" : "textformat.abc")
-                    }
-                    .accessibilityLabel(sortByAmount ? "Sorted by amount" : "Sorted alphabetically")
-                    .accessibilityIdentifier("accountSortToggle")
                 }
                 if #available(iOS 26.0, *) {
                     // Split the sort toggle into its own glass pill instead of
