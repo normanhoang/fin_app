@@ -30,6 +30,24 @@ final class FinAppUITests: XCTestCase {
             .firstMatch
     }
 
+    /// Find a row in the filter sheet: expand the medium-detent sheet to full
+    /// height via its grabber, then scroll the sheet's own List (the last
+    /// collection view — the paging RootView contributes several others) until
+    /// the row exists. Lazy rows scrolled off-screen are absent from the tree.
+    private func filterSheetRow(_ app: XCUIApplication, _ id: String) -> XCUIElement {
+        let row = app.buttons[id].firstMatch
+        if row.waitForExistence(timeout: 5) { return row }
+        let grabber = app.buttons["Sheet Grabber"]
+        if grabber.exists { grabber.swipeUp() }
+        var swipes = 0
+        while !row.waitForExistence(timeout: 1) && swipes < 5 {
+            let lists = app.collectionViews
+            lists.element(boundBy: lists.count - 1).swipeUp()
+            swipes += 1
+        }
+        return row
+    }
+
     // 1. Tapping the Net Worth card opens the graph screen (empty "Building
     //    History" state with sample data, since snapshots only record on sync).
     func testNetWorthCardOpensGraph() {
@@ -94,36 +112,65 @@ final class FinAppUITests: XCTestCase {
         snap(app, "category-changed")
     }
 
-    // 3c. The filter menu offers an "Uncategorized" option that filters the list.
+    // 3c. The filter sheet offers an "Uncategorized" option that filters the list.
     func testUncategorizedFilterOption() {
         let app = launch(tab: 1)
         let filter = app.buttons["filterButton"]
         XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
         filter.tap()
 
-        let uncategorized = app.buttons["Uncategorized"].firstMatch
-        XCTAssertTrue(uncategorized.waitForExistence(timeout: 5), "Uncategorized option missing from filter menu")
+        let uncategorized = filterSheetRow(app, "txnCatToggle-Uncategorized")
+        XCTAssertTrue(uncategorized.exists, "Uncategorized option missing from filter sheet")
         uncategorized.tap()
+        app.buttons["filterDone"].tap()
 
         XCTAssertTrue(app.staticTexts["Filtered: Uncategorized"].waitForExistence(timeout: 5),
                       "Uncategorized filter not applied")
         snap(app, "filter-uncategorized")
     }
 
-    // 3b. The Filter button opens the category popup and filters the list.
+    // 3b. The Filter button opens the filter sheet and filters the list.
     func testFilterButtonFiltersTransactions() {
         let app = launch(tab: 1)
         let filter = app.buttons["filterButton"]
         XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
         filter.tap()
 
-        let housing = app.buttons["Housing"].firstMatch
-        XCTAssertTrue(housing.waitForExistence(timeout: 5), "Category popup did not open")
+        let housing = filterSheetRow(app, "txnCatToggle-Housing")
+        XCTAssertTrue(housing.exists, "Filter sheet did not open")
         housing.tap()
+        app.buttons["filterDone"].tap()
 
         XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5),
-                      "Filter not applied from the popup")
+                      "Filter not applied from the sheet")
         snap(app, "filter-from-button")
+    }
+
+    // 3d. Multiple categories can be selected; the chip summarizes the count,
+    // and Clear All removes the filter without dismissing the sheet.
+    func testMultiSelectAndClearAllFilters() {
+        let app = launch(tab: 1)
+        let filter = app.buttons["filterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
+        filter.tap()
+
+        let housing = filterSheetRow(app, "txnCatToggle-Housing")
+        XCTAssertTrue(housing.exists, "Filter sheet did not open")
+        housing.tap()
+        filterSheetRow(app, "txnCatToggle-Dining").tap()
+        app.buttons["filterDone"].tap()
+
+        XCTAssertTrue(app.staticTexts["Filtered: 2 categories"].waitForExistence(timeout: 5),
+                      "Multi-select chip not shown")
+
+        filter.tap()
+        let clearAll = app.buttons["filterClearAll"]
+        XCTAssertTrue(clearAll.waitForExistence(timeout: 5))
+        clearAll.tap()
+        app.buttons["filterDone"].tap()
+
+        XCTAssertFalse(app.staticTexts["Filtered: 2 categories"].waitForExistence(timeout: 2),
+                       "Clear All did not remove the filter")
     }
 
     // 4. "Set as Recurring" creates a bill that shows on the Recurring tab.

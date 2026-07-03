@@ -50,11 +50,13 @@
 		A7898F5A30C57ED6AC611DBE /* SimpleFinClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF81821B7F79704744CFCA64 /* SimpleFinClientTests.swift */; };
 		A85895AA42FEE3133FBCF20B /* CategorySeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */; };
 		AA0BFDC33D80BC0726B95FE1 /* KeyboardDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB70D4CE933C581B0369E8DE /* KeyboardDismiss.swift */; };
+		B161FB28B04B6190A5054538 /* TransactionFilterStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */; };
 		BCCB90EF53F6A68F106DD4F6 /* DesignComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D9D282FA26B1CA7C500013 /* DesignComponents.swift */; };
 		BCEEE9C5BF5256E595BEC834 /* Transaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979D1A4CE8D86953E1BDB0E0 /* Transaction.swift */; };
 		BD65E5D5CF02AE7229D86B50 /* SimpleFinClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA1EA7DFE6B5F3DEF338F8ED /* SimpleFinClient.swift */; };
 		BE167BDDEAF20F4B2A0DFFDC /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4CE39E1069B5053BE5996A8 /* AppRouter.swift */; };
 		C1B282377FB42D75D41228B1 /* CategorizationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA2A0E0D769B3FBF63B2BCF /* CategorizationEngine.swift */; };
+		C8539872CC9290420E7AF5D7 /* TransactionFilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9E60995D4AEE6C0438B237 /* TransactionFilterSheet.swift */; };
 		CB70F4D8DA06EF5DC0BED403 /* SchemaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5AC54257EA7A1991C56AC50 /* SchemaTests.swift */; };
 		CCA43441E3E6F49DC60BC3A0 /* TransactionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC94D5BAEBE5DC0628F94355 /* TransactionRow.swift */; };
 		CEBA1E054B6939F4FCDC2C0A /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF50253EE05EB506D6F973D /* Formatting.swift */; };
@@ -102,6 +104,7 @@
 		3836AD2C232480258AF632D7 /* FinApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FinApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3E67EDF458CCCD9D09B72E62 /* Budget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Budget.swift; sourceTree = "<group>"; };
 		402A245B5633BA51B2CF4853 /* AddAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddAccountView.swift; sourceTree = "<group>"; };
+		4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFilterStateTests.swift; sourceTree = "<group>"; };
 		5502E6B035A3EC87366C7343 /* RecurringScheduleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringScheduleTests.swift; sourceTree = "<group>"; };
 		56E5762A9CF9A5EF3F565EAB /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
 		5D88D40C9AF27A9C91DFA4FA /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
@@ -114,6 +117,7 @@
 		71E0C0CFBEFA86055F447425 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
 		725B00DD1C0DB2802CC7B87F /* RecurringStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringStoreTests.swift; sourceTree = "<group>"; };
 		768E0A9F851B31523F3F4359 /* CategoryRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryRule.swift; sourceTree = "<group>"; };
+		7A9E60995D4AEE6C0438B237 /* TransactionFilterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFilterSheet.swift; sourceTree = "<group>"; };
 		7B14848472272349DA38AAE1 /* RecurringDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringDetector.swift; sourceTree = "<group>"; };
 		804A8BB060B86F185BD38825 /* FinAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinAppApp.swift; sourceTree = "<group>"; };
 		83E9F972299B9113B1459971 /* CertificatePinner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CertificatePinner.swift; sourceTree = "<group>"; };
@@ -158,6 +162,7 @@
 		094F5793A966E22764E1BCF8 /* Transactions */ = {
 			isa = PBXGroup;
 			children = (
+				7A9E60995D4AEE6C0438B237 /* TransactionFilterSheet.swift */,
 				CC94D5BAEBE5DC0628F94355 /* TransactionRow.swift */,
 				FCC485F0F95DE68212D4907D /* TransactionsView.swift */,
 			);
@@ -371,6 +376,7 @@
 				027C6051FE9F3E15969CBF30 /* SimpleFinDecodingTests.swift */,
 				064BF2355930485CECCB1254 /* SyncServiceTests.swift */,
 				B424AC64C26E611E7FCC9110 /* SyncThrottleTests.swift */,
+				4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */,
 			);
 			path = FinAppTests;
 			sourceTree = "<group>";
@@ -563,6 +569,7 @@
 				48BDECAB02A5339BC2B6E1B0 /* SyncThrottle.swift in Sources */,
 				02FE8C4C4ADA367D86AC3CA9 /* Theme.swift in Sources */,
 				BCEEE9C5BF5256E595BEC834 /* Transaction.swift in Sources */,
+				C8539872CC9290420E7AF5D7 /* TransactionFilterSheet.swift in Sources */,
 				CCA43441E3E6F49DC60BC3A0 /* TransactionRow.swift in Sources */,
 				4C1634AD41135D7EB5B89FFB /* TransactionsView.swift in Sources */,
 			);
@@ -585,6 +592,7 @@
 				0B97456C80A794C0BCDD5C6C /* SimpleFinDecodingTests.swift in Sources */,
 				62BB21250781CCCB4300C8ED /* SyncServiceTests.swift in Sources */,
 				31279BF4003B5BCA2E34D4D7 /* SyncThrottleTests.swift in Sources */,
+				B161FB28B04B6190A5054538 /* TransactionFilterStateTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -706,7 +714,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = DZRPJF9JB6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -773,7 +781,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = DZRPJF9JB6;
 				ENABLE_NS_ASSERTIONS = NO;

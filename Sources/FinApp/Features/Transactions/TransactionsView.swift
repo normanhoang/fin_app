@@ -3,16 +3,20 @@ import SwiftData
 
 struct TransactionsView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
     @Query(sort: \Category.name) private var categories: [Category]
+    @Query private var accounts: [Account]
     @State private var search = ""
-    @State private var showFilterPicker = false
+    @State private var showFilterSheet = false
     @State private var path: [Transaction] = []
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
 
     private var filtered: [Transaction] {
-        var result = transactions.filter { matches(router.txnFilter, $0) }
+        let filter = router.txnFilter
+        let interval = filter.month.flatMap { Calendar.current.dateInterval(of: .month, for: $0) }
+        var result = transactions.filter { filter.matches($0, monthInterval: interval) }
         if !search.isEmpty {
             // Case-insensitive range search avoids allocating a lowercased copy
             // of every payee on every keystroke.
@@ -24,24 +28,40 @@ struct TransactionsView: View {
         return result
     }
 
-    private func matches(_ filter: TransactionFilter, _ txn: Transaction) -> Bool {
-        switch filter {
-        case .all: true
-        case .income: txn.category?.isIncome == true && txn.amount > 0
-        case .spending: txn.amount < 0 && txn.category?.isIncome != true && txn.category?.name != "Transfers"
-        case .uncategorized: txn.category == nil
-        case .category(let name): txn.category?.name == name
-        }
+    /// Sorted by user-facing name; `customName` overrides `name`, so sort
+    /// in-memory rather than in the query.
+    private var sortedAccounts: [Account] {
+        accounts.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 
+    /// Facet summaries joined with "·". A single category renders as just its
+    /// name (e.g. "Filtered: Housing") — UI tests assert those exact strings.
     private var filterLabel: String? {
-        switch router.txnFilter {
-        case .all: nil
-        case .income: "Income"
-        case .spending: "Spending"
-        case .uncategorized: "Uncategorized"
-        case .category(let name): name
+        let filter = router.txnFilter
+        guard filter.isActive else { return nil }
+        var parts: [String] = []
+        if filter.categories.count == 1, let item = filter.categories.first {
+            switch item {
+            case .uncategorized: parts.append("Uncategorized")
+            case .named(let name): parts.append(name)
+            }
+        } else if filter.categories.count > 1 {
+            parts.append("\(filter.categories.count) categories")
         }
+        switch filter.type {
+        case .all: break
+        case .income: parts.append("Income")
+        case .spending: parts.append("Expenses")
+        }
+        if let month = filter.month {
+            parts.append(month.formatted(.dateTime.month(.abbreviated).year()))
+        }
+        if filter.accountIDs.count == 1, let id = filter.accountIDs.first {
+            parts.append(accounts.first { $0.id == id }?.displayName ?? "1 account")
+        } else if filter.accountIDs.count > 1 {
+            parts.append("\(filter.accountIDs.count) accounts")
+        }
+        return parts.joined(separator: " · ")
     }
 
     var body: some View {
@@ -81,11 +101,36 @@ struct TransactionsView: View {
                 .background(Color.appBackground.ignoresSafeArea())
                 .navigationTitle("Transactions")
                 .fixLargeTitleInset(trigger: topReset)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showFilterSheet = true
+                        } label: {
+                            Image(systemName: router.txnFilter.isActive
+                                  ? "line.3.horizontal.decrease.circle.fill"
+                                  : "line.3.horizontal.decrease.circle")
+                        }
+                        .accessibilityLabel("Filter transactions")
+                        .accessibilityIdentifier("filterButton")
+                    }
+                }
+                .sheet(isPresented: $showFilterSheet) {
+                    TransactionFilterSheet(
+                        filter: Binding(get: { router.txnFilter }, set: { router.txnFilter = $0 }),
+                        categories: categories,
+                        accounts: sortedAccounts
+                    )
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                }
                 .navigationDestination(for: Transaction.self) { txn in
                     TransactionDetailView(transaction: txn)
                 }
             }
         }
+        // The sheet presents above the app's privacy cover, so it would stay
+        // visible in the app-switcher snapshot; dismiss when leaving foreground.
+        .onChange(of: scenePhase) { if scenePhase != .active { showFilterSheet = false } }
         .onChange(of: router.resetToken) { path = []; search = "" }
         .onChange(of: router.pendingTxnID) { openPendingTransaction() }
         .onChange(of: router.selectedTab) { handleTabChange() }
@@ -99,7 +144,7 @@ struct TransactionsView: View {
     private func handleTabChange() {
         if router.selectedTab == AppTab.transactions.rawValue {
             if !router.txnArrivalIsDeepLink {
-                router.txnFilter = .all
+                router.txnFilter = TransactionFilterState()
                 search = ""
             }
             router.txnArrivalIsDeepLink = false
@@ -145,54 +190,26 @@ struct TransactionsView: View {
     }
 
     private var searchBar: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search payee or category", text: $search)
-                    .textFieldStyle(.plain)
-                    .foregroundStyle(Color.textPrimary)
-                    .autocorrectionDisabled()
-                    .accessibilityIdentifier("txnSearchField")
-                if !search.isEmpty {
-                    Button {
-                        search = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(Color.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Clear search")
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("Search payee or category", text: $search)
+                .textFieldStyle(.plain)
+                .foregroundStyle(Color.textPrimary)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier("txnSearchField")
+            if !search.isEmpty {
+                Button {
+                    search = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Color.textSecondary)
                 }
-            }
-            .padding(10)
-            .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
-
-            Button {
-                showFilterPicker = true
-            } label: {
-                Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                    .font(.system(size: 26))
-                    .foregroundStyle(Color.brand)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Filter by category")
-            .accessibilityIdentifier("filterButton")
-            .popover(isPresented: $showFilterPicker) {
-                CategoryPickerPopup(
-                    categories: categories,
-                    selectedName: { if case .category(let name) = router.txnFilter { name } else { nil } }(),
-                    isUncategorizedSelected: router.txnFilter == .uncategorized,
-                    onSelect: { selected in
-                        if let category = selected {
-                            router.txnFilter = .category(category.name)
-                        } else {
-                            router.txnFilter = .uncategorized
-                        }
-                    }
-                )
-                .presentationCompactAdaptation(.popover)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
             }
         }
+        .padding(10)
+        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
         .padding(.horizontal)
         .padding(.top, 8)
         .padding(.bottom, 6)
@@ -203,7 +220,7 @@ struct TransactionsView: View {
             HStack(spacing: 6) {
                 Text("Filtered: \(label)")
                     .font(.system(size: 13, weight: .semibold))
-                Button { router.txnFilter = .all } label: {
+                Button { router.txnFilter = TransactionFilterState() } label: {
                     Image(systemName: "xmark.circle.fill")
                 }
                 .buttonStyle(.plain)
