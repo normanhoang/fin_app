@@ -1,13 +1,12 @@
 import SwiftUI
 
-/// Multi-facet filter sheet for the Transactions list: month, flow type,
-/// categories (multi-select), and accounts (multi-select). Every toggle writes
-/// straight back through the binding so the list live-updates behind the
-/// medium detent; "Done" just dismisses.
+/// Multi-facet filter sheet for the Transactions list: month, flow type, and
+/// categories (multi-select). Every toggle writes straight back through the
+/// binding so the list live-updates behind the medium detent; "Done" just
+/// dismisses.
 struct TransactionFilterSheet: View {
     @Binding var filter: TransactionFilterState
     let categories: [Category]
-    let accounts: [Account]
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -38,14 +37,6 @@ struct TransactionFilterSheet: View {
                                   color: Color(hex: category.colorHex),
                                   item: .named(category.name))
                             .accessibilityIdentifier("txnCatToggle-\(category.name)")
-                    }
-                }
-                .listRowBackground(Color.surface)
-
-                Section("Accounts") {
-                    ForEach(accounts) { account in
-                        accountRow(account)
-                            .accessibilityIdentifier("txnAcctToggle-\(account.id)")
                     }
                 }
                 .listRowBackground(Color.surface)
@@ -122,23 +113,6 @@ struct TransactionFilterSheet: View {
                     .foregroundStyle(color)
                     .frame(width: 22)
                 Text(name)
-                    .foregroundStyle(Color.textPrimary)
-                Spacer(minLength: 16)
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(selected ? Color.brand : Color.textSecondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func accountRow(_ account: Account) -> some View {
-        let selected = filter.accountIDs.contains(account.id)
-        return Button {
-            if selected { filter.accountIDs.remove(account.id) } else { filter.accountIDs.insert(account.id) }
-        } label: {
-            HStack(spacing: 10) {
-                Text(account.displayName)
                     .foregroundStyle(Color.textPrimary)
                 Spacer(minLength: 16)
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")

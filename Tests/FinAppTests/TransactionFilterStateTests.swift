@@ -16,13 +16,6 @@ final class TransactionFilterStateTests: XCTestCase {
         cal.date(from: DateComponents(year: y, month: m, day: d, hour: h))!
     }
 
-    private func account(_ id: String = UUID().uuidString) -> Account {
-        let a = Account(id: id, org: "B", name: "A", currency: "USD",
-                        balance: 0, balanceDate: Date())
-        ctx.insert(a)
-        return a
-    }
-
     private func cat(_ name: String, income: Bool = false) -> FinApp.Category {
         let c = FinApp.Category(name: name, colorHex: "#000", systemIcon: "tag", isIncome: income)
         ctx.insert(c)
@@ -30,9 +23,9 @@ final class TransactionFilterStateTests: XCTestCase {
     }
 
     private func txn(_ amount: String, _ d: Date = .now,
-                     account: Account? = nil, category: FinApp.Category? = nil) -> Transaction {
+                     category: FinApp.Category? = nil) -> Transaction {
         let t = Transaction(id: UUID().uuidString, posted: d, amount: Decimal(string: amount)!,
-                            detail: "x", account: account, category: category)
+                            detail: "x", category: category)
         ctx.insert(t)
         return t
     }
@@ -86,18 +79,6 @@ final class TransactionFilterStateTests: XCTestCase {
         XCTAssertFalse(filter.matches(txn("-1.00", category: cat("Dining")), monthInterval: nil))
     }
 
-    // MARK: Accounts
-
-    func testAccountFilter() {
-        var filter = TransactionFilterState()
-        let checking = account("acc-1")
-        filter.accountIDs = ["acc-1"]
-
-        XCTAssertTrue(filter.matches(txn("-1.00", account: checking), monthInterval: nil))
-        XCTAssertFalse(filter.matches(txn("-1.00", account: account("acc-2")), monthInterval: nil))
-        XCTAssertFalse(filter.matches(txn("-1.00"), monthInterval: nil), "nil account fails a non-empty account filter")
-    }
-
     // MARK: Type
 
     func testIncomeRequiresIncomeCategoryAndPositiveAmount() {
@@ -127,23 +108,19 @@ final class TransactionFilterStateTests: XCTestCase {
     func testFacetsCombineWithAND() {
         var filter = TransactionFilterState()
         let dining = cat("Dining")
-        let checking = account("acc-1")
         filter.month = date(2026, 6, 1, 0)
         filter.categories = [.named("Dining")]
-        filter.accountIDs = ["acc-1"]
         filter.type = .spending
         let interval = monthInterval(of: filter)
 
         XCTAssertTrue(filter.matches(
-            txn("-20.00", date(2026, 6, 15), account: checking, category: dining), monthInterval: interval))
+            txn("-20.00", date(2026, 6, 15), category: dining), monthInterval: interval))
         // Each facet failing alone breaks the match.
         XCTAssertFalse(filter.matches(
-            txn("-20.00", date(2026, 7, 15), account: checking, category: dining), monthInterval: interval))
+            txn("-20.00", date(2026, 7, 15), category: dining), monthInterval: interval))
         XCTAssertFalse(filter.matches(
-            txn("-20.00", date(2026, 6, 15), account: checking, category: cat("Housing")), monthInterval: interval))
+            txn("-20.00", date(2026, 6, 15), category: cat("Housing")), monthInterval: interval))
         XCTAssertFalse(filter.matches(
-            txn("-20.00", date(2026, 6, 15), account: account("acc-2"), category: dining), monthInterval: interval))
-        XCTAssertFalse(filter.matches(
-            txn("20.00", date(2026, 6, 15), account: checking, category: dining), monthInterval: interval))
+            txn("20.00", date(2026, 6, 15), category: dining), monthInterval: interval))
     }
 }

@@ -39,8 +39,6 @@ struct TransactionFilterState: Equatable {
     var month: Date?
     /// Empty = all categories.
     var categories: Set<CategoryFilterItem> = []
-    /// Account IDs; empty = all accounts.
-    var accountIDs: Set<String> = []
     var type: FlowType = .all
 
     var isActive: Bool { self != TransactionFilterState() }
@@ -69,9 +67,6 @@ struct TransactionFilterState: Equatable {
             let hit = txn.category.map { categories.contains(.named($0.name)) }
                 ?? categories.contains(.uncategorized)
             if !hit { return false }
-        }
-        if !accountIDs.isEmpty {
-            guard let account = txn.account, accountIDs.contains(account.id) else { return false }
         }
         switch type {
         case .all: return true

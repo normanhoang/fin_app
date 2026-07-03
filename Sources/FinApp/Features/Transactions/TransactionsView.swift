@@ -6,7 +6,6 @@ struct TransactionsView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
     @Query(sort: \Category.name) private var categories: [Category]
-    @Query private var accounts: [Account]
     @State private var search = ""
     @State private var showFilterSheet = false
     @State private var path: [Transaction] = []
@@ -26,12 +25,6 @@ struct TransactionsView: View {
             }
         }
         return result
-    }
-
-    /// Sorted by user-facing name; `customName` overrides `name`, so sort
-    /// in-memory rather than in the query.
-    private var sortedAccounts: [Account] {
-        accounts.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 
     /// Facet summaries joined with "·". A single category renders as just its
@@ -55,11 +48,6 @@ struct TransactionsView: View {
         }
         if let month = filter.month {
             parts.append(month.formatted(.dateTime.month(.abbreviated).year()))
-        }
-        if filter.accountIDs.count == 1, let id = filter.accountIDs.first {
-            parts.append(accounts.first { $0.id == id }?.displayName ?? "1 account")
-        } else if filter.accountIDs.count > 1 {
-            parts.append("\(filter.accountIDs.count) accounts")
         }
         return parts.joined(separator: " · ")
     }
@@ -117,8 +105,7 @@ struct TransactionsView: View {
                 .sheet(isPresented: $showFilterSheet) {
                     TransactionFilterSheet(
                         filter: Binding(get: { router.txnFilter }, set: { router.txnFilter = $0 }),
-                        categories: categories,
-                        accounts: sortedAccounts
+                        categories: categories
                     )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
