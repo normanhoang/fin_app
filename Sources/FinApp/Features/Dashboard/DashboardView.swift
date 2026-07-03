@@ -34,6 +34,9 @@ struct DashboardView: View {
     @State private var showCategoryFilter = false
     /// Hide the synthetic "Uncategorized" row from the Spending Categories list.
     @AppStorage("dashHideUncategorized") private var hideUncategorized = false
+    /// Auto mode: show only categories with real spend this month; the manual
+    /// isHidden flags lie dormant. Defaults on for fresh and existing installs.
+    @AppStorage("dashCategoryAuto") private var autoCategories = true
     /// The trend chart's plot rectangle, in the "dash" coordinate space — used to
     /// position the popup and to map taps back to a bar.
     @State private var trendPlot: CGRect = .zero
@@ -195,6 +198,18 @@ struct DashboardView: View {
     // MARK: Spending by category
 
     private var topCategories: [Analytics.CategoryTotal] {
+        if autoCategories {
+            // Auto: only categories with spend this month. spendingByCategory
+            // ignores isHidden (wanted — manual hides are dormant) but includes
+            // Transfers, so strip them here. Re-sort with the name tiebreak:
+            // its dictionary-built order is unstable on total ties.
+            return Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
+                .filter { $0.category?.name != "Transfers" && $0.total > 0 }
+                .sorted {
+                    $0.total != $1.total ? $0.total > $1.total
+                                         : ($0.category?.name ?? "") < ($1.category?.name ?? "")
+                }
+        }
         // Transfers move money between your own accounts — not real spending.
         // Every non-hidden category shows, at $0 when there's no spend this month.
         var rows = Analytics.spendingCategories(transactions, categories: categories,
@@ -219,6 +234,20 @@ struct DashboardView: View {
             HStack {
                 SectionLabel("Spending Categories")
                 Spacer()
+                // Auto itself doesn't seed: turning it off reveals the dormant
+                // manual selections as-is.
+                Button { autoCategories.toggle() } label: {
+                    Text("Auto")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(autoCategories ? .white : Color.brand)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(autoCategories ? Color.brand : Color.brand.opacity(0.12), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Automatically show only categories with spending")
+                .accessibilityValue(autoCategories ? "on" : "off")
+                .accessibilityIdentifier("catAutoToggle")
                 Button { showCategoryFilter = true } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                         .font(.system(size: 18))
@@ -260,7 +289,8 @@ struct DashboardView: View {
                 .accessibilityIdentifier("category-\(name)")
             }
             if cats.isEmpty {
-                Text("All categories hidden — tap the filter to show some.")
+                Text(autoCategories ? "No spending yet this month."
+                                    : "All categories hidden — tap the filter to show some.")
                     .font(.subheadline)
                     .foregroundStyle(Color.textSecondary)
             }
@@ -290,6 +320,18 @@ struct DashboardView: View {
         return map
     }
 
+    /// Leaving Auto via a popup tap must not change what's visible: seed the
+    /// manual flags from Auto's current view (visible = has spend), then let
+    /// the tapped toggle apply on top. No-op when Auto is already off.
+    private func disableAutoSeedingFromSpend(spend: [String: Decimal]) {
+        guard autoCategories else { return }
+        for category in categories where category.name != "Transfers" {
+            category.isHidden = (spend[category.name] ?? 0) <= 0
+        }
+        hideUncategorized = (spend[""] ?? 0) <= 0
+        autoCategories = false
+    }
+
     /// Filter checkbox: filled when shown, half-filled when hidden but the category
     /// still has spend this month, empty when hidden with no spend.
     /// SF Symbols quirk: `circle.tophalf.filled` renders with the BOTTOM half solid
@@ -305,12 +347,20 @@ struct DashboardView: View {
     /// popover, and tapping outside dismisses it.
     private var categoryFilterPopup: some View {
         let listed = categories.filter { $0.name != "Transfers" }
-        let allVisible = !hideUncategorized && listed.allSatisfy { !$0.isHidden }
+        let spend = monthSpendByName
+        // Rows show EFFECTIVE visibility: under Auto that's "has spend", not the
+        // dormant isHidden flags. Any tap seeds the flags from this view first
+        // (so nothing jumps), turns Auto off, then applies the toggle.
+        let uncatVisible = autoCategories ? (spend[""] ?? 0) > 0 : !hideUncategorized
+        let allVisible = uncatVisible && listed.allSatisfy {
+            autoCategories ? (spend[$0.name] ?? 0) > 0 : !$0.isHidden
+        }
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 SectionLabel("Show Categories")
                 Spacer()
                 Button(allVisible ? "Deselect All" : "Select All") {
+                    disableAutoSeedingFromSpend(spend: spend)
                     hideUncategorized = allVisible
                     for category in listed { category.isHidden = allVisible }
                 }
@@ -319,9 +369,8 @@ struct DashboardView: View {
             }
             ScrollView {
                 VStack(spacing: 4) {
-                    let spend = monthSpendByName
-                    let uncatVisible = !hideUncategorized
                     Button {
+                        disableAutoSeedingFromSpend(spend: spend)
                         hideUncategorized.toggle()
                     } label: {
                         HStack(spacing: 10) {
@@ -344,8 +393,10 @@ struct DashboardView: View {
                     .accessibilityIdentifier("catToggle-Uncategorized")
                     .accessibilityValue(uncatVisible ? "shown" : ((spend[""] ?? 0) > 0 ? "half" : "empty"))
                     ForEach(listed) { category in
-                        let visible = !category.isHidden
+                        let visible = autoCategories ? (spend[category.name] ?? 0) > 0
+                                                     : !category.isHidden
                         Button {
+                            disableAutoSeedingFromSpend(spend: spend)
                             category.isHidden.toggle()
                         } label: {
                             HStack(spacing: 10) {

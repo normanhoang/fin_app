@@ -516,7 +516,9 @@ final class FinAppUITests: XCTestCase {
     // 14b. Filter checkbox is half-filled for a hidden category that still has
     //      current-month spend, empty for a hidden category with none. (Fresh
     //      sample dates the recurring Netflix/Spotify charges to today →
-    //      Subscriptions has this-month spend; Bars has none.)
+    //      Subscriptions has this-month spend; Bars has none.) The first tap
+    //      also disables Auto and seeds the flags from Auto's view, so Bars
+    //      (no spend) lands hidden/"empty" without being touched.
     func testFilterCheckboxReflectsSpend() {
         let app = launch(tab: 2)
         let filter = app.buttons["categoryFilterButton"]
@@ -532,11 +534,55 @@ final class FinAppUITests: XCTestCase {
                        "Hidden category with current-month spend should be half-filled")
 
         let bars = app.buttons["catToggle-Bars"]
-        XCTAssertEqual(bars.value as? String, "shown")
-        bars.tap()
         XCTAssertEqual(bars.value as? String, "empty",
-                       "Hidden category with no spend should be empty")
+                       "Seeding on leaving Auto should hide zero-spend categories")
+        bars.tap()
+        XCTAssertEqual(bars.value as? String, "shown")
         snap(app, "filter-checkbox-states")
+    }
+
+    // 14d. Auto (default ON) hides zero-spend categories; toggling it off
+    //      reveals the dormant manual state (fresh store: everything visible).
+    func testAutoToggleShowsZeroSpendCategories() {
+        let app = launch(tab: 2)
+        XCTAssertTrue(app.buttons["category-Housing"].waitForExistence(timeout: 8),
+                      "Housing (has spend) should show under Auto")
+        XCTAssertFalse(app.buttons["category-Bars"].exists,
+                       "Auto should hide categories with no spend this month")
+
+        let auto = app.buttons["catAutoToggle"]
+        while !auto.isHittable { app.swipeUp() }
+        XCTAssertEqual(auto.value as? String, "on")
+        auto.tap()
+        XCTAssertTrue(app.buttons["category-Bars"].waitForExistence(timeout: 3),
+                      "Manual state (all visible) should take over when Auto is off")
+        auto.tap()
+        XCTAssertFalse(app.buttons["category-Bars"].waitForExistence(timeout: 2),
+                       "Re-enabling Auto should re-derive from spend")
+    }
+
+    // 14e. Tapping a popup toggle disables Auto and seeds the manual flags from
+    //      Auto's view — the visible set only changes by the tapped row.
+    func testPopupTapDisablesAutoAndSeeds() {
+        let app = launch(tab: 2)
+        let filter = app.buttons["categoryFilterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
+        while !filter.isHittable { app.swipeUp() }
+        filter.tap()
+
+        let groceries = app.buttons["catToggle-Groceries"]
+        XCTAssertTrue(groceries.waitForExistence(timeout: 5), "Filter popup did not open")
+        groceries.tap()
+        app.navigationBars["Dashboard"].tap() // dismiss the popover
+
+        XCTAssertEqual(app.buttons["catAutoToggle"].value as? String, "off",
+                       "Popup tap should disable Auto")
+        XCTAssertFalse(app.buttons["category-Groceries"].exists,
+                       "Tapped category should now be hidden")
+        XCTAssertFalse(app.buttons["category-Bars"].exists,
+                       "Seeding must keep zero-spend categories hidden")
+        XCTAssertTrue(app.buttons["category-Housing"].exists,
+                      "Untouched spent categories must stay visible")
     }
 
     // 14c. Hiding every category must not make the whole card (and its filter

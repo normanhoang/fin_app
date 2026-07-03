@@ -90,6 +90,20 @@ final class AnalyticsTests: XCTestCase {
         XCTAssertEqual(Analytics.netWorth(accounts), Decimal(string: "2900.00"))
     }
 
+    func testSpendingByCategoryIgnoresHiddenAndIncludesTransfers() {
+        // The Dashboard's Auto category mode relies on both properties.
+        let hidden = cat("Food")
+        hidden.isHidden = true
+        let transfers = cat("Transfers")
+        txn("-40.00", date(2026, 6, 5), category: hidden)
+        txn("-25.00", date(2026, 6, 6), category: transfers)
+        let txns = try! ctx.fetch(FetchDescriptor<Transaction>())
+        let names = Analytics.spendingByCategory(txns, inMonthOf: date(2026, 6, 1), calendar: cal)
+            .map { $0.category?.name }
+        XCTAssertTrue(names.contains("Food"), "isHidden must be ignored (Dashboard Auto relies on this)")
+        XCTAssertTrue(names.contains("Transfers"), "Transfers included — callers must filter them out")
+    }
+
     func testMonthlyIncomeSumsIncomeCategoryInMonth() {
         let income = cat("Income", income: true)
         txn("2000.00", date(2026, 6, 5), category: income)

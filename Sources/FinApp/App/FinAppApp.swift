@@ -26,6 +26,13 @@ struct FinAppApp: App {
         if isUITest || ProcessInfo.processInfo.environment["FINAPP_SAMPLE"] == "1" {
             SampleData.inject(into: container.mainContext)
         }
+        if isUITest {
+            // The store is in-memory per launch, but UserDefaults persist across
+            // UI-test launches — reset the dashboard filter flags so tests can't
+            // leak state into each other and become order-dependent.
+            UserDefaults.standard.removeObject(forKey: "dashCategoryAuto")
+            UserDefaults.standard.removeObject(forKey: "dashHideUncategorized")
+        }
         #else
         let container = AppSchema.makeContainer()
         self.container = container
