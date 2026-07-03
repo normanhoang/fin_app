@@ -617,6 +617,29 @@ final class FinAppUITests: XCTestCase {
         snap(app, "categories-all-hidden")
     }
 
+    // 8b. Collapse-all/expand-all toolbar button hides and restores account rows,
+    //     and keeps working across repeated taps (regression: strict set equality
+    //     made the first tap a visual no-op when collapsedTypes held stale types).
+    func testCollapseAllToggleHidesAndRestoresRows() {
+        let app = launch(tab: 0) // Accounts
+        let row = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'accountRow-'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "No account rows")
+
+        let toggle = app.buttons["accountCollapseAllToggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 3), "Collapse-all button not found")
+
+        for i in 1...3 {
+            toggle.tap()
+            XCTAssertTrue(row.waitForNonExistence(timeout: 3),
+                          "Rows still visible after collapse-all (round \(i))")
+            toggle.tap()
+            XCTAssertTrue(row.waitForExistence(timeout: 3),
+                          "Rows did not return after expand-all (round \(i))")
+        }
+        snap(app, "collapse-all-expanded")
+    }
+
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
     func testRecurringRowOpensDetail() {
         let app = launch(tab: 3) // Recurring

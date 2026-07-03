@@ -35,6 +35,10 @@ struct AccountsView: View {
 
     private var assetGroups: [TypeGroup] { groups(debt: false) }
     private var debtGroups: [TypeGroup] { groups(debt: true) }
+    private var allTypes: Set<AccountType> { Set((assetGroups + debtGroups).map(\.type)) }
+    /// Superset, not equality: `collapsedTypes` can hold stale types (e.g. after an
+    /// account is retyped), which would otherwise make collapse-all a visual no-op.
+    private var allCollapsed: Bool { collapsedTypes.isSuperset(of: allTypes) }
     private func total(_ groups: [TypeGroup]) -> Decimal { groups.reduce(Decimal(0)) { $0 + $1.subtotal } }
 
     var body: some View {
@@ -68,6 +72,21 @@ struct AccountsView: View {
             .navigationDestination(for: Account.self) { AccountDetailView(account: $0) }
             .navigationDestination(for: Transaction.self) { TransactionDetailView(transaction: $0) }
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        withAnimation {
+                            collapsedTypes = allCollapsed ? [] : allTypes
+                        }
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .rotationEffect(.degrees(allCollapsed ? -90 : 0))
+                    }
+                    .accessibilityLabel(allCollapsed ? "Expand all" : "Collapse all")
+                    .accessibilityIdentifier("accountCollapseAllToggle")
+                }
+                if #available(iOS 26.0, *) {
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { sortByAmount.toggle() } label: {
                         Image(systemName: sortByAmount ? "arrow.down.circle" : "textformat.abc")
