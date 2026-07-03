@@ -42,6 +42,7 @@ struct DashboardView: View {
     /// first item and is dropped mid-paging.
     @State private var topReset = 0
     @Environment(\.bottomBarInset) private var bottomBarInset
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -89,6 +90,12 @@ struct DashboardView: View {
             } else {
                 path = NavigationPath()
             }
+        }
+        // The popover presents above the window's content, so the privacy cover
+        // and lock screen (ZStack overlays in FinAppApp) can't hide it — dismiss
+        // it the moment the scene stops being frontmost.
+        .onChange(of: scenePhase) {
+            if scenePhase != .active { showCategoryFilter = false }
         }
         .onChange(of: path) {
             if router.selectedTab == AppTab.dashboard.rawValue { router.subpageOpen = !path.isEmpty }
