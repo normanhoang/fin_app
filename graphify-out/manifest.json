@@ -1,0 +1,402 @@
+{
+  "Sources/FinApp/Analytics/Analytics.swift": {
+    "mtime": 1782965308.3266225,
+    "ast_hash": "5506e3da12450217040b58d13d1c73fa",
+    "semantic_hash": "5506e3da12450217040b58d13d1c73fa"
+  },
+  "Sources/FinApp/Analytics/NetWorthSnapshotService.swift": {
+    "mtime": 1782965502.9621818,
+    "ast_hash": "419e80b15a10052450182ac0a5aebaf3",
+    "semantic_hash": "419e80b15a10052450182ac0a5aebaf3"
+  },
+  "Sources/FinApp/App/AppRouter.swift": {
+    "mtime": 1783087201.493694,
+    "ast_hash": "dda44d062c42c1d3ec3af4ae153ad96c",
+    "semantic_hash": "dda44d062c42c1d3ec3af4ae153ad96c"
+  },
+  "Sources/FinApp/App/FinAppApp.swift": {
+    "mtime": 1783092686.410428,
+    "ast_hash": "481a7ec1862b81a6c6461855301f2a5f",
+    "semantic_hash": "481a7ec1862b81a6c6461855301f2a5f"
+  },
+  "Sources/FinApp/App/RootView.swift": {
+    "mtime": 1782965482.2029254,
+    "ast_hash": "46abad0c246a318bf81c8fb2655cd107",
+    "semantic_hash": "46abad0c246a318bf81c8fb2655cd107"
+  },
+  "Sources/FinApp/Assets.xcassets/AccentColor.colorset/Contents.json": {
+    "mtime": 1782271797.0872571,
+    "ast_hash": "56d1fb50f7629aa8c4f86b68bcfe16e6",
+    "semantic_hash": "56d1fb50f7629aa8c4f86b68bcfe16e6"
+  },
+  "Sources/FinApp/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1782189856.4382753,
+    "ast_hash": "cc0fa974a2eb9d06669de8f7d07455fc",
+    "semantic_hash": "cc0fa974a2eb9d06669de8f7d07455fc"
+  },
+  "Sources/FinApp/Assets.xcassets/Contents.json": {
+    "mtime": 1782189852.5527744,
+    "ast_hash": "9deb2ada1cc834bbebf8bbad9c8978a1",
+    "semantic_hash": "9deb2ada1cc834bbebf8bbad9c8978a1"
+  },
+  "Sources/FinApp/Assets.xcassets/SplashIcon.imageset/Contents.json": {
+    "mtime": 1782192883.9900029,
+    "ast_hash": "55ffa82c3af33b245998603fbf966133",
+    "semantic_hash": "55ffa82c3af33b245998603fbf966133"
+  },
+  "Sources/FinApp/Categorization/CategorizationEngine.swift": {
+    "mtime": 1782965428.8655024,
+    "ast_hash": "f8d2d2f7a4aab0851c485892193bdda3",
+    "semantic_hash": "f8d2d2f7a4aab0851c485892193bdda3"
+  },
+  "Sources/FinApp/Categorization/CategorySeed.swift": {
+    "mtime": 1782705153.7801635,
+    "ast_hash": "dd0f06084181a07d5ec4a16460da1b73",
+    "semantic_hash": "dd0f06084181a07d5ec4a16460da1b73"
+  },
+  "Sources/FinApp/Features/Accounts/AccountsView.swift": {
+    "mtime": 1783113252.608923,
+    "ast_hash": "11bfaeb1bce5dd688b81812409959f52",
+    "semantic_hash": "11bfaeb1bce5dd688b81812409959f52"
+  },
+  "Sources/FinApp/Features/Accounts/AddAccountView.swift": {
+    "mtime": 1782911703.0091083,
+    "ast_hash": "c3d2d8bb7f11606817c71859d547505b",
+    "semantic_hash": "c3d2d8bb7f11606817c71859d547505b"
+  },
+  "Sources/FinApp/Features/Budgets/BudgetsView.swift": {
+    "mtime": 1782270862.5217385,
+    "ast_hash": "1471274313e27eb87ba45b3c6aa5f93e",
+    "semantic_hash": "1471274313e27eb87ba45b3c6aa5f93e"
+  },
+  "Sources/FinApp/Features/Dashboard/DashboardView.swift": {
+    "mtime": 1783095480.575873,
+    "ast_hash": "fa62678433448930a5f5fd5134a005f6",
+    "semantic_hash": "fa62678433448930a5f5fd5134a005f6"
+  },
+  "Sources/FinApp/Features/Dashboard/NetWorthDetailView.swift": {
+    "mtime": 1782962337.4771266,
+    "ast_hash": "1793caa810e15845f0d9e8ff7f62a858",
+    "semantic_hash": "1793caa810e15845f0d9e8ff7f62a858"
+  },
+  "Sources/FinApp/Features/Lock/LockScreen.swift": {
+    "mtime": 1782270898.761641,
+    "ast_hash": "100678137b0acaa511bfa31e417c7a26",
+    "semantic_hash": "100678137b0acaa511bfa31e417c7a26"
+  },
+  "Sources/FinApp/Features/Recurring/RecurringView.swift": {
+    "mtime": 1783103155.503715,
+    "ast_hash": "2d95e3f5f8bee6a6f4673c048d5d9ba1",
+    "semantic_hash": "2d95e3f5f8bee6a6f4673c048d5d9ba1"
+  },
+  "Sources/FinApp/Features/Settings/SettingsView.swift": {
+    "mtime": 1782859834.6428344,
+    "ast_hash": "6ffdba94c4f8ed60a97d149dfe0c4d60",
+    "semantic_hash": "6ffdba94c4f8ed60a97d149dfe0c4d60"
+  },
+  "Sources/FinApp/Features/Splash/SplashView.swift": {
+    "mtime": 1782271787.5476096,
+    "ast_hash": "59e80305efbca85e124f695b3f3dc1ef",
+    "semantic_hash": "59e80305efbca85e124f695b3f3dc1ef"
+  },
+  "Sources/FinApp/Features/Transactions/TransactionFilterSheet.swift": {
+    "mtime": 1783090201.1006656,
+    "ast_hash": "c0fc1d9b1e000814c3aa3f759f053341",
+    "semantic_hash": "c0fc1d9b1e000814c3aa3f759f053341"
+  },
+  "Sources/FinApp/Features/Transactions/TransactionRow.swift": {
+    "mtime": 1782965546.6818552,
+    "ast_hash": "918a03aa2df607d423e9149e19ea2e42",
+    "semantic_hash": "918a03aa2df607d423e9149e19ea2e42"
+  },
+  "Sources/FinApp/Features/Transactions/TransactionsView.swift": {
+    "mtime": 1783090225.4662218,
+    "ast_hash": "a0a435b73b395c6891820994984686a8",
+    "semantic_hash": "a0a435b73b395c6891820994984686a8"
+  },
+  "Sources/FinApp/Models/Account.swift": {
+    "mtime": 1782261350.8290355,
+    "ast_hash": "be551c4a00eda3861c028e78626375f7",
+    "semantic_hash": "be551c4a00eda3861c028e78626375f7"
+  },
+  "Sources/FinApp/Models/AccountType.swift": {
+    "mtime": 1782258879.511502,
+    "ast_hash": "bd271230da211ab6c3eb5715f972239d",
+    "semantic_hash": "bd271230da211ab6c3eb5715f972239d"
+  },
+  "Sources/FinApp/Models/AppSchema.swift": {
+    "mtime": 1782258800.299711,
+    "ast_hash": "53d539c414bf7f6f90fe7cc10c6e59c0",
+    "semantic_hash": "53d539c414bf7f6f90fe7cc10c6e59c0"
+  },
+  "Sources/FinApp/Models/Budget.swift": {
+    "mtime": 1782185854.4818263,
+    "ast_hash": "74f0ce2bae4f46f783e94c7e8e05ec83",
+    "semantic_hash": "74f0ce2bae4f46f783e94c7e8e05ec83"
+  },
+  "Sources/FinApp/Models/Category.swift": {
+    "mtime": 1782705143.094859,
+    "ast_hash": "e96873d674583f938a44d09c4c9108f3",
+    "semantic_hash": "e96873d674583f938a44d09c4c9108f3"
+  },
+  "Sources/FinApp/Models/CategoryRule.swift": {
+    "mtime": 1782185847.9593923,
+    "ast_hash": "e7aa86a11567dd4a529c4f5c9e3901e0",
+    "semantic_hash": "e7aa86a11567dd4a529c4f5c9e3901e0"
+  },
+  "Sources/FinApp/Models/NetWorthSnapshot.swift": {
+    "mtime": 1782258789.2577813,
+    "ast_hash": "f2db28d923da896ad6c6ece569ddee95",
+    "semantic_hash": "f2db28d923da896ad6c6ece569ddee95"
+  },
+  "Sources/FinApp/Models/RecurringBill.swift": {
+    "mtime": 1782962498.7569568,
+    "ast_hash": "d7b80f1d0efb72504788e8e584c16b9b",
+    "semantic_hash": "d7b80f1d0efb72504788e8e584c16b9b"
+  },
+  "Sources/FinApp/Models/Transaction.swift": {
+    "mtime": 1782185836.2146137,
+    "ast_hash": "9df70546dfcaa57ce28b9e9998dec6ac",
+    "semantic_hash": "9df70546dfcaa57ce28b9e9998dec6ac"
+  },
+  "Sources/FinApp/Recurring/RecurringDetector.swift": {
+    "mtime": 1782962410.8178093,
+    "ast_hash": "3aa39d8f24015fbbd042c66027978a75",
+    "semantic_hash": "3aa39d8f24015fbbd042c66027978a75"
+  },
+  "Sources/FinApp/Recurring/RecurringSchedule.swift": {
+    "mtime": 1783000144.0632641,
+    "ast_hash": "120422e8183e629f90ccd92ab5807e84",
+    "semantic_hash": "120422e8183e629f90ccd92ab5807e84"
+  },
+  "Sources/FinApp/Recurring/RecurringStore.swift": {
+    "mtime": 1782265709.6806743,
+    "ast_hash": "6ce296c0f1d8863dca6d38af80ff2f8c",
+    "semantic_hash": "6ce296c0f1d8863dca6d38af80ff2f8c"
+  },
+  "Sources/FinApp/SimpleFin/CertificatePinner.swift": {
+    "mtime": 1782189439.792723,
+    "ast_hash": "3be6da90b02fc8aaa9ae729747acdfad",
+    "semantic_hash": "3be6da90b02fc8aaa9ae729747acdfad"
+  },
+  "Sources/FinApp/SimpleFin/CredentialStore.swift": {
+    "mtime": 1782189241.7935698,
+    "ast_hash": "dd2187156b1b43fdb4aff7c5dd8679e6",
+    "semantic_hash": "dd2187156b1b43fdb4aff7c5dd8679e6"
+  },
+  "Sources/FinApp/SimpleFin/SimpleFinClient.swift": {
+    "mtime": 1782192255.4527934,
+    "ast_hash": "33e0e7413b0581d9326138ec742a026d",
+    "semantic_hash": "33e0e7413b0581d9326138ec742a026d"
+  },
+  "Sources/FinApp/SimpleFin/SimpleFinDTO.swift": {
+    "mtime": 1782186191.6014347,
+    "ast_hash": "546d60324fe3335eef7e071fe5be81d2",
+    "semantic_hash": "546d60324fe3335eef7e071fe5be81d2"
+  },
+  "Sources/FinApp/SimpleFin/SyncCoordinator.swift": {
+    "mtime": 1782965518.7657592,
+    "ast_hash": "ac7743a9e81e8f085818bd70384d1688",
+    "semantic_hash": "ac7743a9e81e8f085818bd70384d1688"
+  },
+  "Sources/FinApp/SimpleFin/SyncService.swift": {
+    "mtime": 1782965507.9415698,
+    "ast_hash": "a34b73df07c35a3e9be17cad09079d3f",
+    "semantic_hash": "a34b73df07c35a3e9be17cad09079d3f"
+  },
+  "Sources/FinApp/SimpleFin/SyncThrottle.swift": {
+    "mtime": 1782189205.6351836,
+    "ast_hash": "a6c3d3c76a48918ed145583405f4d3ec",
+    "semantic_hash": "a6c3d3c76a48918ed145583405f4d3ec"
+  },
+  "Sources/FinApp/Support/AppLock.swift": {
+    "mtime": 1782188438.1161726,
+    "ast_hash": "82d525993a088ddd622113d6e773091e",
+    "semantic_hash": "82d525993a088ddd622113d6e773091e"
+  },
+  "Sources/FinApp/Support/CategoryPickerPopup.swift": {
+    "mtime": 1782705143.095056,
+    "ast_hash": "0aa64275a1ed3f96b990f79cc187c749",
+    "semantic_hash": "0aa64275a1ed3f96b990f79cc187c749"
+  },
+  "Sources/FinApp/Support/DesignComponents.swift": {
+    "mtime": 1782333260.2645934,
+    "ast_hash": "42551a12580d09a3c22c6e1c889403c6",
+    "semantic_hash": "42551a12580d09a3c22c6e1c889403c6"
+  },
+  "Sources/FinApp/Support/Formatting.swift": {
+    "mtime": 1782965571.5768692,
+    "ast_hash": "f2f5b5b3e3030b6285ab8b6855ba1cbf",
+    "semantic_hash": "f2f5b5b3e3030b6285ab8b6855ba1cbf"
+  },
+  "Sources/FinApp/Support/KeyboardDismiss.swift": {
+    "mtime": 1782274126.3609912,
+    "ast_hash": "b7c16aa6968d2fb2377f9897a6064c03",
+    "semantic_hash": "b7c16aa6968d2fb2377f9897a6064c03"
+  },
+  "Sources/FinApp/Support/NavBarRelayout.swift": {
+    "mtime": 1782355777.1721218,
+    "ast_hash": "b218cbb3445187a19c9ed3a01e4c58fd",
+    "semantic_hash": "b218cbb3445187a19c9ed3a01e4c58fd"
+  },
+  "Sources/FinApp/Support/SampleData.swift": {
+    "mtime": 1782963664.5963202,
+    "ast_hash": "cb63bffb95a7bee126116f756634c001",
+    "semantic_hash": "cb63bffb95a7bee126116f756634c001"
+  },
+  "Sources/FinApp/Support/Theme.swift": {
+    "mtime": 1782271739.3251529,
+    "ast_hash": "4fb452b5d00ecf108c351e89098f5c5b",
+    "semantic_hash": "4fb452b5d00ecf108c351e89098f5c5b"
+  },
+  "Tests/FinAppTests/AnalyticsTests.swift": {
+    "mtime": 1783092730.138573,
+    "ast_hash": "8930f85d43de5d339e3aaf20177e21dd",
+    "semantic_hash": "8930f85d43de5d339e3aaf20177e21dd"
+  },
+  "Tests/FinAppTests/CategorizationEngineTests.swift": {
+    "mtime": 1782965634.8773143,
+    "ast_hash": "9c8aa80d218b67cbbb3b63bbba4347bd",
+    "semantic_hash": "9c8aa80d218b67cbbb3b63bbba4347bd"
+  },
+  "Tests/FinAppTests/CategorySeedTests.swift": {
+    "mtime": 1782259089.927438,
+    "ast_hash": "42cf7c5f2fc5bfcfa9aefeccaa700578",
+    "semantic_hash": "42cf7c5f2fc5bfcfa9aefeccaa700578"
+  },
+  "Tests/FinAppTests/CertificatePinnerTests.swift": {
+    "mtime": 1782189469.591922,
+    "ast_hash": "b4ffdbe4708e6d636defb318de04e084",
+    "semantic_hash": "b4ffdbe4708e6d636defb318de04e084"
+  },
+  "Tests/FinAppTests/CredentialStoreTests.swift": {
+    "mtime": 1782187058.4955368,
+    "ast_hash": "0854e2473379c46906738e592db6921a",
+    "semantic_hash": "0854e2473379c46906738e592db6921a"
+  },
+  "Tests/FinAppTests/RecurringDetectorTests.swift": {
+    "mtime": 1782962485.1508439,
+    "ast_hash": "cd76afc2cf170e692c7ae601935051bc",
+    "semantic_hash": "cd76afc2cf170e692c7ae601935051bc"
+  },
+  "Tests/FinAppTests/RecurringScheduleTests.swift": {
+    "mtime": 1783000086.3316324,
+    "ast_hash": "52a9ee48a236de4f34c061666a36faf2",
+    "semantic_hash": "52a9ee48a236de4f34c061666a36faf2"
+  },
+  "Tests/FinAppTests/RecurringStoreTests.swift": {
+    "mtime": 1782265838.5141025,
+    "ast_hash": "2b4320305d5af99b48a99764d3d7442b",
+    "semantic_hash": "2b4320305d5af99b48a99764d3d7442b"
+  },
+  "Tests/FinAppTests/SchemaTests.swift": {
+    "mtime": 1782185916.93071,
+    "ast_hash": "98685bd51a63e7c6bca9d21541329ba2",
+    "semantic_hash": "98685bd51a63e7c6bca9d21541329ba2"
+  },
+  "Tests/FinAppTests/SimpleFinClientTests.swift": {
+    "mtime": 1782192236.3809266,
+    "ast_hash": "818ed60908ddaa67f751c1daffcab731",
+    "semantic_hash": "818ed60908ddaa67f751c1daffcab731"
+  },
+  "Tests/FinAppTests/SimpleFinDecodingTests.swift": {
+    "mtime": 1782186036.6197133,
+    "ast_hash": "5e6836e280c96f231d86c0c4dffa3685",
+    "semantic_hash": "5e6836e280c96f231d86c0c4dffa3685"
+  },
+  "Tests/FinAppTests/SyncServiceTests.swift": {
+    "mtime": 1782965529.206628,
+    "ast_hash": "467fee0e7b08326a8dd14543aa45add0",
+    "semantic_hash": "467fee0e7b08326a8dd14543aa45add0"
+  },
+  "Tests/FinAppTests/SyncThrottleTests.swift": {
+    "mtime": 1782189197.6391165,
+    "ast_hash": "3ec1553c5e29666cf56ba16b604e761b",
+    "semantic_hash": "3ec1553c5e29666cf56ba16b604e761b"
+  },
+  "Tests/FinAppTests/TransactionFilterStateTests.swift": {
+    "mtime": 1783087260.2861683,
+    "ast_hash": "cd29f5c37049ce2138adb087f8e4880e",
+    "semantic_hash": "cd29f5c37049ce2138adb087f8e4880e"
+  },
+  "Tests/FinAppUITests/FinAppUITests.swift": {
+    "mtime": 1783108383.7329946,
+    "ast_hash": "a9ab0c6a064d29b73d9837aa7f6dd2b0",
+    "semantic_hash": "a9ab0c6a064d29b73d9837aa7f6dd2b0"
+  },
+  "AppStore/privacy-policy.md": {
+    "mtime": 1782705153.7711642,
+    "ast_hash": "9bf4aae4ac2d908becab749a9bfcf555",
+    "semantic_hash": "9bf4aae4ac2d908becab749a9bfcf555"
+  },
+  "AppStore/store-listing.md": {
+    "mtime": 1782867227.5885046,
+    "ast_hash": "ce4927f9e69d3cc2ef210005c1db0823",
+    "semantic_hash": "ce4927f9e69d3cc2ef210005c1db0823"
+  },
+  "AppStore/support.md": {
+    "mtime": 1782705153.7787616,
+    "ast_hash": "ec70abad3c9f62bdea0ba7e864c19fc1",
+    "semantic_hash": "ec70abad3c9f62bdea0ba7e864c19fc1"
+  },
+  "CLAUDE.md": {
+    "mtime": 1783019260.9005313,
+    "ast_hash": "8083d8ca8c8bfdce52a4b176dcb10691",
+    "semantic_hash": "8083d8ca8c8bfdce52a4b176dcb10691"
+  },
+  "project.yml": {
+    "mtime": 1783113365.8606923,
+    "ast_hash": "9184ec34a2c1265feb02bafc2c12aef2",
+    "semantic_hash": "9184ec34a2c1265feb02bafc2c12aef2"
+  },
+  "AppStore/screenshots/00-accounts-light.png": {
+    "mtime": 1783113551.0719209,
+    "ast_hash": "eda0a6dcbd8d99dbf622ac9a2a29d143",
+    "semantic_hash": "eda0a6dcbd8d99dbf622ac9a2a29d143"
+  },
+  "AppStore/screenshots/00-accounts.png": {
+    "mtime": 1783113533.0105631,
+    "ast_hash": "a568da0a6ea8ea23a95cabd441ff6dca",
+    "semantic_hash": "a568da0a6ea8ea23a95cabd441ff6dca"
+  },
+  "AppStore/screenshots/01-transactions-light.png": {
+    "mtime": 1783113555.5089395,
+    "ast_hash": "b34824f260f46279fb329c6d3af31eec",
+    "semantic_hash": "b34824f260f46279fb329c6d3af31eec"
+  },
+  "AppStore/screenshots/01-transactions.png": {
+    "mtime": 1783113537.519916,
+    "ast_hash": "bd96de64931384f158ea4bf571b82576",
+    "semantic_hash": "bd96de64931384f158ea4bf571b82576"
+  },
+  "AppStore/screenshots/02-dashboard-light.png": {
+    "mtime": 1783113559.9372773,
+    "ast_hash": "94153b1da4fcfebeace2bc27b0e33d4e",
+    "semantic_hash": "94153b1da4fcfebeace2bc27b0e33d4e"
+  },
+  "AppStore/screenshots/02-dashboard.png": {
+    "mtime": 1783113541.9935505,
+    "ast_hash": "d202fbdb6047116feb120f38ac8fd9a8",
+    "semantic_hash": "d202fbdb6047116feb120f38ac8fd9a8"
+  },
+  "AppStore/screenshots/03-recurring-light.png": {
+    "mtime": 1783113564.3853297,
+    "ast_hash": "e32ec51581f58909b256727c52f98d8e",
+    "semantic_hash": "e32ec51581f58909b256727c52f98d8e"
+  },
+  "AppStore/screenshots/03-recurring.png": {
+    "mtime": 1783113546.5441315,
+    "ast_hash": "061647cc59d5215025f197ba1dc117ac",
+    "semantic_hash": "061647cc59d5215025f197ba1dc117ac"
+  },
+  "Sources/FinApp/Assets.xcassets/AppIcon.appiconset/icon-1024.png": {
+    "mtime": 1782270989.882007,
+    "ast_hash": "524fbba8f7dd3b8de64dc0e522cc9e02",
+    "semantic_hash": "524fbba8f7dd3b8de64dc0e522cc9e02"
+  },
+  "Sources/FinApp/Assets.xcassets/SplashIcon.imageset/icon-1024.png": {
+    "mtime": 1782270989.9036305,
+    "ast_hash": "524fbba8f7dd3b8de64dc0e522cc9e02",
+    "semantic_hash": "524fbba8f7dd3b8de64dc0e522cc9e02"
+  }
+}
