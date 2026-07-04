@@ -75,13 +75,23 @@ struct AccountsView: View {
             .navigationDestination(for: Transaction.self) { TransactionDetailView(transaction: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingAdd = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add account")
+                        .accessibilityIdentifier("addAccountButton")
+                }
+                if #available(iOS 26.0, *) {
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { sortByAmount.toggle() } label: {
-                        Image(systemName: sortByAmount ? "arrow.down.circle" : "textformat.abc")
+                        SortGlyph(alphabetical: !sortByAmount)
                     }
                     .accessibilityLabel(sortByAmount ? "Sorted by amount" : "Sorted alphabetically")
                     .accessibilityIdentifier("accountSortToggle")
                 }
                 if #available(iOS 26.0, *) {
+                    // Split each button into its own glass pill instead of
+                    // sharing one capsule.
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -93,16 +103,6 @@ struct AccountsView: View {
                     }
                     .accessibilityLabel(allCollapsed ? "Expand all" : "Collapse all")
                     .accessibilityIdentifier("accountCollapseAllToggle")
-                }
-                if #available(iOS 26.0, *) {
-                    // Split the sort toggle into its own glass pill instead of
-                    // sharing one capsule with the + button.
-                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingAdd = true } label: { Image(systemName: "plus") }
-                        .accessibilityLabel("Add account")
-                        .accessibilityIdentifier("addAccountButton")
                 }
             }
             .sheet(isPresented: $showingAdd) { AddAccountView() }
@@ -180,6 +180,39 @@ struct AccountsView: View {
                       color: balanceColor(account.balance))
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// Classic "sort" glyph: down arrow beside a character slot showing either
+/// stacked A/Z or $ (no SF Symbol exists for this composition).
+private struct SortGlyph: View {
+    let alphabetical: Bool
+
+    private var letters: some View {
+        VStack(spacing: -1.5) {
+            Text("A")
+            Text("Z")
+        }
+        .font(.system(size: 8.5, weight: .heavy, design: .rounded))
+    }
+
+    private var dollar: some View {
+        Text("$")
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+    }
+
+    var body: some View {
+        HStack(spacing: 2.5) {
+            Image(systemName: "arrow.down")
+                .font(.system(size: 13, weight: .semibold))
+            ZStack {
+                // Both variants sized invisibly so the slot (and the
+                // toolbar pill) keeps one width across toggles.
+                letters.hidden()
+                dollar.hidden()
+                if alphabetical { letters } else { dollar }
+            }
+        }
     }
 }
 
