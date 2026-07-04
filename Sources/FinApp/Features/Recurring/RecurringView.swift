@@ -5,6 +5,7 @@ struct RecurringView: View {
     @Environment(\.modelContext) private var context
     @Environment(AppRouter.self) private var router
     @Query(sort: \RecurringBill.nextDue) private var bills: [RecurringBill]
+    @Query(sort: \Transaction.posted, order: .reverse) private var allTransactions: [Transaction]
     @State private var path: [RecurringBill] = []
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
@@ -12,8 +13,17 @@ struct RecurringView: View {
     @State private var displayedMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
     @State private var selectedDay = Calendar.current.startOfDay(for: .now)
 
-    private var confirmed: [RecurringBill] { bills.filter { $0.confirmed && !$0.dismissed } }
-    private var candidates: [RecurringBill] { bills.filter { !$0.confirmed && !$0.dismissed } }
+    // Sorted by the rolled-forward due date, not the stored one: a bill whose
+    // stored nextDue slipped into the past (no new charge synced yet) would
+    // otherwise pin to the top of the ascending @Query order.
+    private var confirmed: [RecurringBill] {
+        bills.filter { $0.confirmed && !$0.dismissed }
+            .sorted { ($0.effectiveNextDue ?? .distantFuture) < ($1.effectiveNextDue ?? .distantFuture) }
+    }
+    private var candidates: [RecurringBill] {
+        bills.filter { !$0.confirmed && !$0.dismissed }
+            .sorted { ($0.effectiveNextDue ?? .distantFuture) < ($1.effectiveNextDue ?? .distantFuture) }
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -84,6 +94,7 @@ struct RecurringView: View {
                     month: displayedMonth,
                     selectedDay: $selectedDay,
                     markedDays: markedDays,
+                    pastMarkedDays: pastMarkedDays,
                     onStep: { stepMonth(by: $0) }
                 )
             }
@@ -125,11 +136,13 @@ struct RecurringView: View {
     }
 
     /// Days of the displayed month (1-based) with at least one projected occurrence.
+    /// Anchored on the rolled-forward due date so a missed/overdue stored date
+    /// doesn't paint a phantom "upcoming" dot on a day already gone by.
     private var markedDays: Set<Int> {
         let cal = Calendar.current
         var days = Set<Int>()
         for bill in confirmed {
-            guard let anchor = bill.nextDue else { continue }
+            guard let anchor = bill.effectiveNextDue else { continue }
             for date in RecurringSchedule.occurrences(anchor: anchor, cadence: bill.cadence,
                                                       in: monthInterval, calendar: cal) {
                 days.insert(cal.component(.day, from: date))
@@ -138,10 +151,35 @@ struct RecurringView: View {
         return days
     }
 
+    /// Actual charges already posted for confirmed bills within the displayed
+    /// month. Only month-filtered transactions get merchant-normalized, so the
+    /// per-render cost stays small.
+    private var monthPastCharges: [(date: Date, merchant: String)] {
+        let todayStart = Calendar.current.startOfDay(for: .now)
+        let merchants = Set(confirmed.map(\.merchantName))
+        return allTransactions.compactMap { txn in
+            guard txn.posted >= monthInterval.start, txn.posted < monthInterval.end,
+                  txn.posted < todayStart else { return nil }
+            let merchant = CategorizationEngine.normalizeMerchant(txn.payee ?? txn.detail)
+            guard merchants.contains(merchant) else { return nil }
+            return (txn.posted, merchant)
+        }
+    }
+
+    /// Days of the displayed month (1-based) with an actual past charge.
+    private var pastMarkedDays: Set<Int> {
+        let cal = Calendar.current
+        return Set(monthPastCharges.map { cal.component(.day, from: $0.date) })
+    }
+
     private var billsOnSelectedDay: [RecurringBill] {
         let cal = Calendar.current
+        let chargedMerchants = Set(monthPastCharges
+            .filter { cal.isDate($0.date, inSameDayAs: selectedDay) }
+            .map(\.merchant))
         return confirmed.filter { bill in
-            guard let anchor = bill.nextDue else { return false }
+            if chargedMerchants.contains(bill.merchantName) { return true }
+            guard let anchor = bill.effectiveNextDue else { return false }
             return RecurringSchedule.occurrences(anchor: anchor, cadence: bill.cadence,
                                                  in: monthInterval, calendar: cal)
                 .contains { cal.isDate($0, inSameDayAs: selectedDay) }
@@ -170,11 +208,13 @@ struct RecurringView: View {
 }
 
 /// One-month grid: chevrons to change month, a ring on today, a filled circle
-/// on the selection, and a dot under days with recurring charges.
+/// on the selection, and a dot under days with recurring charges — full brand
+/// for projected upcoming, dimmed for charges that already posted.
 private struct CalendarMonthCard: View {
     let month: Date
     @Binding var selectedDay: Date
     let markedDays: Set<Int>
+    let pastMarkedDays: Set<Int>
     let onStep: (Int) -> Void
 
     private let calendar = Calendar.current
@@ -265,7 +305,7 @@ private struct CalendarMonthCard: View {
                         }
                     }
                 Circle()
-                    .fill(markedDays.contains(day) ? Color.brand : Color.clear)
+                    .fill(dotColor(day))
                     .frame(width: 4, height: 4)
             }
             .frame(maxWidth: .infinity)
@@ -275,13 +315,20 @@ private struct CalendarMonthCard: View {
         .accessibilityLabel(date.formatted(.dateTime.month().day()))
         .accessibilityIdentifier("calDay-\(day)")
     }
+
+    /// Projected upcoming wins over past when a day has both.
+    private func dotColor(_ day: Int) -> Color {
+        if markedDays.contains(day) { return .brand }
+        if pastMarkedDays.contains(day) { return .brand.opacity(0.35) }
+        return .clear
+    }
 }
 
 struct RecurringRow: View {
     let bill: RecurringBill
 
     private var dueText: String? {
-        bill.nextDue.map { "next \($0.formatted(.dateTime.month().day()))" }
+        bill.effectiveNextDue.map { "next \($0.formatted(.dateTime.month().day()))" }
     }
 
     var body: some View {

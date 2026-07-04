@@ -63,6 +63,36 @@ final class RecurringScheduleTests: XCTestCase {
         XCTAssertTrue(hits.isEmpty)
     }
 
+    func testNextOccurrenceOverdueMonthlyRollsForward() {
+        // Stored nextDue Jul 2, today Jul 4 -> first future occurrence is Aug 2.
+        let next = RecurringSchedule.nextOccurrence(onOrAfter: date(2026, 7, 4),
+                                                    anchor: date(2026, 7, 2),
+                                                    cadence: .monthly, calendar: cal)
+        XCTAssertEqual(next, date(2026, 8, 2))
+    }
+
+    func testNextOccurrenceDueTodayStaysToday() {
+        let next = RecurringSchedule.nextOccurrence(onOrAfter: date(2026, 7, 4),
+                                                    anchor: date(2026, 7, 4),
+                                                    cadence: .monthly, calendar: cal)
+        XCTAssertEqual(next, date(2026, 7, 4))
+    }
+
+    func testNextOccurrenceFutureAnchorUnchanged() {
+        let next = RecurringSchedule.nextOccurrence(onOrAfter: date(2026, 7, 4),
+                                                    anchor: date(2026, 7, 20),
+                                                    cadence: .weekly, calendar: cal)
+        XCTAssertEqual(next, date(2026, 7, 20))
+    }
+
+    func testNextOccurrenceMonthlyJan31Clamps() {
+        // Jan 31 anchor asked for the next occurrence in February clamps to Feb 28.
+        let next = RecurringSchedule.nextOccurrence(onOrAfter: date(2026, 2, 1),
+                                                    anchor: date(2026, 1, 31),
+                                                    cadence: .monthly, calendar: cal)
+        XCTAssertEqual(next, date(2026, 2, 28))
+    }
+
     func testWeeklyFarPastAnchorTerminatesAndAligns() {
         let anchor = date(2021, 7, 7) // ~5 years back
         let hits = RecurringSchedule.occurrences(anchor: anchor, cadence: .weekly,

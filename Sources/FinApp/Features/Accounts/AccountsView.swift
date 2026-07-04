@@ -83,8 +83,10 @@ struct AccountsView: View {
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
+                    // Glyph shows the mode a tap switches TO, not the current one:
+                    // alphabetical list -> "$" (tap to sort by value), and vice versa.
                     Button { sortByAmount.toggle() } label: {
-                        SortGlyph(alphabetical: !sortByAmount)
+                        SortGlyph(alphabetical: sortByAmount)
                     }
                     .accessibilityLabel(sortByAmount ? "Sorted by amount" : "Sorted alphabetically")
                     .accessibilityIdentifier("accountSortToggle")

@@ -35,4 +35,28 @@ enum RecurringSchedule {
         case .yearly: calendar.date(byAdding: .year, value: 1, to: date)
         }
     }
+
+    /// First occurrence on/after `date`, stepping calendar-aware from `anchor`.
+    /// Returns `anchor` unchanged if it is already on/after `date`.
+    static func nextOccurrence(onOrAfter date: Date, anchor: Date, cadence: Cadence,
+                               calendar: Calendar = .current) -> Date {
+        let floor = calendar.startOfDay(for: date)
+        var result = anchor
+        // Same runaway cap as occurrences().
+        for _ in 0..<1000 {
+            if result >= floor { break }
+            guard let next = advance(result, by: cadence, calendar: calendar) else { break }
+            result = next
+        }
+        return result
+    }
+}
+
+extension RecurringBill {
+    /// Stored `nextDue` rolled forward to today-or-later for display and sort.
+    /// The stored value stays untouched — it only moves on sync or user edit,
+    /// so it can be days in the past when no new charge has posted yet.
+    var effectiveNextDue: Date? {
+        nextDue.map { RecurringSchedule.nextOccurrence(onOrAfter: .now, anchor: $0, cadence: cadence) }
+    }
 }
