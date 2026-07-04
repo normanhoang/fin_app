@@ -23,9 +23,16 @@ enum CategorizationEngine {
     /// this toolchain).
     @MainActor
     static func categorizeAll(in context: ModelContext) {
+        let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        categorizeAll(txns, in: context)
+    }
+
+    /// Same, over an already-fetched transaction list so the sync pipeline can
+    /// share one fetch across its post-sync steps.
+    @MainActor
+    static func categorizeAll(_ txns: [Transaction], in context: ModelContext) {
         let rules = (try? context.fetch(FetchDescriptor<CategoryRule>())) ?? []
         guard !rules.isEmpty else { return }
-        let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for txn in txns where !txn.categorizedByUser {
             categorize(txn, using: rules)
         }

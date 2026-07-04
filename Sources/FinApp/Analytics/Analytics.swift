@@ -73,7 +73,13 @@ enum Analytics {
     /// bottom in a stable order. The uncategorized row (if any) is preserved.
     static func spendingCategories(_ txns: [Transaction], categories: [Category],
                                    inMonthOf date: Date, calendar: Calendar = .current) -> [CategoryTotal] {
-        let spent = spendingByCategory(txns, inMonthOf: date, calendar: calendar)
+        spendingCategories(spent: spendingByCategory(txns, inMonthOf: date, calendar: calendar),
+                           categories: categories)
+    }
+
+    /// Same, over an already-computed `spendingByCategory` result so callers that
+    /// have it don't rescan the transaction list.
+    static func spendingCategories(spent: [CategoryTotal], categories: [Category]) -> [CategoryTotal] {
         let spentNames = Set(spent.compactMap { $0.category?.name })
         let zeros = categories
             .filter { !$0.isIncome && $0.name != "Transfers" && !spentNames.contains($0.name) }

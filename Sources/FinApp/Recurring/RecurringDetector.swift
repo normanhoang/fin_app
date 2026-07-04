@@ -73,6 +73,13 @@ enum RecurringDetector {
     @MainActor
     static func refresh(in context: ModelContext, calendar: Calendar = .current) {
         let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        refresh(txns, in: context, calendar: calendar)
+    }
+
+    /// Same, over an already-fetched transaction list so the sync pipeline can
+    /// share one fetch across its post-sync steps.
+    @MainActor
+    static func refresh(_ txns: [Transaction], in context: ModelContext, calendar: Calendar = .current) {
         let candidates = detectCandidates(from: txns, calendar: calendar)
         let existing = (try? context.fetch(FetchDescriptor<RecurringBill>())) ?? []
         let byName = Dictionary(existing.map { ($0.merchantName, $0) }, uniquingKeysWith: { a, _ in a })

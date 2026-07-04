@@ -197,13 +197,13 @@ struct DashboardView: View {
 
     // MARK: Spending by category
 
-    private var topCategories: [Analytics.CategoryTotal] {
+    private func topCategories(from monthSpend: [Analytics.CategoryTotal]) -> [Analytics.CategoryTotal] {
         if autoCategories {
             // Auto: only categories with spend this month. spendingByCategory
             // ignores isHidden (wanted — manual hides are dormant) but includes
             // Transfers, so strip them here. Re-sort with the name tiebreak:
             // its dictionary-built order is unstable on total ties.
-            return Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
+            return monthSpend
                 .filter { $0.category?.name != "Transfers" && $0.total > 0 }
                 .sorted {
                     $0.total != $1.total ? $0.total > $1.total
@@ -212,8 +212,7 @@ struct DashboardView: View {
         }
         // Transfers move money between your own accounts — not real spending.
         // Every non-hidden category shows, at $0 when there's no spend this month.
-        var rows = Analytics.spendingCategories(transactions, categories: categories,
-                                                inMonthOf: now, calendar: calendar)
+        var rows = Analytics.spendingCategories(spent: monthSpend, categories: categories)
         if hideUncategorized {
             rows.removeAll { $0.category == nil }
         } else if !rows.contains(where: { $0.category == nil }) {
@@ -226,7 +225,9 @@ struct DashboardView: View {
     private var categoryCard: some View {
         // Compute the totals once per render and hand them down — recomputing the
         // full aggregation for the max and again per row multiplied the work.
-        let cats = topCategories
+        // One transaction scan shared by the category list and the filter popup.
+        let monthSpend = Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
+        let cats = topCategories(from: monthSpend)
         let maxTotalRaw = cats.map(\.total).max() ?? 0
         // Guarded against divide-by-zero: with every category at $0 the max is 0.
         let maxTotal = maxTotalRaw > 0 ? maxTotalRaw : 1
@@ -257,7 +258,7 @@ struct DashboardView: View {
                 .accessibilityLabel("Show or hide categories")
                 .accessibilityIdentifier("categoryFilterButton")
                 .popover(isPresented: $showCategoryFilter) {
-                    categoryFilterPopup
+                    categoryFilterPopup(monthSpend: monthSpend)
                         .presentationCompactAdaptation(.popover)
                 }
             }
@@ -312,9 +313,9 @@ struct DashboardView: View {
 
     /// This-month spend keyed by category name (uncategorized under ""). Flags
     /// hidden categories that still had real spend this month.
-    private var monthSpendByName: [String: Decimal] {
+    private func monthSpendByName(from monthSpend: [Analytics.CategoryTotal]) -> [String: Decimal] {
         var map: [String: Decimal] = [:]
-        for t in Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar) {
+        for t in monthSpend {
             map[t.category?.name ?? ""] = t.total
         }
         return map
@@ -345,9 +346,9 @@ struct DashboardView: View {
     /// Toggle which categories appear in the Spending Categories list. Tapping a
     /// row flips `isHidden` (SwiftData autosaves); the list updates live behind the
     /// popover, and tapping outside dismisses it.
-    private var categoryFilterPopup: some View {
+    private func categoryFilterPopup(monthSpend: [Analytics.CategoryTotal]) -> some View {
         let listed = categories.filter { $0.name != "Transfers" }
-        let spend = monthSpendByName
+        let spend = monthSpendByName(from: monthSpend)
         // Rows show EFFECTIVE visibility: under Auto that's "has spend", not the
         // dormant isHidden flags. Any tap seeds the flags from this view first
         // (so nothing jumps), turns Auto off, then applies the toggle.
