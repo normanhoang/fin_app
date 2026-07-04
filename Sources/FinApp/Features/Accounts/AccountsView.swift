@@ -54,13 +54,18 @@ struct AccountsView: View {
                 } else {
                     List {
                         // One Section per type so the inset card rounds at each type's
-                        // top and bottom; an eyebrow marks the first Assets/Debts type.
-                        ForEach(assetGroups) { typeSection($0, groupTitle: "Assets",
-                                                            groupTotal: total(assetGroups),
-                                                            showEyebrow: $0.id == assetGroups.first?.id) }
-                        ForEach(debtGroups) { typeSection($0, groupTitle: "Debts",
-                                                          groupTotal: total(debtGroups),
-                                                          showEyebrow: $0.id == debtGroups.first?.id) }
+                        // top and bottom. The Assets/Debts eyebrows get their own
+                        // header-only Sections so the List's section spacing applies
+                        // uniformly — eyebrow-to-type and type-to-type gaps match,
+                        // expanded or collapsed.
+                        if !assetGroups.isEmpty {
+                            eyebrowSection("Assets", total: total(assetGroups))
+                            ForEach(assetGroups) { typeSection($0) }
+                        }
+                        if !debtGroups.isEmpty {
+                            eyebrowSection("Debts", total: total(debtGroups))
+                            ForEach(debtGroups) { typeSection($0) }
+                        }
                     }
                     .listRowSeparatorTint(Color.hairline)
                     .screenBackground()
@@ -120,7 +125,27 @@ struct AccountsView: View {
         }
     }
 
-    private func typeSection(_ group: TypeGroup, groupTitle: String, groupTotal: Decimal, showEyebrow: Bool) -> some View {
+    private func eyebrowSection(_ title: String, total: Decimal) -> some View {
+        Section {
+        } header: {
+            HStack {
+                Text(title)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Color.textPrimary)
+                Spacer()
+                Text(Money.string(total))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(balanceColor(total))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(balanceColor(total).opacity(0.14), in: Capsule())
+            }
+            .padding(.top, 8)
+            .textCase(nil)
+        }
+    }
+
+    private func typeSection(_ group: TypeGroup) -> some View {
         Section {
             if !collapsedTypes.contains(group.type) {
                 ForEach(group.accounts) { account in
@@ -132,44 +157,27 @@ struct AccountsView: View {
                 }
             }
         } header: {
-            VStack(alignment: .leading, spacing: 8) {
-                if showEyebrow {
-                    HStack {
-                        Text(groupTitle)
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(Color.textPrimary)
-                        Spacer()
-                        Text(Money.string(groupTotal))
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundStyle(balanceColor(groupTotal))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(balanceColor(groupTotal).opacity(0.14), in: Capsule())
-                    }
-                    .padding(.top, 8)
-                }
-                HStack {
-                    Image(systemName: "chevron.down")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.textSecondary)
-                        .rotationEffect(.degrees(collapsedTypes.contains(group.type) ? -90 : 0))
-                    Text(group.type.displayName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.textSecondary)
-                    Spacer()
-                    MoneyText(value: group.subtotal, size: 14, weight: .semibold,
-                              color: balanceColor(group.subtotal))
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if collapsedTypes.contains(group.type) {
-                        collapsedTypes.remove(group.type)
-                    } else {
-                        collapsedTypes.insert(group.type)
-                    }
-                }
-                .accessibilityIdentifier("accountGroupHeader-\(group.type.rawValue)")
+            HStack {
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.textSecondary)
+                    .rotationEffect(.degrees(collapsedTypes.contains(group.type) ? -90 : 0))
+                Text(group.type.displayName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.textSecondary)
+                Spacer()
+                MoneyText(value: group.subtotal, size: 14, weight: .semibold,
+                          color: balanceColor(group.subtotal))
             }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if collapsedTypes.contains(group.type) {
+                    collapsedTypes.remove(group.type)
+                } else {
+                    collapsedTypes.insert(group.type)
+                }
+            }
+            .accessibilityIdentifier("accountGroupHeader-\(group.type.rawValue)")
             .textCase(nil)
         }
     }
