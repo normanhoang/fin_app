@@ -235,20 +235,6 @@ struct DashboardView: View {
             HStack {
                 SectionLabel("Spending Categories")
                 Spacer()
-                // Auto itself doesn't seed: turning it off reveals the dormant
-                // manual selections as-is.
-                Button { autoCategories.toggle() } label: {
-                    Text("Auto")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(autoCategories ? .white : Color.brand)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(autoCategories ? Color.brand.opacity(0.7) : Color.brand.opacity(0.12), in: Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Automatically show only categories with spending")
-                .accessibilityValue(autoCategories ? "on" : "off")
-                .accessibilityIdentifier("catAutoToggle")
                 Button { showCategoryFilter = true } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                         .font(.system(size: 18))
@@ -370,6 +356,30 @@ struct DashboardView: View {
             }
             ScrollView {
                 VStack(spacing: 4) {
+                    // Auto itself doesn't seed: turning it off reveals the dormant
+                    // manual selections as-is.
+                    Button { autoCategories.toggle() } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.brand)
+                                .frame(width: 22)
+                            Text("Auto")
+                                .foregroundStyle(Color.textPrimary)
+                            Spacer(minLength: 16)
+                            filterCheckbox(visible: autoCategories, hasSpend: false)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(autoCategories ? Color.brand.opacity(0.12) : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Automatically show only categories with spending")
+                    .accessibilityValue(autoCategories ? "on" : "off")
+                    .accessibilityIdentifier("catAutoToggle")
+                    Divider()
                     Button {
                         disableAutoSeedingFromSpend(spend: spend)
                         hideUncategorized.toggle()

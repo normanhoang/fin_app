@@ -88,8 +88,8 @@ struct AccountsView: View {
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    // Glyph shows the mode a tap switches TO, not the current one:
-                    // alphabetical list -> "$" (tap to sort by value), and vice versa.
+                    // Glyph shows the current mode: "$" when sorted by value,
+                    // stacked A/Z when alphabetical.
                     Button { sortByAmount.toggle() } label: {
                         SortGlyph(alphabetical: sortByAmount)
                     }
@@ -193,7 +193,7 @@ struct AccountsView: View {
     }
 }
 
-/// Classic "sort" glyph: down arrow beside a character slot showing either
+/// Classic "sort" glyph: up arrow beside a character slot showing either
 /// stacked A/Z or $ (no SF Symbol exists for this composition).
 private struct SortGlyph: View {
     let alphabetical: Bool
@@ -213,14 +213,14 @@ private struct SortGlyph: View {
 
     var body: some View {
         HStack(spacing: 2.5) {
-            Image(systemName: "arrow.down")
+            Image(systemName: alphabetical ? "arrow.down" : "arrow.up")
                 .font(.system(size: 13, weight: .semibold))
             ZStack {
                 // Both variants sized invisibly so the slot (and the
                 // toolbar pill) keeps one width across toggles.
                 letters.hidden()
                 dollar.hidden()
-                if alphabetical { letters } else { dollar }
+                if alphabetical { dollar } else { letters }
             }
         }
     }
