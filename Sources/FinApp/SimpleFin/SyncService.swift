@@ -19,7 +19,6 @@ enum SyncService {
 
         for dto in dtos {
             let account = upsertAccount(dto, existing: accountsByID[dto.id], in: context)
-            applyBalanceCorrection(account)
             for txDTO in dto.transactions {
                 upsertTransaction(txDTO, existing: txnsByID[txDTO.id], account: account, in: context)
             }
@@ -36,19 +35,6 @@ enum SyncService {
             }
         }
         try context.save()
-    }
-
-    /// Per-account correction: Bank of America Checking reports the real balance in
-    /// `available-balance`, so swap the two fields. Re-applied each sync (idempotent)
-    /// since the DTO overwrites the fields on every upsert. Fixes net worth too.
-    @MainActor
-    private static func applyBalanceCorrection(_ account: Account) {
-        let name = account.displayName.lowercased()
-        guard name.contains("bank of america"), name.contains("checking"),
-              let available = account.availableBalance else { return }
-        let original = account.balance
-        account.balance = available
-        account.availableBalance = original
     }
 
     @MainActor

@@ -275,6 +275,11 @@ struct AccountDetailView: View {
                                   color: balanceColor(account.balance))
                     }
                 }
+                if account.accountType == .cash, let avail = account.availableBalance {
+                    LabeledContent("Available") {
+                        MoneyText(value: avail, code: account.currency, weight: .regular, color: .textSecondary)
+                    }
+                }
                 Picker("Type", selection: $account.accountType) {
                     ForEach(AccountType.allCases) { type in
                         Text(type.displayName).tag(type)
