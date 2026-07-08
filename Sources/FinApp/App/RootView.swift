@@ -179,7 +179,7 @@ private struct CustomTabBar: View {
     private static let items: [(title: String, icon: String)] = [
         ("Accounts", "building.columns.fill"),
         ("Transactions", "list.bullet"),
-        ("Dashboard", "chart.pie.fill"),
+        ("Dashboard", "chart.line.uptrend.xyaxis"),
         ("Recurring", "arrow.clockwise"),
         ("Settings", "gearshape.fill"),
     ]
