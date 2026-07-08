@@ -58,8 +58,11 @@ The phone must be **unlocked** for launch to succeed.
 pages built up-front) with a **custom bottom bar**. It deliberately does **not** use
 `.tabViewStyle(.page)` — page-swiping between the per-tab `NavigationStack`s triggered a
 `UINavigationBar` layout assertion (SIGABRT). `AppRouter` (`@Observable`, in the environment)
-holds `selectedTab` and `txnFilter`; Dashboard tiles set `txnFilter` then `selectedTab = 2`
-to deep-link into a pre-filtered Transactions list.
+holds `selectedTab` and `txnFilter`; Dashboard tiles call `router.showTransactions(_:)`,
+which sets `txnFilter` then `selectedTab = AppTab.transactions.rawValue` to deep-link into a
+pre-filtered Transactions list. Page order: Dashboard · Transactions · Accounts · Recurring ·
+Settings (Dashboard leftmost + default); the `AppTab` rawValue == physical pager position ==
+tab-bar item index, so all three must move together when reordering.
 
 **SwiftData layer.** `Models/AppSchema.swift` lists every `@Model` type in one place —
 **update `AppSchema.models` when adding a model.** Migrations are lightweight only: a new

@@ -39,11 +39,11 @@ struct RootView: View {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
                     HStack(spacing: 0) {
-                        // Order: Accounts · Transactions · Dashboard · Recurring · Settings.
+                        // Order: Dashboard · Transactions · Accounts · Recurring · Settings.
                         // (Budgets hidden for now, kept in the codebase.)
-                        pageView(AccountsView(), AppTab.accounts.rawValue)
-                        pageView(TransactionsView(), AppTab.transactions.rawValue)
                         pageView(DashboardView(), AppTab.dashboard.rawValue)
+                        pageView(TransactionsView(), AppTab.transactions.rawValue)
+                        pageView(AccountsView(), AppTab.accounts.rawValue)
                         pageView(RecurringView(), AppTab.recurring.rawValue)
                         pageView(SettingsView(), AppTab.settings.rawValue)
                     }
@@ -175,11 +175,11 @@ private struct CustomTabBar: View {
     @Environment(AppRouter.self) private var router
     @Namespace private var pill
 
-    // Order matches the pager: Accounts · Transactions · Dashboard · Recurring · Settings.
+    // Order matches the pager: Dashboard · Transactions · Accounts · Recurring · Settings.
     private static let items: [(title: String, icon: String)] = [
-        ("Accounts", "building.columns.fill"),
-        ("Transactions", "list.bullet"),
         ("Dashboard", "chart.line.uptrend.xyaxis"),
+        ("Transactions", "list.bullet"),
+        ("Accounts", "building.columns.fill"),
         ("Recurring", "arrow.clockwise"),
         ("Settings", "gearshape.fill"),
     ]
