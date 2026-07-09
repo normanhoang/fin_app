@@ -73,6 +73,21 @@ final class SyncServiceTests: XCTestCase {
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Transaction>()).count, 1)
     }
 
+    func testUserNoteSurvivesReSync() throws {
+        let ctx = makeContext()
+        let dto = account(txns: [tx(id: "t1", amount: "-10.00")])
+        try SyncService.sync(accounts: [dto], into: ctx)
+
+        let txn = try XCTUnwrap(ctx.fetch(FetchDescriptor<Transaction>()).first)
+        txn.note = "split with roommate"
+        try ctx.save()
+
+        try SyncService.sync(accounts: [dto], into: ctx)
+
+        let resynced = try XCTUnwrap(ctx.fetch(FetchDescriptor<Transaction>()).first)
+        XCTAssertEqual(resynced.note, "split with roommate")
+    }
+
     func testPendingBecomesPostedUpdatesInPlace() throws {
         let ctx = makeContext()
         try SyncService.sync(accounts: [account(txns: [tx(id: "t1", amount: "-9.99", pending: true)])], into: ctx)

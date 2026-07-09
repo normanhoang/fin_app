@@ -44,6 +44,9 @@ struct TransactionRow: View {
                     if transaction.pending {
                         Text("· Pending").foregroundStyle(.orange)
                     }
+                    if transaction.note != nil {
+                        Image(systemName: "note.text")
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(Color.textSecondary)

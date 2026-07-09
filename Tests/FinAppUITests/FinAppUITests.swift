@@ -304,6 +304,42 @@ final class FinAppUITests: XCTestCase {
                       "Renamed account not shown in list")
     }
 
+    // 6c. Adding a note in the transaction detail persists across a back-navigate
+    //     and re-open (stored on the model, not view state).
+    func testTransactionNotePersists() {
+        let app = launch(tab: 1)
+        let row = firstTxnRow(app)
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "No transaction rows")
+        row.tap()
+
+        let field = app.descendants(matching: .any).matching(identifier: "txnNoteField").firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5), "Note field missing")
+        field.tap()
+        let note = "split with roommate"
+        field.typeText(note)
+        snap(app, "transaction-note")
+
+        app.navigationBars.buttons.element(boundBy: 0).tap() // back to list
+        XCTAssertTrue(firstTxnRow(app).waitForExistence(timeout: 5))
+        firstTxnRow(app).tap()
+
+        let reopened = app.descendants(matching: .any).matching(identifier: "txnNoteField").firstMatch
+        XCTAssertTrue(reopened.waitForExistence(timeout: 5), "Note field missing after re-open")
+        XCTAssertEqual(reopened.value as? String, note, "Note did not persist")
+
+        // Back to the list: the row shows the note icon, and search matches note text.
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let noteIcon = app.images["note.text"].firstMatch
+        XCTAssertTrue(noteIcon.waitForExistence(timeout: 5), "Note icon missing from row")
+        let searchField = app.textFields["txnSearchField"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        searchField.tap()
+        searchField.typeText("roommate")
+        XCTAssertTrue(firstTxnRow(app).waitForExistence(timeout: 5),
+                      "Search should match the transaction by its note")
+        snap(app, "note-search-match")
+    }
+
     // 6b. Tapping the Transactions tab clears an active filter from the Dashboard.
     func testTransactionsTabClearsFilter() {
         let app = launch(tab: 2)

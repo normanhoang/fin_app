@@ -12,6 +12,9 @@ final class Transaction {
     var payee: String?
     var memo: String?
     var pending: Bool
+    /// User-written note. Sync never writes this field, so it survives re-syncs
+    /// (unlike `memo`, which is bank-provided and overwritten).
+    var note: String? = nil
     /// True once the user has manually set the category, so re-categorization
     /// passes leave it untouched.
     var categorizedByUser: Bool
@@ -29,6 +32,7 @@ final class Transaction {
         payee: String? = nil,
         memo: String? = nil,
         pending: Bool = false,
+        note: String? = nil,
         categorizedByUser: Bool = false,
         account: Account? = nil,
         category: Category? = nil
@@ -40,6 +44,7 @@ final class Transaction {
         self.payee = payee
         self.memo = memo
         self.pending = pending
+        self.note = note
         self.categorizedByUser = categorizedByUser
         self.account = account
         self.category = category

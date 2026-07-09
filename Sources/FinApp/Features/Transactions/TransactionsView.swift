@@ -22,6 +22,7 @@ struct TransactionsView: View {
             result = result.filter {
                 ($0.payee ?? $0.detail).range(of: search, options: .caseInsensitive) != nil
                 || ($0.category?.name.range(of: search, options: .caseInsensitive) != nil)
+                || ($0.note?.range(of: search, options: .caseInsensitive) != nil)
             }
         }
         return result
@@ -194,7 +195,7 @@ struct TransactionsView: View {
     private var searchBar: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search payee or category", text: $search)
+            TextField("Search payee, category, or notes", text: $search)
                 .textFieldStyle(.plain)
                 .foregroundStyle(Color.textPrimary)
                 .autocorrectionDisabled()
@@ -246,6 +247,7 @@ struct TransactionDetailView: View {
 
     @State private var recurringCadence: Cadence = .monthly
     @State private var showCategoryPicker = false
+    @State private var noteText = ""
 
     private var merchant: String {
         CategorizationEngine.normalizeMerchant(transaction.payee ?? transaction.detail)
@@ -279,6 +281,11 @@ struct TransactionDetailView: View {
                 }
             }
             .listRowBackground(Color.surface)
+            Section("Note") {
+                TextField("Add a note", text: $noteText, axis: .vertical)
+                    .accessibilityIdentifier("txnNoteField")
+            }
+            .listRowBackground(Color.surface)
             Section("Recurring") {
                 if alreadyRecurring {
                     Label("Added to Recurring", systemImage: "checkmark.circle.fill")
@@ -304,6 +311,16 @@ struct TransactionDetailView: View {
         .screenBackground()
         .navigationTitle(transaction.payee ?? transaction.detail)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { noteText = transaction.note ?? "" }
+        .onChange(of: noteText) { applyNote() }
+    }
+
+    /// Persist the edited note (blank clears it), mirroring the account-rename
+    /// pattern; sync never writes `note`, so it survives re-syncs.
+    private func applyNote() {
+        let trimmed = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        transaction.note = trimmed.isEmpty ? nil : trimmed
+        try? context.save()
     }
 
     private var categoryMenu: some View {
