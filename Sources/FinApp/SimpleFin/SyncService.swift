@@ -8,8 +8,10 @@ import SwiftData
 /// Existing rows are preloaded into id-keyed maps in one fetch each, rather than
 /// a per-item predicated fetch — simpler, faster, and avoids `#Predicate`.
 enum SyncService {
+    /// Throws if the final save fails — callers must surface it, since a failed
+    /// save after the prune deletes below would silently diverge from the store.
     @MainActor
-    static func sync(accounts dtos: [AccountDTO], into context: ModelContext) {
+    static func sync(accounts dtos: [AccountDTO], pruneMissing: Bool = false, into context: ModelContext) throws {
         let existingAccounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
         let existingTxns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         let accountsByID = Dictionary(existingAccounts.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -17,25 +19,22 @@ enum SyncService {
 
         for dto in dtos {
             let account = upsertAccount(dto, existing: accountsByID[dto.id], in: context)
-            applyBalanceCorrection(account)
             for txDTO in dto.transactions {
                 upsertTransaction(txDTO, existing: txnsByID[txDTO.id], account: account, in: context)
             }
         }
-        try? context.save()
-    }
-
-    /// Per-account correction: Bank of America Checking reports the real balance in
-    /// `available-balance`, so swap the two fields. Re-applied each sync (idempotent)
-    /// since the DTO overwrites the fields on every upsert. Fixes net worth too.
-    @MainActor
-    private static func applyBalanceCorrection(_ account: Account) {
-        let name = account.displayName.lowercased()
-        guard name.contains("bank of america"), name.contains("checking"),
-              let available = account.availableBalance else { return }
-        let original = account.balance
-        account.balance = available
-        account.availableBalance = original
+        // A synced account no longer in the response was removed from the SimpleFin
+        // connection — delete it (transactions cascade) so its stale balance stops
+        // counting toward net worth. Callers pass pruneMissing only when the response
+        // reported no provider errors, so a bank outage never wipes data. Manual
+        // accounts are never in the response and are never pruned.
+        if pruneMissing {
+            let dtoIDs = Set(dtos.map(\.id))
+            for account in existingAccounts where !account.isManual && !dtoIDs.contains(account.id) {
+                context.delete(account)
+            }
+        }
+        try context.save()
     }
 
     @MainActor

@@ -4,8 +4,10 @@ struct SettingsView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(AppLock.self) private var lock
     @Environment(AppRouter.self) private var router
+    @Environment(\.modelContext) private var context
     @AppStorage("appearanceMode") private var appearanceRaw = AppearanceMode.system.rawValue
     @State private var setupToken = ""
+    @State private var showClearConfirm = false
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
 
@@ -57,6 +59,8 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Color.surface)
 
+                dataSection
+
                 Section {
                     Text("Your financial data is stored only on this device — there is no server we operate. Account data is fetched through SimpleFin Bridge, which connects to your banks on your behalf, so that fetch does pass through SimpleFin's service.")
                         .font(.footnote)
@@ -73,9 +77,36 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .fixLargeTitleInset(trigger: topReset)
             .onChange(of: router.selectedTab) {
-                if router.selectedTab == AppTab.settings.rawValue { topReset += 1 }
+                // Settings has no pushable subpage, so arriving here always clears
+                // subpageOpen — otherwise a stale `true` (e.g. arriving from another
+                // tab's open detail) would keep paging disabled and block swiping.
+                if router.selectedTab == AppTab.settings.rawValue {
+                    topReset += 1
+                    router.subpageOpen = false
+                }
+            }
+            .confirmationDialog("Clear all local data?", isPresented: $showClearConfirm, titleVisibility: .visible) {
+                Button("Clear all data", role: .destructive) { SampleData.wipeAll(in: context) }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Removes every account, transaction, budget, and history record stored on this device. This cannot be undone.")
             }
         }
+    }
+
+    private var dataSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showClearConfirm = true
+            } label: {
+                Label("Clear all local data", systemImage: "trash")
+            }
+        } header: {
+            Text("Data")
+        } footer: {
+            Text("Deletes all financial data stored on this device.")
+        }
+        .listRowBackground(Color.surface)
     }
 
     private var connectSection: some View {
@@ -96,10 +127,15 @@ struct SettingsView: View {
                 }
             }
             .disabled(setupToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || coordinator.isSyncing)
+            Button {
+                SampleData.inject(into: context)
+            } label: {
+                Label("Preview with sample data", systemImage: "eye")
+            }
         } header: {
             Text("Connect")
         } footer: {
-            Text("Get a setup token from your SimpleFin account. It is used once to establish a read-only connection. Your bank data is fetched through SimpleFin Bridge and stored only on this device.")
+            Text("Get a setup token from your SimpleFin account. It is used once to establish a read-only connection. Your bank data is fetched through SimpleFin Bridge and stored only on this device. Or tap Preview with sample data to explore the app without connecting.")
         }
         .listRowBackground(Color.surface)
     }

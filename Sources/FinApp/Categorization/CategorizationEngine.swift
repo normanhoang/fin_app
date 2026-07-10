@@ -23,9 +23,16 @@ enum CategorizationEngine {
     /// this toolchain).
     @MainActor
     static func categorizeAll(in context: ModelContext) {
+        let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        categorizeAll(txns, in: context)
+    }
+
+    /// Same, over an already-fetched transaction list so the sync pipeline can
+    /// share one fetch across its post-sync steps.
+    @MainActor
+    static func categorizeAll(_ txns: [Transaction], in context: ModelContext) {
         let rules = (try? context.fetch(FetchDescriptor<CategoryRule>())) ?? []
         guard !rules.isEmpty else { return }
-        let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         for txn in txns where !txn.categorizedByUser {
             categorize(txn, using: rules)
         }
@@ -44,6 +51,33 @@ enum CategorizationEngine {
         let rule = CategoryRule(keyword: keyword, priority: 0, createdByUser: true, category: category)
         context.insert(rule)
         return rule
+    }
+
+    /// Apply one rule to every transaction it matches (skipping user-set ones).
+    /// Used after `learn` so a manual assignment reaches the merchant's other
+    /// charges without re-running every rule against the whole store.
+    @MainActor
+    static func apply(_ rule: CategoryRule, in context: ModelContext) {
+        let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        for txn in txns where !txn.categorizedByUser && rule.matches(txn.matchText) {
+            txn.category = rule.category
+        }
+        try? context.save()
+    }
+
+    /// Assign (or clear) a transaction's category from a user action. A non-nil
+    /// category learns a rule and applies just that rule to the merchant's other
+    /// charges; nil clears the category and protects it from auto-recategorizing.
+    @MainActor
+    static func assign(_ category: Category?, to txn: Transaction, in context: ModelContext) {
+        if let category {
+            let rule = learn(from: txn, category: category, in: context)
+            apply(rule, in: context)
+        } else {
+            txn.category = nil
+            txn.categorizedByUser = true
+            try? context.save()
+        }
     }
 
     /// Lowercase and drop tokens that contain digits or punctuation noise, so

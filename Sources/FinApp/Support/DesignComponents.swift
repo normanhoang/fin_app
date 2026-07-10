@@ -151,13 +151,27 @@ struct Sparkline: View {
     let values: [Double]
     var tint: Color = .brand
 
+    /// Hug the data's own range (no axis, so no need for "nice" rounded bounds);
+    /// `.automatic` still widened the domain and flattened the line.
+    private var yDomain: ClosedRange<Double> {
+        let maxV = values.max() ?? 1
+        let minV = values.min() ?? 0
+        // Flat history (or a single value) still needs a non-zero span.
+        let span = Swift.max(maxV - minV, Swift.max(abs(maxV) * 0.01, 1))
+        return (minV - span * 0.05) ... (maxV + span * 0.05)
+    }
+
     var body: some View {
         Chart(Array(values.enumerated()), id: \.offset) { index, value in
             LineMark(x: .value("i", index), y: .value("v", value))
                 .interpolationMethod(.monotone)
                 .foregroundStyle(tint)
                 .lineStyle(StrokeStyle(lineWidth: 2))
-            AreaMark(x: .value("i", index), y: .value("v", value))
+            // Fill starts at the domain floor, not 0 — with a data-hugging domain
+            // a 0 baseline would paint far below the plot (Charts doesn't clip).
+            AreaMark(x: .value("i", index),
+                     yStart: .value("base", yDomain.lowerBound),
+                     yEnd: .value("v", value))
                 .interpolationMethod(.monotone)
                 .foregroundStyle(.linearGradient(
                     colors: [tint.opacity(0.25), tint.opacity(0.01)],
@@ -166,6 +180,6 @@ struct Sparkline: View {
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
-        .chartYScale(domain: .automatic(includesZero: false))
+        .chartYScale(domain: yDomain)
     }
 }

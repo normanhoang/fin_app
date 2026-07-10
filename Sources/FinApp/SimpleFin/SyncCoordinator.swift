@@ -66,12 +66,16 @@ final class SyncCoordinator {
         defer { isSyncing = false }
 
         do {
-            CategorySeed.seedIfNeeded(in: context)
-            CategorySeed.ensureMissing(in: context)
+            // Category seeding runs at launch (FinAppApp.init); no need per sync.
             let response = try await client.fetchAccounts(accessURL: accessURL, since: nextSyncStartDate())
-            SyncService.sync(accounts: response.accounts, into: context)
-            CategorizationEngine.categorizeAll(in: context)
-            RecurringDetector.refresh(in: context)
+            // Prune accounts removed from the connection only on a clean response —
+            // a provider error can mean a bank's accounts are temporarily missing.
+            try SyncService.sync(accounts: response.accounts,
+                                 pruneMissing: response.errors.isEmpty, into: context)
+            // One shared fetch: SyncService.sync has saved, so new inserts are included.
+            let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+            CategorizationEngine.categorizeAll(txns, in: context)
+            RecurringDetector.refresh(txns, in: context)
             recordNetWorthSnapshot()
             providerErrors = response.errors
             lastSyncDate = Date()

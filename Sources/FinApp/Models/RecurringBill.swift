@@ -34,6 +34,10 @@ final class RecurringBill {
     /// User dismissed this detected candidate; kept (not deleted) so re-detection
     /// on the next sync doesn't resurface it. Defaulted for lightweight migration.
     var dismissed: Bool = false
+    /// User set `nextDue` by hand; detection keeps its hands off until a new charge
+    /// posts on/after that date, then auto-projection resumes. Defaulted for
+    /// lightweight migration.
+    var nextDueSetByUser: Bool = false
     @Relationship(deleteRule: .nullify) var category: Category?
 
     var cadence: Cadence {
@@ -50,6 +54,7 @@ final class RecurringBill {
         nextDue: Date? = nil,
         confirmed: Bool = false,
         dismissed: Bool = false,
+        nextDueSetByUser: Bool = false,
         category: Category? = nil
     ) {
         self.id = id
@@ -60,6 +65,7 @@ final class RecurringBill {
         self.nextDue = nextDue
         self.confirmed = confirmed
         self.dismissed = dismissed
+        self.nextDueSetByUser = nextDueSetByUser
         self.category = category
     }
 }

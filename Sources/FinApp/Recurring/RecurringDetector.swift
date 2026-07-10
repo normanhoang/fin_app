@@ -73,6 +73,13 @@ enum RecurringDetector {
     @MainActor
     static func refresh(in context: ModelContext, calendar: Calendar = .current) {
         let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        refresh(txns, in: context, calendar: calendar)
+    }
+
+    /// Same, over an already-fetched transaction list so the sync pipeline can
+    /// share one fetch across its post-sync steps.
+    @MainActor
+    static func refresh(_ txns: [Transaction], in context: ModelContext, calendar: Calendar = .current) {
         let candidates = detectCandidates(from: txns, calendar: calendar)
         let existing = (try? context.fetch(FetchDescriptor<RecurringBill>())) ?? []
         let byName = Dictionary(existing.map { ($0.merchantName, $0) }, uniquingKeysWith: { a, _ in a })
@@ -82,7 +89,15 @@ enum RecurringDetector {
                 bill.expectedAmount = candidate.expectedAmount
                 bill.cadence = candidate.cadence
                 bill.lastSeen = candidate.lastSeen
-                bill.nextDue = candidate.nextDue
+                // A user-set next-due date sticks until a charge posts on/after it,
+                // then auto-projection resumes.
+                if bill.nextDueSetByUser, let userDate = bill.nextDue,
+                   candidate.lastSeen < userDate {
+                    // keep the user's date
+                } else {
+                    bill.nextDueSetByUser = false
+                    bill.nextDue = candidate.nextDue
+                }
                 if bill.category == nil { bill.category = candidate.category }
             } else {
                 context.insert(RecurringBill(

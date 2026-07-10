@@ -34,6 +34,9 @@ struct DashboardView: View {
     @State private var showCategoryFilter = false
     /// Hide the synthetic "Uncategorized" row from the Spending Categories list.
     @AppStorage("dashHideUncategorized") private var hideUncategorized = false
+    /// Auto mode: show only categories with real spend this month; the manual
+    /// isHidden flags lie dormant. Defaults on for fresh and existing installs.
+    @AppStorage("dashCategoryAuto") private var autoCategories = true
     /// The trend chart's plot rectangle, in the "dash" coordinate space — used to
     /// position the popup and to map taps back to a bar.
     @State private var trendPlot: CGRect = .zero
@@ -42,6 +45,7 @@ struct DashboardView: View {
     /// first item and is dropped mid-paging.
     @State private var topReset = 0
     @Environment(\.bottomBarInset) private var bottomBarInset
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -53,7 +57,7 @@ struct DashboardView: View {
                         VStack(spacing: 16) {
                             heroCard
                             monthRow
-                            if !topCategories.isEmpty { categoryCard }
+                            if !categories.isEmpty { categoryCard }
                             trendCard
                         }
                         .padding(.horizontal, 16)
@@ -78,14 +82,26 @@ struct DashboardView: View {
             .fixLargeTitleInset(trigger: topReset)
             .navigationDestination(for: NetWorthRoute.self) { _ in NetWorthDetailView() }
         }
-        // Switching away from this tab resets it to its root page.
+        // Switching away from this tab resets it to its root page. Only the active
+        // tab owns `subpageOpen`, so an inactive tab's reset can't re-enable paging
+        // while another tab has a detail open.
         .onChange(of: router.selectedTab) {
             selectedTrendMonth = nil
             if router.selectedTab == AppTab.dashboard.rawValue {
+                router.subpageOpen = !path.isEmpty
                 topReset += 1   // arriving → rebuild at the very top
             } else {
                 path = NavigationPath()
             }
+        }
+        // The popover presents above the window's content, so the privacy cover
+        // and lock screen (ZStack overlays in FinAppApp) can't hide it — dismiss
+        // it the moment the scene stops being frontmost.
+        .onChange(of: scenePhase) {
+            if scenePhase != .active { showCategoryFilter = false }
+        }
+        .onChange(of: path) {
+            if router.selectedTab == AppTab.dashboard.rawValue { router.subpageOpen = !path.isEmpty }
         }
     }
 
@@ -94,11 +110,10 @@ struct DashboardView: View {
     private var netWorth: Decimal { Analytics.netWorth(accounts) }
     private var sparkValues: [Double] { snapshots.map { ($0.value as NSDecimalNumber).doubleValue } }
 
-    /// Percent change from the first to the latest snapshot, when we have history.
-    private var delta: Double? {
-        guard let first = sparkValues.first, let last = sparkValues.last,
-              sparkValues.count >= 2, first != 0 else { return nil }
-        return (last - first) / abs(first)
+    /// Trailing 30-day net-worth change (falls back to full history when younger
+    /// than 30 days). Carries the actual span so the chip can label it honestly.
+    private var delta: (percent: Double, days: Int)? {
+        Analytics.recentChange(snapshots, asOf: now, calendar: calendar)
     }
 
     private var heroCard: some View {
@@ -107,7 +122,7 @@ struct DashboardView: View {
                 HStack(alignment: .firstTextBaseline) {
                     SectionLabel("Net worth")
                     Spacer()
-                    if let delta { deltaChip(delta) }
+                    if let delta { deltaChip(delta.percent, days: delta.days) }
                 }
                 MoneyText(value: netWorth, size: 40, weight: .bold,
                           color: netWorth < 0 ? .negative : .textPrimary)
@@ -140,11 +155,13 @@ struct DashboardView: View {
         .accessibilityIdentifier("netWorthCard")
     }
 
-    private func deltaChip(_ value: Double) -> some View {
+    private func deltaChip(_ value: Double, days: Int) -> some View {
         let up = value >= 0
         return HStack(spacing: 3) {
             Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
             Text(value.formatted(.percent.precision(.fractionLength(1))))
+            Text(days >= 30 ? "30d" : "\(days)d")
+                .foregroundStyle(Color.textSecondary)
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
         .foregroundStyle(up ? Color.positive : Color.negative)
@@ -180,18 +197,41 @@ struct DashboardView: View {
 
     // MARK: Spending by category
 
-    private var topCategories: [Analytics.CategoryTotal] {
+    private func topCategories(from monthSpend: [Analytics.CategoryTotal]) -> [Analytics.CategoryTotal] {
+        if autoCategories {
+            // Auto: only categories with spend this month. spendingByCategory
+            // ignores isHidden (wanted — manual hides are dormant) but includes
+            // Transfers, so strip them here. Re-sort with the name tiebreak:
+            // its dictionary-built order is unstable on total ties.
+            return monthSpend
+                .filter { $0.category?.name != "Transfers" && $0.total > 0 }
+                .sorted {
+                    $0.total != $1.total ? $0.total > $1.total
+                                         : ($0.category?.name ?? "") < ($1.category?.name ?? "")
+                }
+        }
         // Transfers move money between your own accounts — not real spending.
-        Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
-            .filter { $0.category?.name != "Transfers" }
-            .filter { !($0.category?.isHidden ?? false) }
-            .filter { $0.category != nil || !hideUncategorized }
+        // Every non-hidden category shows, at $0 when there's no spend this month.
+        var rows = Analytics.spendingCategories(spent: monthSpend, categories: categories)
+        if hideUncategorized {
+            rows.removeAll { $0.category == nil }
+        } else if !rows.contains(where: { $0.category == nil }) {
+            // Uncategorized is checked but had no spend this month — still show it at $0.
+            rows.append(Analytics.CategoryTotal(category: nil, total: 0))
+        }
+        return rows
     }
 
-    private var maxCategoryTotal: Decimal { topCategories.map(\.total).max() ?? 1 }
-
     private var categoryCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        // Compute the totals once per render and hand them down — recomputing the
+        // full aggregation for the max and again per row multiplied the work.
+        // One transaction scan shared by the category list and the filter popup.
+        let monthSpend = Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
+        let cats = topCategories(from: monthSpend)
+        let maxTotalRaw = cats.map(\.total).max() ?? 0
+        // Guarded against divide-by-zero: with every category at $0 the max is 0.
+        let maxTotal = maxTotalRaw > 0 ? maxTotalRaw : 1
+        return VStack(alignment: .leading, spacing: 16) {
             HStack {
                 SectionLabel("Spending Categories")
                 Spacer()
@@ -201,13 +241,14 @@ struct DashboardView: View {
                         .foregroundStyle(Color.brand)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Show or hide categories")
                 .accessibilityIdentifier("categoryFilterButton")
                 .popover(isPresented: $showCategoryFilter) {
-                    categoryFilterPopup
+                    categoryFilterPopup(monthSpend: monthSpend)
                         .presentationCompactAdaptation(.popover)
                 }
             }
-            ForEach(topCategories) { item in
+            ForEach(cats) { item in
                 let color = Color(hex: item.category?.colorHex ?? "#8E8E93")
                 let name = item.category?.name ?? "Uncategorized"
                 Button {
@@ -227,19 +268,25 @@ struct DashboardView: View {
                             Spacer()
                             MoneyText(value: item.total, size: 16, weight: .medium, color: .textSecondary)
                         }
-                        shareBar(item.total, color)
+                        shareBar(item.total, color, maxTotal: maxTotal)
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("category-\(name)")
             }
+            if cats.isEmpty {
+                Text(autoCategories ? "No spending yet this month."
+                                    : "All categories hidden — tap the filter to show some.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.textSecondary)
+            }
         }
         .cardStyle()
     }
 
-    private func shareBar(_ total: Decimal, _ color: Color) -> some View {
-        let fraction = max(0.04, NSDecimalNumber(decimal: total / maxCategoryTotal).doubleValue)
+    private func shareBar(_ total: Decimal, _ color: Color, maxTotal: Decimal) -> some View {
+        let fraction = max(0.04, NSDecimalNumber(decimal: total / maxTotal).doubleValue)
         return GeometryReader { geo in
             Capsule().fill(Color.hairline)
                 .overlay(alignment: .leading) {
@@ -250,16 +297,91 @@ struct DashboardView: View {
         .frame(height: 4)
     }
 
+    /// This-month spend keyed by category name (uncategorized under ""). Flags
+    /// hidden categories that still had real spend this month.
+    private func monthSpendByName(from monthSpend: [Analytics.CategoryTotal]) -> [String: Decimal] {
+        var map: [String: Decimal] = [:]
+        for t in monthSpend {
+            map[t.category?.name ?? ""] = t.total
+        }
+        return map
+    }
+
+    /// Leaving Auto via a popup tap must not change what's visible: seed the
+    /// manual flags from Auto's current view (visible = has spend), then let
+    /// the tapped toggle apply on top. No-op when Auto is already off.
+    private func disableAutoSeedingFromSpend(spend: [String: Decimal]) {
+        guard autoCategories else { return }
+        for category in categories where category.name != "Transfers" {
+            category.isHidden = (spend[category.name] ?? 0) <= 0
+        }
+        hideUncategorized = (spend[""] ?? 0) <= 0
+        autoCategories = false
+    }
+
+    /// Filter checkbox: filled when shown, half-filled when hidden but the category
+    /// still has spend this month, empty when hidden with no spend.
+    /// SF Symbols quirk: `circle.tophalf.filled` renders with the BOTTOM half solid
+    /// (and vice versa) — this is the bottom-solid look, verified by rendering.
+    private func filterCheckbox(visible: Bool, hasSpend: Bool) -> some View {
+        let name = visible ? "checkmark.circle.fill" : (hasSpend ? "circle.tophalf.filled" : "circle")
+        return Image(systemName: name)
+            .foregroundStyle(visible || hasSpend ? Color.brand : Color.textSecondary)
+    }
+
     /// Toggle which categories appear in the Spending Categories list. Tapping a
     /// row flips `isHidden` (SwiftData autosaves); the list updates live behind the
     /// popover, and tapping outside dismisses it.
-    private var categoryFilterPopup: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel("Show Categories")
+    private func categoryFilterPopup(monthSpend: [Analytics.CategoryTotal]) -> some View {
+        let listed = categories.filter { $0.name != "Transfers" }
+        let spend = monthSpendByName(from: monthSpend)
+        // Rows show EFFECTIVE visibility: under Auto that's "has spend", not the
+        // dormant isHidden flags. Any tap seeds the flags from this view first
+        // (so nothing jumps), turns Auto off, then applies the toggle.
+        let uncatVisible = autoCategories ? (spend[""] ?? 0) > 0 : !hideUncategorized
+        let allVisible = uncatVisible && listed.allSatisfy {
+            autoCategories ? (spend[$0.name] ?? 0) > 0 : !$0.isHidden
+        }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                SectionLabel("Show Categories")
+                Spacer()
+                Button(allVisible ? "Deselect All" : "Select All") {
+                    disableAutoSeedingFromSpend(spend: spend)
+                    hideUncategorized = allVisible
+                    for category in listed { category.isHidden = allVisible }
+                }
+                .font(.caption)
+                .accessibilityIdentifier("catSelectAll")
+            }
             ScrollView {
                 VStack(spacing: 4) {
-                    let uncatVisible = !hideUncategorized
+                    // Auto itself doesn't seed: turning it off reveals the dormant
+                    // manual selections as-is.
+                    Button { autoCategories.toggle() } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.brand)
+                                .frame(width: 22)
+                            Text("Auto")
+                                .foregroundStyle(Color.textPrimary)
+                            Spacer(minLength: 16)
+                            filterCheckbox(visible: autoCategories, hasSpend: false)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(autoCategories ? Color.brand.opacity(0.12) : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Automatically show only categories with spending")
+                    .accessibilityValue(autoCategories ? "on" : "off")
+                    .accessibilityIdentifier("catAutoToggle")
+                    Divider()
                     Button {
+                        disableAutoSeedingFromSpend(spend: spend)
                         hideUncategorized.toggle()
                     } label: {
                         HStack(spacing: 10) {
@@ -270,8 +392,7 @@ struct DashboardView: View {
                             Text("Uncategorized")
                                 .foregroundStyle(Color.textPrimary)
                             Spacer(minLength: 16)
-                            Image(systemName: uncatVisible ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(uncatVisible ? Color.brand : Color.textSecondary)
+                            filterCheckbox(visible: uncatVisible, hasSpend: (spend[""] ?? 0) > 0)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
@@ -281,9 +402,12 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("catToggle-Uncategorized")
-                    ForEach(categories) { category in
-                        let visible = !category.isHidden
+                    .accessibilityValue(uncatVisible ? "shown" : ((spend[""] ?? 0) > 0 ? "half" : "empty"))
+                    ForEach(listed) { category in
+                        let visible = autoCategories ? (spend[category.name] ?? 0) > 0
+                                                     : !category.isHidden
                         Button {
+                            disableAutoSeedingFromSpend(spend: spend)
                             category.isHidden.toggle()
                         } label: {
                             HStack(spacing: 10) {
@@ -294,8 +418,7 @@ struct DashboardView: View {
                                 Text(category.name)
                                     .foregroundStyle(Color.textPrimary)
                                 Spacer(minLength: 16)
-                                Image(systemName: visible ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(visible ? Color.brand : Color.textSecondary)
+                                filterCheckbox(visible: visible, hasSpend: (spend[category.name] ?? 0) > 0)
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
@@ -305,6 +428,7 @@ struct DashboardView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("catToggle-\(category.name)")
+                        .accessibilityValue(visible ? "shown" : ((spend[category.name] ?? 0) > 0 ? "half" : "empty"))
                     }
                 }
             }
@@ -444,8 +568,9 @@ struct DashboardView: View {
     }
 
     private func popupPosition(for point: Analytics.MonthPoint) -> CGPoint {
-        let count = max(trend.count, 1)
-        let idx = trend.firstIndex { calendar.isDate($0.month, equalTo: point.month, toGranularity: .month) } ?? 0
+        let points = trend
+        let count = max(points.count, 1)
+        let idx = points.firstIndex { calendar.isDate($0.month, equalTo: point.month, toGranularity: .month) } ?? 0
         let x = trendPlot.minX + (CGFloat(idx) + 0.5) / CGFloat(count) * trendPlot.width
         let clampedX = min(max(x, trendPlot.minX + 54), trendPlot.maxX - 54)
         return CGPoint(x: clampedX, y: trendPlot.minY - 34)

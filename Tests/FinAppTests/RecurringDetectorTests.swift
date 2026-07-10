@@ -70,6 +70,41 @@ final class RecurringDetectorTests: XCTestCase {
         XCTAssertTrue(RecurringDetector.detectCandidates(from: allTxns).isEmpty)
     }
 
+    func testRefreshKeepsUserSetNextDue() {
+        // Last charge 10 days ago; auto-projection would say +30d from lastSeen.
+        series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30, endDaysAgo: 10)
+        // User picked a next-due date in the future, after the last charge.
+        let userDate = cal.date(byAdding: .day, value: 5, to: Date())!
+        ctx.insert(RecurringBill(merchantName: "netflix", expectedAmount: Decimal(string: "15.49")!,
+                                 cadence: .monthly, lastSeen: Date(), nextDue: userDate,
+                                 nextDueSetByUser: true))
+        try? ctx.save()
+
+        RecurringDetector.refresh(in: ctx, calendar: cal)
+
+        let bill = ((try? ctx.fetch(FetchDescriptor<RecurringBill>())) ?? [])
+            .first { $0.merchantName == "netflix" }
+        XCTAssertEqual(bill?.nextDue, userDate, "User-set next due must survive refresh")
+        XCTAssertTrue(bill?.nextDueSetByUser == true)
+    }
+
+    func testRefreshResumesProjectionAfterChargeOnOrAfterUserDate() {
+        // Last charge is TODAY — on/after the user's stale date below.
+        series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30, endDaysAgo: 0)
+        let staleUserDate = cal.date(byAdding: .day, value: -3, to: Date())!
+        ctx.insert(RecurringBill(merchantName: "netflix", expectedAmount: Decimal(string: "15.49")!,
+                                 cadence: .monthly, lastSeen: Date(), nextDue: staleUserDate,
+                                 nextDueSetByUser: true))
+        try? ctx.save()
+
+        RecurringDetector.refresh(in: ctx, calendar: cal)
+
+        let bill = ((try? ctx.fetch(FetchDescriptor<RecurringBill>())) ?? [])
+            .first { $0.merchantName == "netflix" }
+        XCTAssertEqual(bill?.nextDueSetByUser, false, "Override clears once a charge posts on/after it")
+        XCTAssertNotEqual(bill?.nextDue, staleUserDate, "Projection resumes from detection")
+    }
+
     func testRefreshDoesNotResurrectDismissedBill() {
         // A merchant that detection will find...
         series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30)

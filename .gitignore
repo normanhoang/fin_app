@@ -1,6 +1,7 @@
 # Xcode / build
 DerivedData/
 build/
+exportOptions.plist
 *.xcuserstate
 **/xcuserdata/
 *.xcuserdatad/

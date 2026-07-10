@@ -7,6 +7,10 @@ struct FinAppApp: App {
     @State private var coordinator: SyncCoordinator
     @State private var lock = AppLock()
     @State private var showSplash = true
+    /// True while the scene isn't frontmost. iOS snapshots the app for the
+    /// app switcher during `.inactive` — before the `.background` lock fires —
+    /// so we cover the content the moment focus is lost.
+    @State private var isInactive = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appearanceMode") private var appearanceRaw = AppearanceMode.system.rawValue
 
@@ -22,11 +26,23 @@ struct FinAppApp: App {
         if isUITest || ProcessInfo.processInfo.environment["FINAPP_SAMPLE"] == "1" {
             SampleData.inject(into: container.mainContext)
         }
+        if isUITest {
+            // The store is in-memory per launch, but UserDefaults persist across
+            // UI-test launches — reset the dashboard filter flags so tests can't
+            // leak state into each other and become order-dependent.
+            UserDefaults.standard.removeObject(forKey: "dashCategoryAuto")
+            UserDefaults.standard.removeObject(forKey: "dashHideUncategorized")
+        }
         #else
         let container = AppSchema.makeContainer()
         self.container = container
         _coordinator = State(initialValue: SyncCoordinator(context: container.mainContext))
         #endif
+
+        // Seed default categories at launch so newly-shipped defaults reach
+        // existing installs without waiting for a network sync.
+        CategorySeed.seedIfNeeded(in: self.container.mainContext)
+        CategorySeed.ensureMissing(in: self.container.mainContext)
     }
 
     var body: some Scene {
@@ -38,12 +54,17 @@ struct FinAppApp: App {
                 if lock.isEnabled && !lock.isUnlocked {
                     LockScreen()
                         .environment(lock)
+                } else if isInactive {
+                    // Privacy cover: keeps balances out of the app-switcher
+                    // snapshot. NOT a lock — Face ID itself makes the scene
+                    // inactive, so locking here would block unlocking.
+                    SplashView()
                 }
                 if showSplash {
                     SplashView()
                         .transition(.opacity)
                         .task {
-                            try? await Task.sleep(for: .seconds(0.9))
+                            try? await Task.sleep(for: .seconds(0.7))
                             withAnimation(.easeOut(duration: 0.3)) { showSplash = false }
                         }
                 }
@@ -53,6 +74,7 @@ struct FinAppApp: App {
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in
+            isInactive = phase != .active
             if phase == .background {
                 lock.lock()
             } else if phase == .active, coordinator.isConnected {

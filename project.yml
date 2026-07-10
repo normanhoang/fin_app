@@ -7,8 +7,8 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.3.0"
+    CURRENT_PROJECT_VERSION: "21"
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: "DZRPJF9JB6"
     CODE_SIGN_STYLE: Automatic
@@ -29,6 +29,8 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Unlock FinApp to view your financial data."
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.finance"
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_EMIT_LOC_STRINGS: YES
         ENABLE_USER_SCRIPT_SANDBOXING: YES

@@ -1,19 +1,37 @@
 import SwiftUI
+import SwiftData
 
 struct TransactionRow: View {
     let transaction: Transaction
+
+    @State private var showCategoryPicker = false
 
     private var categoryColor: Color { Color(hex: transaction.category?.colorHex ?? "#8E8E93") }
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(categoryColor.opacity(0.15))
-                Image(systemName: transaction.category?.systemIcon ?? "questionmark.circle")
-                    .font(.system(size: 14))
-                    .foregroundStyle(categoryColor)
+            // Tap the icon to change just this transaction's category; the rest
+            // of the row keeps its own tap (open detail). A Button nests cleanly
+            // inside the row's enclosing Button/NavigationLink in a List.
+            Button {
+                showCategoryPicker = true
+            } label: {
+                ZStack {
+                    Circle().fill(categoryColor.opacity(0.15))
+                    Image(systemName: transaction.category?.systemIcon ?? "questionmark.circle")
+                        .font(.system(size: 14))
+                        .foregroundStyle(categoryColor)
+                }
+                .frame(width: 38, height: 38)
             }
-            .frame(width: 38, height: 38)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Change category")
+            .accessibilityIdentifier("categoryIcon-\(transaction.id)")
+            .popover(isPresented: $showCategoryPicker) {
+                // The category @Query lives in this host, which only exists while
+                // the popover is open — so scrolling rows never runs the query.
+                CategoryPickerHost(transaction: transaction)
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(transaction.payee ?? transaction.detail)
                     .foregroundStyle(Color.textPrimary)
@@ -26,14 +44,34 @@ struct TransactionRow: View {
                     if transaction.pending {
                         Text("· Pending").foregroundStyle(.orange)
                     }
+                    if transaction.note != nil {
+                        Image(systemName: "note.text")
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(Color.textSecondary)
             }
             Spacer()
-            MoneyText(value: transaction.amount, size: 16, weight: .semibold,
-                      color: transaction.isInflow ? .positive : .textPrimary)
+            MoneyText(value: transaction.amount, code: transaction.account?.currency ?? "USD",
+                      size: 16, weight: .semibold, color: balanceColor(transaction.amount))
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// Hosts the category picker's @Query so it only runs while the popover is open.
+private struct CategoryPickerHost: View {
+    let transaction: Transaction
+    @Query(sort: \Category.name) private var categories: [Category]
+    @Environment(\.modelContext) private var context
+
+    var body: some View {
+        CategoryPickerPopup(
+            categories: categories,
+            selectedName: transaction.category?.name,
+            isUncategorizedSelected: transaction.category == nil,
+            onSelect: { CategorizationEngine.assign($0, to: transaction, in: context) }
+        )
+        .presentationCompactAdaptation(.popover)
     }
 }

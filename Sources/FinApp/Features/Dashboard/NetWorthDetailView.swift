@@ -22,21 +22,37 @@ enum NWRange: String, CaseIterable, Identifiable {
 }
 
 struct NetWorthDetailView: View {
+    @Environment(AppRouter.self) private var router
     @Query(sort: \NetWorthSnapshot.day) private var snapshots: [NetWorthSnapshot]
     @State private var range: NWRange = .sixMonths
     @State private var selectedDate: Date?
+    /// True while a finger is down on the chart, so page swiping is blocked from
+    /// touch-down — not just once a scrub selection engages.
+    @State private var chartTouch = false
 
     private var filtered: [NetWorthSnapshot] {
         guard let start = range.start() else { return snapshots }
         return snapshots.filter { $0.day >= start }
     }
 
-    /// Y range with ~18% top headroom so the scrub popup clears a near-max dot.
+    /// Y range hugging the data (not zero-based) so small changes read as slope.
+    /// Top headroom keeps the scrub popup clear of a near-max dot.
     private var yDomain: ClosedRange<Double> {
         let vals = filtered.map { ($0.value as NSDecimalNumber).doubleValue }
         let maxV = vals.max() ?? 1
-        let minV = Swift.min(vals.min() ?? 0, 0)
-        return minV ... (maxV * 1.18)
+        let minV = vals.min() ?? 0
+        // Flat history (or a single value) still needs a non-zero span.
+        let span = Swift.max(maxV - minV, Swift.max(abs(maxV) * 0.01, 1))
+        return (minV - span * 0.08) ... (maxV + span * 0.25)
+    }
+
+    /// Fractional change across the selected range; nil when <2 points or zero baseline.
+    private var rangeDelta: Double? {
+        guard let first = filtered.first, let last = filtered.last, first.day < last.day else { return nil }
+        let from = (first.value as NSDecimalNumber).doubleValue
+        guard from != 0 else { return nil }
+        let to = (last.value as NSDecimalNumber).doubleValue
+        return (to - from) / abs(from)
     }
 
     /// Snapshot in `filtered` whose day is closest to the scrubbed x-position.
@@ -58,8 +74,16 @@ struct NetWorthDetailView: View {
             } else {
                 List {
                     Section {
-                        rangePicker
-                        chart
+                        // One row for picker + chip + chart so List draws no
+                        // separator between them. Even spacing keeps the chip
+                        // visually centered between the buttons and the graph.
+                        VStack(spacing: 12) {
+                            rangePicker
+                            if let rangeDelta {
+                                HStack { Spacer(); deltaChip(rangeDelta) }
+                            }
+                            chart
+                        }
                     }
                     .listRowBackground(Color.surface)
                 }
@@ -68,6 +92,15 @@ struct NetWorthDetailView: View {
         }
         .navigationTitle("Net Worth")
         .navigationBarTitleDisplayMode(.inline)
+        // While a finger is on the chart or a scrub selection is active, the
+        // horizontal drag is the chart's — block the left-swipe-to-next-tab
+        // gesture so scrubbing can't page away.
+        .onChange(of: selectedDate) { updateSuppress() }
+        .onDisappear { router.suppressPageSwipe = false }
+    }
+
+    private func updateSuppress() {
+        router.suppressPageSwipe = chartTouch || selectedDate != nil
     }
 
     private var rangePicker: some View {
@@ -91,6 +124,19 @@ struct NetWorthDetailView: View {
         .padding(.vertical, 2)
     }
 
+    private func deltaChip(_ value: Double) -> some View {
+        let up = value >= 0
+        return HStack(spacing: 3) {
+            Image(systemName: up ? "arrow.up.right" : "arrow.down.right")
+            Text(value.formatted(.percent.precision(.fractionLength(1))))
+        }
+        .font(.system(size: 12, weight: .semibold, design: .rounded))
+        .foregroundStyle(up ? Color.positive : Color.negative)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background((up ? Color.positive : Color.negative).opacity(0.12), in: Capsule())
+    }
+
     @ViewBuilder
     private var chart: some View {
         if filtered.count < 2 {
@@ -107,9 +153,12 @@ struct NetWorthDetailView: View {
                 .interpolationMethod(.monotone)
                 .foregroundStyle(Color.brand)
                 .lineStyle(StrokeStyle(lineWidth: 2.5))
+                // Fill starts at the domain floor, not 0 — with a data-hugging
+                // domain a 0 baseline would paint below the plot (no clipping).
                 AreaMark(
                     x: .value("Day", point.day, unit: .day),
-                    y: .value("Net Worth", (point.value as NSDecimalNumber).doubleValue)
+                    yStart: .value("Base", yDomain.lowerBound),
+                    yEnd: .value("Net Worth", (point.value as NSDecimalNumber).doubleValue)
                 )
                 .interpolationMethod(.monotone)
                 .foregroundStyle(.linearGradient(
@@ -147,6 +196,11 @@ struct NetWorthDetailView: View {
                             Text(day, format: .dateTime.month(.abbreviated).day())
                                 .font(.caption2)
                                 .fixedSize()
+                                // rotationEffect doesn't change the layout box, so
+                                // the tilted text pokes ~13pt above and below it and
+                                // gets clipped/crosses the axis. Vertical padding
+                                // grows the box so the chart reserves enough room.
+                                .padding(.vertical, 10)
                                 .rotationEffect(.degrees(-35))
                                 .foregroundStyle(Color.textSecondary)
                         }
@@ -157,9 +211,24 @@ struct NetWorthDetailView: View {
                 AxisGridLine().foregroundStyle(Color.hairline)
                 AxisValueLabel().foregroundStyle(Color.textSecondary)
             } }
-            .padding(.top, 28)
-            .frame(height: 240)
-            .padding(.vertical, 8)
+            .frame(height: 260)
+            .padding(.bottom, 8)
+            // Block page swiping from the moment a touch moves on the chart —
+            // waiting for chartXSelection to engage lets the pager grab the
+            // first ~10pt and slide the page. simultaneousGesture keeps the
+            // scrub and vertical List scroll working.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        chartTouch = true
+                        updateSuppress()
+                    }
+                    .onEnded { _ in
+                        chartTouch = false
+                        updateSuppress()
+                    }
+            )
+            .accessibilityIdentifier("netWorthChart")
         }
     }
 
