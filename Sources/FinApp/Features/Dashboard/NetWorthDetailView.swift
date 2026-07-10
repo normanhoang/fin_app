@@ -35,12 +35,15 @@ struct NetWorthDetailView: View {
         return snapshots.filter { $0.day >= start }
     }
 
-    /// Y range with ~18% top headroom so the scrub popup clears a near-max dot.
+    /// Y range hugging the data (not zero-based) so small changes read as slope.
+    /// Top headroom keeps the scrub popup clear of a near-max dot.
     private var yDomain: ClosedRange<Double> {
         let vals = filtered.map { ($0.value as NSDecimalNumber).doubleValue }
         let maxV = vals.max() ?? 1
-        let minV = Swift.min(vals.min() ?? 0, 0)
-        return minV ... (maxV * 1.18)
+        let minV = vals.min() ?? 0
+        // Flat history (or a single value) still needs a non-zero span.
+        let span = Swift.max(maxV - minV, Swift.max(abs(maxV) * 0.01, 1))
+        return (minV - span * 0.08) ... (maxV + span * 0.25)
     }
 
     /// Fractional change across the selected range; nil when <2 points or zero baseline.
@@ -150,9 +153,12 @@ struct NetWorthDetailView: View {
                 .interpolationMethod(.monotone)
                 .foregroundStyle(Color.brand)
                 .lineStyle(StrokeStyle(lineWidth: 2.5))
+                // Fill starts at the domain floor, not 0 — with a data-hugging
+                // domain a 0 baseline would paint below the plot (no clipping).
                 AreaMark(
                     x: .value("Day", point.day, unit: .day),
-                    y: .value("Net Worth", (point.value as NSDecimalNumber).doubleValue)
+                    yStart: .value("Base", yDomain.lowerBound),
+                    yEnd: .value("Net Worth", (point.value as NSDecimalNumber).doubleValue)
                 )
                 .interpolationMethod(.monotone)
                 .foregroundStyle(.linearGradient(

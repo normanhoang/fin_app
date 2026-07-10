@@ -11,7 +11,6 @@ struct AddAccountView: View {
     @State private var name = ""
     @State private var type: AccountType = .cash
     @State private var balanceText = ""
-    @State private var currency = "USD"
 
     private var balance: Decimal? { Decimal(string: balanceText, locale: .current) }
 
@@ -31,8 +30,6 @@ struct AddAccountView: View {
                 Section("Balance") {
                     TextField("0.00", text: $balanceText)
                         .keyboardType(.numbersAndPunctuation)
-                    TextField("Currency", text: $currency)
-                        .textInputAutocapitalization(.characters)
                 }
                 .listRowBackground(Color.surface)
                 if type.isDebt {
@@ -63,7 +60,7 @@ struct AddAccountView: View {
             id: "manual-\(UUID().uuidString)",
             org: "Manual",
             name: name.trimmingCharacters(in: .whitespaces),
-            currency: currency.isEmpty ? "USD" : currency.uppercased(),
+            currency: "USD",
             balance: balance,
             balanceDate: Date(),
             typeRaw: type.rawValue,
