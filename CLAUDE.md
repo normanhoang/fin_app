@@ -28,7 +28,8 @@ non-lazy `Grid` (see the Recurring calendar card).
 ### DEBUG launch environment variables
 Set via `SIMCTL_CHILD_<VAR>` for `simctl launch`, or `XCUIApplication.launchEnvironment`:
 - `FINAPP_SAMPLE=1` — inject `SampleData` into the on-disk store.
-- `FINAPP_TAB=<0–5>` — initial tab.
+- `FINAPP_TAB=<0–4>` — initial tab (== `AppTab` rawValue; 0 Accounts · 1 Transactions ·
+  2 Dashboard · 3 Recurring · 4 Settings).
 - `FINAPP_UITEST=1` — use an **in-memory** container + fresh sample data each launch
   (clean, deterministic; used by `FinAppUITests`).
 
@@ -66,7 +67,10 @@ tab-bar item index == the `launch(tab:)` indices in `FinAppUITests.swift`, so al
 must move together when reordering. The pager builds every page up-front, so XCUITest
 `exists` is true for elements on off-screen pages — a wrong tab index hangs
 `while !isHittable` loops instead of failing (the `launch` helper asserts the landing
-nav bar to catch this).
+nav bar to catch this). The pager also `.ignoresSafeArea(.keyboard)` (keyboard resize
+shifted paging offsets), which kills SwiftUI's automatic focus scroll — screens with text
+fields restore room via `keyboardAvoiding()` + `KeyboardReveal`
+(`Support/KeyboardDismiss.swift`); see `TransactionDetailView`'s note field.
 
 **SwiftData layer.** `Models/AppSchema.swift` lists every `@Model` type in one place —
 **update `AppSchema.models` when adding a model.** Migrations are lightweight only: a new
@@ -114,7 +118,10 @@ are **end-exclusive**. View mode persists via `@AppStorage("recurringShowCalenda
   cursor clicks do not. Edge back-swipe works via
   `coordinate(...).press(forDuration:thenDragTo:)`. Lazy List rows scrolled off-screen are
   **absent from the element tree** (`exists == false`) — assert navigation landings on
-  `app.navigationBars["Title"]`, not on off-screen fields. `xcodebuild test` runs on a
+  `app.navigationBars["Title"]`, not on off-screen fields. Conversely, elements on
+  **other pager pages** still `exists` (all pages pre-built) and `tap()` silently
+  auto-scrolls to them across pages — never use unbounded `while !isHittable` scroll
+  loops; use the bounded `swipeUpUntilHittable` helper. `xcodebuild test` runs on a
   **cloned** simulator, so `simctl io <id> screenshot` can't capture test UI; dump
   `app.debugDescription` from inside the test instead.
 - Money/color formatting lives in `Support/Formatting.swift` (`Money.string`, `Color(hex:)`).
