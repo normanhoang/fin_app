@@ -70,10 +70,10 @@ service; see https://simplefin.org.
 `https://normanhoang.github.io/fin_app/privacy`
 
 ## What's New (version 1.4.0)
-`First release. Connect your bank through SimpleFin and see your net worth,
-spending, categories, and recurring bills — all stored privately on your device.
-Scrub your net-worth history, add notes to transactions, track manual accounts,
-and let the Dashboard curate your spending categories automatically.`
+`Scrub through your net-worth history across time ranges, add notes to
+transactions, and filter them by month. The Dashboard now curates your spending
+categories around where you actually spend, account groups can be collapsed and
+sorted, and recurring bills gained a calendar view.`
 
 ## App Review notes (paste into "Notes" for the reviewer)
 FinApp connects to a user's bank through SimpleFin, which requires a user-provided
