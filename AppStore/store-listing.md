@@ -26,15 +26,19 @@ create and nothing to track.
 
 WHAT YOU GET
 
-• Net worth at a glance — every account in one balance, with a history graph that
-  grows as you use the app.
+• Net worth at a glance — every account in one balance, with a history graph you
+  can scrub through across time ranges from a month to all time.
 • Automatic categories — transactions are sorted into Groceries, Dining,
-  Transport, Subscriptions, and more, with rules you can tune.
+  Transport, Subscriptions, and more, with rules you can tune and a Dashboard
+  list that curates itself around where you actually spend.
 • Spending insight — see your top categories each month and a six-month trend.
-• Recurring bills — FinApp spots subscriptions and repeating charges so nothing
-  sneaks up on you.
-• Transactions, searchable — filter by category, income, or spending and find any
-  charge fast.
+• Recurring bills — FinApp spots subscriptions and repeating charges, and a
+  calendar view shows what's due when.
+• Transactions, searchable — filter by category, month, income, or spending,
+  and attach your own notes to any charge.
+• Accounts, your way — group by type, collapse and sort sections, rename
+  accounts, and add manual accounts (property, loans, cash) alongside synced
+  ones.
 
 PRIVATE BY DESIGN
 
@@ -65,9 +69,11 @@ service; see https://simplefin.org.
 ## Privacy Policy URL
 `https://normanhoang.github.io/fin_app/privacy`
 
-## What's New (version 1.0.0)
+## What's New (version 1.3.0)
 `First release. Connect your bank through SimpleFin and see your net worth,
-spending, categories, and recurring bills — all stored privately on your device.`
+spending, categories, and recurring bills — all stored privately on your device.
+Scrub your net-worth history, add notes to transactions, track manual accounts,
+and let the Dashboard curate your spending categories automatically.`
 
 ## App Review notes (paste into "Notes" for the reviewer)
 FinApp connects to a user's bank through SimpleFin, which requires a user-provided
