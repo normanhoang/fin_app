@@ -284,6 +284,11 @@ struct TransactionDetailView: View {
             Section("Note") {
                 TextField("Add a note", text: $noteText, axis: .vertical)
                     .accessibilityIdentifier("txnNoteField")
+                    // Keeps the field above the keyboard: the pager disables the
+                    // keyboard safe area (RootView), which also kills SwiftUI's
+                    // focus scroll, and ScrollViewReader.scrollTo is a no-op in
+                    // this List. Pair with keyboardAvoiding() below.
+                    .background(KeyboardReveal())
             }
             .listRowBackground(Color.surface)
             Section("Recurring") {
@@ -309,6 +314,7 @@ struct TransactionDetailView: View {
         }
         .listRowSeparatorTint(Color.hairline)
         .screenBackground()
+        .keyboardAvoiding()
         .navigationTitle(transaction.payee ?? transaction.detail)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { noteText = transaction.note ?? "" }
