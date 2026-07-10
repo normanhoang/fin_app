@@ -1,11 +1,11 @@
 import Foundation
 import Observation
 
-/// Bottom-bar pages in display order. Dashboard is leftmost and the default.
+/// Bottom-bar pages in display order. Dashboard sits centre and is the default.
 enum AppTab: Int, CaseIterable {
-    case dashboard = 0
+    case accounts = 0
     case transactions = 1
-    case accounts = 2
+    case dashboard = 2
     case recurring = 3
     case settings = 4
 }

@@ -9,12 +9,35 @@ final class FinAppUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// Page order (== AppTab rawValues): Accounts 0 · Transactions 1 · Dashboard 2 ·
+    /// Recurring 3 · Settings 4. Must move with any app page reorder.
+    private static let tabTitles = ["Accounts", "Transactions", "Dashboard", "Recurring", "Settings"]
+
     private func launch(tab: Int = 0) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["FINAPP_UITEST"] = "1"
         app.launchEnvironment["FINAPP_TAB"] = String(tab)
         app.launch()
+        // The pager builds all pages up-front, so `exists` is true even for
+        // elements on off-screen pages (their frames sit a page-width off to the
+        // side) — assert the landing page's nav bar is actually on screen, or a
+        // stale tab index hangs isHittable loops instead of failing.
+        let bar = app.navigationBars[Self.tabTitles[tab]]
+        XCTAssertTrue(bar.waitForExistence(timeout: 8),
+                      "\(Self.tabTitles[tab]) nav bar missing after launch")
+        let mid = CGPoint(x: bar.frame.midX, y: bar.frame.midY)
+        XCTAssertTrue(app.windows.firstMatch.frame.contains(mid),
+                      "Launch did not land on \(Self.tabTitles[tab]) (tab \(tab)); nav bar off-screen at \(bar.frame)")
         return app
+    }
+
+    /// Scrolls until `element` is hittable, bounded so a wrong page or missing
+    /// element fails fast instead of swiping forever.
+    private func swipeUpUntilHittable(_ app: XCUIApplication, _ element: XCUIElement,
+                                      maxSwipes: Int = 6) {
+        var swipes = 0
+        while !element.isHittable && swipes < maxSwipes { app.swipeUp(); swipes += 1 }
+        XCTAssertTrue(element.isHittable, "\(element) not hittable after \(maxSwipes) swipes")
     }
 
     private func snap(_ app: XCUIApplication, _ name: String) {
@@ -317,6 +340,16 @@ final class FinAppUITests: XCTestCase {
         field.tap()
         let note = "split with roommate"
         field.typeText(note)
+
+        // The pager ignores the keyboard safe area, so the detail view restores
+        // its own avoidance (keyboardAvoiding + KeyboardReveal) — the focused
+        // field must sit fully above the keyboard while typing.
+        let keyboard = app.keyboards.element
+        if keyboard.waitForExistence(timeout: 2) {
+            sleep(1) // let the reveal scroll settle
+            XCTAssertLessThanOrEqual(field.frame.maxY, keyboard.frame.minY,
+                                     "Note field hidden behind keyboard")
+        }
         snap(app, "transaction-note")
 
         app.navigationBars.buttons.element(boundBy: 0).tap() // back to list
@@ -428,7 +461,7 @@ final class FinAppUITests: XCTestCase {
         let chart = app.descendants(matching: .any).matching(identifier: "trendChart").firstMatch
         XCTAssertTrue(chart.waitForExistence(timeout: 8), "Trend chart not found")
         // The trend card is below the fold — scroll it into view before tapping.
-        while !chart.isHittable { app.swipeUp() }
+        swipeUpUntilHittable(app, chart)
         // Tap a bar to open the popup.
         chart.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
 
@@ -535,7 +568,7 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(groceries.waitForExistence(timeout: 8), "Groceries row not found")
 
         let filter = app.buttons["categoryFilterButton"]
-        while !filter.isHittable { app.swipeUp() }
+        swipeUpUntilHittable(app, filter)
         filter.tap()
 
         let toggle = app.buttons["catToggle-Groceries"]
@@ -559,7 +592,7 @@ final class FinAppUITests: XCTestCase {
         let app = launch(tab: 2)
         let filter = app.buttons["categoryFilterButton"]
         XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
-        while !filter.isHittable { app.swipeUp() }
+        swipeUpUntilHittable(app, filter)
         filter.tap()
 
         let subs = app.buttons["catToggle-Subscriptions"]
@@ -588,7 +621,7 @@ final class FinAppUITests: XCTestCase {
                        "Auto should hide categories with no spend this month")
 
         let filter = app.buttons["categoryFilterButton"]
-        while !filter.isHittable { app.swipeUp() }
+        swipeUpUntilHittable(app, filter)
         filter.tap()
 
         let auto = app.buttons["catAutoToggle"]
@@ -613,7 +646,7 @@ final class FinAppUITests: XCTestCase {
         let app = launch(tab: 2)
         let filter = app.buttons["categoryFilterButton"]
         XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
-        while !filter.isHittable { app.swipeUp() }
+        swipeUpUntilHittable(app, filter)
         filter.tap()
 
         let groceries = app.buttons["catToggle-Groceries"]
@@ -641,7 +674,7 @@ final class FinAppUITests: XCTestCase {
         let app = launch(tab: 2)
         let filter = app.buttons["categoryFilterButton"]
         XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
-        while !filter.isHittable { app.swipeUp() }
+        swipeUpUntilHittable(app, filter)
         filter.tap()
 
         let anyToggle = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'catToggle-'"))

@@ -60,9 +60,13 @@ pages built up-front) with a **custom bottom bar**. It deliberately does **not**
 `UINavigationBar` layout assertion (SIGABRT). `AppRouter` (`@Observable`, in the environment)
 holds `selectedTab` and `txnFilter`; Dashboard tiles call `router.showTransactions(_:)`,
 which sets `txnFilter` then `selectedTab = AppTab.transactions.rawValue` to deep-link into a
-pre-filtered Transactions list. Page order: Dashboard · Transactions · Accounts · Recurring ·
-Settings (Dashboard leftmost + default); the `AppTab` rawValue == physical pager position ==
-tab-bar item index, so all three must move together when reordering.
+pre-filtered Transactions list. Page order: Accounts · Transactions · Dashboard · Recurring ·
+Settings (Dashboard centre + default); the `AppTab` rawValue == physical pager position ==
+tab-bar item index == the `launch(tab:)` indices in `FinAppUITests.swift`, so all **four**
+must move together when reordering. The pager builds every page up-front, so XCUITest
+`exists` is true for elements on off-screen pages — a wrong tab index hangs
+`while !isHittable` loops instead of failing (the `launch` helper asserts the landing
+nav bar to catch this).
 
 **SwiftData layer.** `Models/AppSchema.swift` lists every `@Model` type in one place —
 **update `AppSchema.models` when adding a model.** Migrations are lightweight only: a new
