@@ -69,7 +69,7 @@ service; see https://simplefin.org.
 ## Privacy Policy URL
 `https://normanhoang.github.io/fin_app/privacy`
 
-## What's New (version 1.3.0)
+## What's New (version 1.4.0)
 `First release. Connect your bank through SimpleFin and see your net worth,
 spending, categories, and recurring bills — all stored privately on your device.
 Scrub your net-worth history, add notes to transactions, track manual accounts,
