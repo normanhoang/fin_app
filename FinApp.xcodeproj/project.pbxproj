@@ -27,6 +27,7 @@
 		376D0DB44392F0D19284F2A4 /* AddAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 402A245B5633BA51B2CF4853 /* AddAccountView.swift */; };
 		3836D4D7CDE4C69965C7A6DE /* SimpleFinDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B602EA010AAD4A66F375696 /* SimpleFinDTO.swift */; };
 		39EDC88671CEA76BD0FB67C7 /* SyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFC15F8654A2F89151683CC /* SyncService.swift */; };
+		39F7EBE8E47BE369BADA07A5 /* AccountTypeDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */; };
 		4891B02FA00245357663C0C3 /* NetWorthDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606FC94FD2F4B2285B430C29 /* NetWorthDetailView.swift */; };
 		48BDECAB02A5339BC2B6E1B0 /* SyncThrottle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D312B976200420472CDE54 /* SyncThrottle.swift */; };
 		4C1634AD41135D7EB5B89FFB /* TransactionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC485F0F95DE68212D4907D /* TransactionsView.swift */; };
@@ -68,6 +69,7 @@
 		E93AB1B266462599FD6E313E /* AnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F103062B940571D6066896DB /* AnalyticsTests.swift */; };
 		EBF50466C5AA4CC793B4595D /* RecurringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE541B07C89A694F7FB77690 /* RecurringView.swift */; };
 		F55755054B013D055029E417 /* RecurringBill.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B02795D854EE1341B5F06F /* RecurringBill.swift */; };
+		FDE219EA4D93D15D5B41BC69 /* AccountTypeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604E0AABADAADE1208B1CDFF /* AccountTypeDetector.swift */; };
 		FEB7622646B2A61DC95A0D32 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDF8413499DFC8E1F525137 /* Category.swift */; };
 		FFA44D52AC81C504BCD5F43B /* BudgetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260C10DC85D4E6BD9F2BBB2C /* BudgetsView.swift */; };
 /* End PBXBuildFile section */
@@ -99,6 +101,7 @@
 		0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySeedTests.swift; sourceTree = "<group>"; };
 		1FA2A0E0D769B3FBF63B2BCF /* CategorizationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorizationEngine.swift; sourceTree = "<group>"; };
 		260C10DC85D4E6BD9F2BBB2C /* BudgetsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetsView.swift; sourceTree = "<group>"; };
+		319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTypeDetectorTests.swift; sourceTree = "<group>"; };
 		31D3BBB0FAE7CB66E82483CA /* AccountType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountType.swift; sourceTree = "<group>"; };
 		365C671522FDEAC79598B554 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3836AD2C232480258AF632D7 /* FinApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FinApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -109,6 +112,7 @@
 		56E5762A9CF9A5EF3F565EAB /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
 		5D88D40C9AF27A9C91DFA4FA /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		60054F73B320018C24367A1B /* NetWorthSnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthSnapshotService.swift; sourceTree = "<group>"; };
+		604E0AABADAADE1208B1CDFF /* AccountTypeDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTypeDetector.swift; sourceTree = "<group>"; };
 		606FC94FD2F4B2285B430C29 /* NetWorthDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthDetailView.swift; sourceTree = "<group>"; };
 		679C5CE470E0A8FB16D007C2 /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		67D9D282FA26B1CA7C500013 /* DesignComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignComponents.swift; sourceTree = "<group>"; };
@@ -223,6 +227,7 @@
 		49E6DABA76FDE2B0871AFCAC /* SimpleFin */ = {
 			isa = PBXGroup;
 			children = (
+				604E0AABADAADE1208B1CDFF /* AccountTypeDetector.swift */,
 				83E9F972299B9113B1459971 /* CertificatePinner.swift */,
 				F0EB34F0BF32A4E818280F28 /* CredentialStore.swift */,
 				DA1EA7DFE6B5F3DEF338F8ED /* SimpleFinClient.swift */,
@@ -363,6 +368,7 @@
 		EB16F9255958BE7D8AA5731E /* FinAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */,
 				F103062B940571D6066896DB /* AnalyticsTests.swift */,
 				04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */,
 				0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */,
@@ -528,6 +534,7 @@
 			files = (
 				A6563AF342837A74756942C2 /* Account.swift in Sources */,
 				9C6DB0B1771AA72FDF3D81E1 /* AccountType.swift in Sources */,
+				FDE219EA4D93D15D5B41BC69 /* AccountTypeDetector.swift in Sources */,
 				E07329D086BB921CAC49EA7D /* AccountsView.swift in Sources */,
 				376D0DB44392F0D19284F2A4 /* AddAccountView.swift in Sources */,
 				05199C9D83578377BD7B4B2A /* Analytics.swift in Sources */,
@@ -579,6 +586,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				39F7EBE8E47BE369BADA07A5 /* AccountTypeDetectorTests.swift in Sources */,
 				E93AB1B266462599FD6E313E /* AnalyticsTests.swift in Sources */,
 				2C6ACAA2776EDC4B380970C6 /* CategorizationEngineTests.swift in Sources */,
 				A85895AA42FEE3133FBCF20B /* CategorySeedTests.swift in Sources */,
