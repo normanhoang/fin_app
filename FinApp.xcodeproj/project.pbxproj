@@ -68,6 +68,7 @@
 		E07329D086BB921CAC49EA7D /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCCB76803E218E918FE6943F /* AccountsView.swift */; };
 		E93AB1B266462599FD6E313E /* AnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F103062B940571D6066896DB /* AnalyticsTests.swift */; };
 		EBF50466C5AA4CC793B4595D /* RecurringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE541B07C89A694F7FB77690 /* RecurringView.swift */; };
+		EE47972BC14412C4CACDDD4E /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6517CF137C1914A5F1D3A3C /* AppLockTests.swift */; };
 		F55755054B013D055029E417 /* RecurringBill.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B02795D854EE1341B5F06F /* RecurringBill.swift */; };
 		FDE219EA4D93D15D5B41BC69 /* AccountTypeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604E0AABADAADE1208B1CDFF /* AccountTypeDetector.swift */; };
 		FEB7622646B2A61DC95A0D32 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDF8413499DFC8E1F525137 /* Category.swift */; };
@@ -148,6 +149,7 @@
 		DA1EA7DFE6B5F3DEF338F8ED /* SimpleFinClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleFinClient.swift; sourceTree = "<group>"; };
 		DCCB76803E218E918FE6943F /* AccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
 		E4CE39E1069B5053BE5996A8 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
+		E6517CF137C1914A5F1D3A3C /* AppLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockTests.swift; sourceTree = "<group>"; };
 		E693700E847C857D1E593892 /* RecurringSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringSchedule.swift; sourceTree = "<group>"; };
 		E959B4F9273A78E7A0710B99 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		EDE8665D0ABC06FA8113E1A5 /* NetWorthSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthSnapshot.swift; sourceTree = "<group>"; };
@@ -370,6 +372,7 @@
 			children = (
 				319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */,
 				F103062B940571D6066896DB /* AnalyticsTests.swift */,
+				E6517CF137C1914A5F1D3A3C /* AppLockTests.swift */,
 				04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */,
 				0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */,
 				01D92227D4FC668C5E576325 /* CertificatePinnerTests.swift */,
@@ -588,6 +591,7 @@
 			files = (
 				39F7EBE8E47BE369BADA07A5 /* AccountTypeDetectorTests.swift in Sources */,
 				E93AB1B266462599FD6E313E /* AnalyticsTests.swift in Sources */,
+				EE47972BC14412C4CACDDD4E /* AppLockTests.swift in Sources */,
 				2C6ACAA2776EDC4B380970C6 /* CategorizationEngineTests.swift in Sources */,
 				A85895AA42FEE3133FBCF20B /* CategorySeedTests.swift in Sources */,
 				9050621A3E190824E037C9C8 /* CertificatePinnerTests.swift in Sources */,
