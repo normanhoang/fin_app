@@ -52,7 +52,8 @@ enum SyncService {
         let account = Account(
             id: dto.id, org: dto.org, name: dto.name, currency: dto.currency,
             balance: dto.balance, availableBalance: dto.availableBalance,
-            balanceDate: dto.balanceDate
+            balanceDate: dto.balanceDate,
+            typeRaw: AccountTypeDetector.infer(name: dto.name, balance: dto.balance).rawValue
         )
         context.insert(account)
         return account

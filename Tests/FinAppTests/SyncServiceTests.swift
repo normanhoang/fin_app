@@ -137,6 +137,33 @@ final class SyncServiceTests: XCTestCase {
         XCTAssertEqual(ids, ["a1", "manual-1"])
     }
 
+    func testNewAccountGetsDetectedType() throws {
+        let ctx = makeContext()
+        let dto = AccountDTO(
+            id: "cc1", org: "Chase", name: "Chase Sapphire Credit Card", currency: "USD",
+            balance: Decimal(string: "-250.00")!, availableBalance: nil,
+            balanceDate: Date(), transactions: []
+        )
+        try SyncService.sync(accounts: [dto], into: ctx)
+
+        let acct = try XCTUnwrap(ctx.fetch(FetchDescriptor<Account>()).first)
+        XCTAssertEqual(acct.accountType, .creditCard)
+    }
+
+    func testUserChosenTypeSurvivesReSync() throws {
+        let ctx = makeContext()
+        try SyncService.sync(accounts: [account(txns: [])], into: ctx)
+
+        let acct = try XCTUnwrap(ctx.fetch(FetchDescriptor<Account>()).first)
+        acct.accountType = .investment
+        try ctx.save()
+
+        try SyncService.sync(accounts: [account(txns: [])], into: ctx)
+
+        let resynced = try XCTUnwrap(ctx.fetch(FetchDescriptor<Account>()).first)
+        XCTAssertEqual(resynced.accountType, .investment)
+    }
+
     func testUpdatesAccountBalance() throws {
         let ctx = makeContext()
         try SyncService.sync(accounts: [account(balance: "100.00", txns: [])], into: ctx)

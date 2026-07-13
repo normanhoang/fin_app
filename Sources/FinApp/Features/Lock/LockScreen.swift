@@ -3,6 +3,7 @@ import SwiftUI
 /// Full-screen cover shown while the app is locked.
 struct LockScreen: View {
     @Environment(AppLock.self) private var lock
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 22) {
@@ -24,6 +25,13 @@ struct LockScreen: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.appBackground.ignoresSafeArea())
-        .task { await lock.authenticate() }
+        // The lock screen is inserted while the app is heading to the background
+        // (lock() fires on .background), and LocalAuthentication fails with
+        // biometryNotAvailable (-6) unless the app is foreground-active — so only
+        // auto-prompt once the scene is actually active.
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await lock.autoAuthenticate()
+        }
     }
 }
