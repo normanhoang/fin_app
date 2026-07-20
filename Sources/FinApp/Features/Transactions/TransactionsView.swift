@@ -218,13 +218,13 @@ struct TransactionsView: View {
         .padding(.bottom, 6)
     }
 
-    /// Month title plus, while one or more category filters are selected, that
-    /// month's net subtotal over exactly the rows shown in the section.
+    /// Month title plus, while a category or income/expenses filter is selected,
+    /// that month's net subtotal over exactly the rows shown in the section.
     private func monthHeader(_ group: (month: Date, txns: [Transaction])) -> some View {
         HStack {
             Text(group.month.formatted(.dateTime.month(.wide).year()))
             Spacer()
-            if !router.txnFilter.categories.isEmpty {
+            if !router.txnFilter.categories.isEmpty || router.txnFilter.type != .all {
                 let subtotal = group.txns.reduce(Decimal(0)) { $0 + $1.amount }
                 MoneyText(value: subtotal,
                           size: 13,

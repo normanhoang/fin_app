@@ -70,9 +70,9 @@ service; see https://simplefin.org.
 `https://normanhoang.github.io/fin_app/privacy`
 
 ## What's New (version 1.6.0)
-`See what you actually spent: when you filter transactions by category, each
-month's header now shows a subtotal for exactly the transactions listed —
-combine with the month filter, income/expense toggle, or search to drill in
+`See what you actually spent: when you filter transactions by category or by
+income/expenses, each month's header now shows a subtotal for exactly the
+transactions listed — combine with the month filter or search to drill in
 further.`
 
 ## App Review notes (paste into "Notes" for the reviewer)

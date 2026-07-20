@@ -222,6 +222,26 @@ final class FinAppUITests: XCTestCase {
         snap(app, "month-subtotals")
     }
 
+    // 3g. The income/expenses picker triggers the same month subtotals on its
+    // own, with no category filter selected.
+    func testMonthSubtotalsShownForTypeFilter() {
+        let app = launch(tab: 1)
+        let filter = app.buttons["filterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
+
+        let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
+        XCTAssertFalse(subtotal.exists, "Subtotal should not show while unfiltered")
+
+        filter.tap()
+        let picker = app.segmentedControls["typeFilterPicker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5), "Type picker missing")
+        picker.buttons["Expenses"].tap()
+        app.buttons["filterDone"].tap()
+
+        XCTAssertTrue(subtotal.waitForExistence(timeout: 5),
+                      "Subtotal missing with an Expenses filter active")
+    }
+
     // 3d. Multiple categories can be selected; the chip summarizes the count,
     // and Clear All removes the filter without dismissing the sheet.
     func testMultiSelectAndClearAllFilters() {
