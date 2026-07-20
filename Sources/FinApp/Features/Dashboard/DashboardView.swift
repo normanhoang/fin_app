@@ -312,7 +312,7 @@ struct DashboardView: View {
     /// the tapped toggle apply on top. No-op when Auto is already off.
     private func disableAutoSeedingFromSpend(spend: [String: Decimal]) {
         guard autoCategories else { return }
-        for category in categories where category.name != "Transfers" {
+        for category in categories where !category.isIncome && category.name != "Transfers" {
             category.isHidden = (spend[category.name] ?? 0) <= 0
         }
         hideUncategorized = (spend[""] ?? 0) <= 0
@@ -331,9 +331,11 @@ struct DashboardView: View {
 
     /// Toggle which categories appear in the Spending Categories list. Tapping a
     /// row flips `isHidden` (SwiftData autosaves); the list updates live behind the
-    /// popover, and tapping outside dismisses it.
+    /// popover, and tapping outside dismisses it. Income categories and Transfers
+    /// are omitted — the same exclusions the list itself applies, so every row
+    /// here is one that can actually appear.
     private func categoryFilterPopup(monthSpend: [Analytics.CategoryTotal]) -> some View {
-        let listed = categories.filter { $0.name != "Transfers" }
+        let listed = categories.filter { !$0.isIncome && $0.name != "Transfers" }
         let spend = monthSpendByName(from: monthSpend)
         // Rows show EFFECTIVE visibility: under Auto that's "has spend", not the
         // dormant isHidden flags. Any tap seeds the flags from this view first

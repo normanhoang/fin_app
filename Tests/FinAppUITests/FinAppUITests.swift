@@ -631,6 +631,21 @@ final class FinAppUITests: XCTestCase {
         snap(app, "category-hidden")
     }
 
+    // 14a. Income categories are absent from the filter popup — the Spending
+    //      Categories list excludes them either way, so a toggle would do nothing.
+    func testFilterPopupOmitsIncomeCategories() {
+        let app = launch(tab: 2)
+        let filter = app.buttons["categoryFilterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
+        swipeUpUntilHittable(app, filter)
+        filter.tap()
+
+        XCTAssertTrue(app.buttons["catToggle-Groceries"].waitForExistence(timeout: 5),
+                      "Category filter popup did not open")
+        XCTAssertFalse(app.buttons["catToggle-Income"].exists,
+                       "Income should not be listed in the filter popup")
+    }
+
     // 14b. Filter checkbox is half-filled for a hidden category that still has
     //      current-month spend, empty for a hidden category with none. (Fresh
     //      sample dates the recurring Netflix/Spotify charges to today →
