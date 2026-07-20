@@ -69,12 +69,11 @@ service; see https://simplefin.org.
 ## Privacy Policy URL
 `https://normanhoang.github.io/fin_app/privacy`
 
-## What's New (version 1.5.0)
-`Synced accounts now land in the right group automatically — FinApp recognizes
-credit cards, loans, and investment accounts by name on first sync, and your own
-reclassifications always stick. Plus: scrub through your net-worth history across
-time ranges, add notes to transactions, filter them by month, collapse and sort
-account groups, and see recurring bills on a calendar.`
+## What's New (version 1.6.0)
+`See what you actually spent: when you filter transactions by category, each
+month's header now shows a subtotal for exactly the transactions listed —
+combine with the month filter, income/expense toggle, or search to drill in
+further.`
 
 ## App Review notes (paste into "Notes" for the reviewer)
 FinApp connects to a user's bank through SimpleFin, which requires a user-provided
