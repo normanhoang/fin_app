@@ -79,7 +79,7 @@ struct TransactionsView: View {
                                     .accessibilityIdentifier("txnRow-\(txn.id)")
                                 }
                             } header: {
-                                Text(group.month.formatted(.dateTime.month(.wide).year()))
+                                monthHeader(group)
                             }
                         }
                     }
@@ -216,6 +216,22 @@ struct TransactionsView: View {
         .padding(.horizontal)
         .padding(.top, 8)
         .padding(.bottom, 6)
+    }
+
+    /// Month title plus, while one or more category filters are selected, that
+    /// month's net subtotal over exactly the rows shown in the section.
+    private func monthHeader(_ group: (month: Date, txns: [Transaction])) -> some View {
+        HStack {
+            Text(group.month.formatted(.dateTime.month(.wide).year()))
+            Spacer()
+            if !router.txnFilter.categories.isEmpty {
+                let subtotal = group.txns.reduce(Decimal(0)) { $0 + $1.amount }
+                MoneyText(value: subtotal,
+                          size: 13,
+                          color: balanceColor(subtotal))
+                    .accessibilityIdentifier("monthSubtotal")
+            }
+        }
     }
 
     private func filterChip(_ label: String) -> some View {

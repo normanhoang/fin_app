@@ -193,6 +193,35 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(forward.isEnabled, "Forward should re-enable once off the newest month")
     }
 
+    // 3f. Month section headers show per-month subtotals only while at least one
+    // category filter is selected — not unfiltered, and not for month alone.
+    func testMonthSubtotalsShownWhenFiltering() {
+        let app = launch(tab: 1)
+        let filter = app.buttons["filterButton"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
+
+        let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
+        XCTAssertFalse(subtotal.exists, "Subtotal should not show while unfiltered")
+
+        filter.tap()
+        let back = app.buttons["filterMonthBack"]
+        XCTAssertTrue(back.waitForExistence(timeout: 5), "Month row missing")
+        back.tap()   // All time → newest month with data
+        app.buttons["filterDone"].tap()
+        XCTAssertFalse(subtotal.waitForExistence(timeout: 2),
+                       "Subtotal should not show for a month-only filter")
+
+        filter.tap()
+        let housing = filterSheetRow(app, "txnCatToggle-Housing")
+        XCTAssertTrue(housing.exists, "Filter sheet did not open")
+        housing.tap()
+        app.buttons["filterDone"].tap()
+
+        XCTAssertTrue(subtotal.waitForExistence(timeout: 5),
+                      "Subtotal missing with a category filter active")
+        snap(app, "month-subtotals")
+    }
+
     // 3d. Multiple categories can be selected; the chip summarizes the count,
     // and Clear All removes the filter without dismissing the sheet.
     func testMultiSelectAndClearAllFilters() {
