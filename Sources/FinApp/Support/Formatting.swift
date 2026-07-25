@@ -8,6 +8,17 @@ enum Money {
     }
 }
 
+/// Balance coloring: red is reserved for liabilities (negative balances);
+/// positive balances stay neutral.
+func balanceColor(_ value: Decimal) -> Color {
+    value < 0 ? .negative : .textPrimary
+}
+
+/// Transaction-amount coloring: green for inflows, neutral for outflows.
+func amountColor(_ value: Decimal) -> Color {
+    value > 0 ? .positive : .textPrimary
+}
+
 /// Memoizes parsed hex colors — category colors are re-resolved on every row
 /// render, and the palette is a handful of strings.
 private final class HexColorCache: @unchecked Sendable {

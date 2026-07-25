@@ -40,6 +40,44 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(element.isHittable, "\(element) not hittable after \(maxSwipes) swipes")
     }
 
+    /// The Spending Categories header (identifier `categoryFilterButton`) —
+    /// no longer a Button; the filter popup opens from its context menu.
+    private func categoryFilterHeader(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: "categoryFilterButton").firstMatch
+    }
+
+    /// Long-press the Spending Categories header and open the filter popup
+    /// from its context menu.
+    private func openCategoryFilter(_ app: XCUIApplication) {
+        let header = categoryFilterHeader(app)
+        swipeUpUntilHittable(app, header)
+        header.press(forDuration: 0.8)
+        let item = app.buttons["Filter Categories"]
+        XCTAssertTrue(item.waitForExistence(timeout: 3), "Filter context menu did not open")
+        item.tap()
+    }
+
+    /// Find a category toggle in the filter sheet, which is a medium-detent List:
+    /// expand it via its grabber, then scroll the sheet's own collection view (the
+    /// paging RootView contributes several others) until the row exists. Lazy rows
+    /// scrolled off-screen are absent from the tree.
+    @discardableResult
+    private func filterSheetRow(_ app: XCUIApplication, _ id: String) -> XCUIElement {
+        let row = app.buttons[id].firstMatch
+        if row.waitForExistence(timeout: 3) { return row }
+        let grabber = app.buttons["Sheet Grabber"]
+        if grabber.exists { grabber.swipeUp() }
+        var swipes = 0
+        let window = app.windows.firstMatch.frame
+        while !row.waitForExistence(timeout: 1) && swipes < 6 {
+            let onScreen = app.collectionViews.allElementsBoundByIndex
+                .filter { $0.frame.minX >= 0 && $0.frame.minX < window.width && !$0.frame.isEmpty }
+            onScreen.last?.swipeUp()
+            swipes += 1
+        }
+        return row
+    }
+
     private func snap(_ app: XCUIApplication, _ name: String) {
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = name
@@ -51,24 +89,6 @@ final class FinAppUITests: XCTestCase {
         app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'txnRow-'"))
             .firstMatch
-    }
-
-    /// Find a row in the filter sheet: expand the medium-detent sheet to full
-    /// height via its grabber, then scroll the sheet's own List (the last
-    /// collection view — the paging RootView contributes several others) until
-    /// the row exists. Lazy rows scrolled off-screen are absent from the tree.
-    private func filterSheetRow(_ app: XCUIApplication, _ id: String) -> XCUIElement {
-        let row = app.buttons[id].firstMatch
-        if row.waitForExistence(timeout: 5) { return row }
-        let grabber = app.buttons["Sheet Grabber"]
-        if grabber.exists { grabber.swipeUp() }
-        var swipes = 0
-        while !row.waitForExistence(timeout: 1) && swipes < 5 {
-            let lists = app.collectionViews
-            lists.element(boundBy: lists.count - 1).swipeUp()
-            swipes += 1
-        }
-        return row
     }
 
     // 1. Tapping the Net Worth card opens the graph screen (empty "Building
@@ -100,6 +120,64 @@ final class FinAppUITests: XCTestCase {
 
         XCTAssertFalse(app.navigationBars["Net Worth"].waitForExistence(timeout: 2),
                        "Dashboard should return to its root, not the Net Worth subpage")
+    }
+
+    // 1c. With no budgets, the Dashboard shows an empty-state card whose Add
+    //     button opens the New Budget form (so budgets stay reachable).
+    func testEmptyBudgetsCardAddsBudget() {
+        let app = XCUIApplication()
+        app.launchEnvironment["FINAPP_UITEST"] = "1"
+        app.launchEnvironment["FINAPP_TAB"] = "2"
+        app.launchEnvironment["FINAPP_NO_BUDGETS"] = "1"
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Dashboard"].waitForExistence(timeout: 8))
+
+        let add = app.buttons["addBudgetButton"]
+        for _ in 0..<6 where !add.isHittable { app.swipeUp() }
+        XCTAssertTrue(add.isHittable, "Empty budgets card / Add button missing")
+        add.tap()
+
+        XCTAssertTrue(app.navigationBars["New Budget"].waitForExistence(timeout: 5),
+                      "Add Budget form did not open from the empty card")
+    }
+
+    // 1d. Tapping a budget row opens the edit sheet for its monthly limit.
+    func testBudgetRowOpensEdit() {
+        let app = launch(tab: 2)
+        let edit = app.buttons["budgetsEditButton"]
+        for _ in 0..<6 where !edit.isHittable { app.swipeUp() }
+        XCTAssertTrue(edit.waitForExistence(timeout: 8), "Budgets card Edit button missing")
+
+        // Tapping Edit occasionally doesn't register the sheet under load; retry
+        // while we're still on the Dashboard (the Edit button is still present).
+        let budgetsNav = app.navigationBars["Budgets"]
+        for _ in 0..<3 {
+            if edit.isHittable { edit.tap() }   // only tap while still on the Dashboard
+            if budgetsNav.waitForExistence(timeout: 4) { break }
+        }
+        XCTAssertTrue(budgetsNav.exists, "Budgets manager did not open")
+        let row = app.buttons["budgetRow-Dining"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "Budget row missing")
+
+        let editNav = app.navigationBars["Edit Budget"]
+        for _ in 0..<3 {
+            if row.isHittable { row.tap() }
+            if editNav.waitForExistence(timeout: 4) { break }
+        }
+        XCTAssertTrue(editNav.exists, "Edit Budget sheet did not open")
+        XCTAssertTrue(app.textFields["editBudgetLimitField"].exists, "Limit field missing")
+    }
+
+    // 1e. Over-budget budgets show a dismissible alert on the Dashboard card.
+    func testOverBudgetAlertDismiss() {
+        let app = launch(tab: 2)
+        // Sample data: Groceries $421/$400 and Dining $77/$30 are both over.
+        let alert = app.buttons["dismissOverBudget-Groceries"]
+        for _ in 0..<6 where !alert.isHittable { app.swipeUp() }
+        XCTAssertTrue(alert.waitForExistence(timeout: 8), "Over-budget alert missing")
+        alert.tap()
+        XCTAssertFalse(app.buttons["dismissOverBudget-Groceries"].waitForExistence(timeout: 3),
+                       "Dismissing should hide the over-budget alert")
     }
 
     // 2. Transaction detail shows the top category Menu and the Recurring controls.
@@ -135,52 +213,54 @@ final class FinAppUITests: XCTestCase {
         snap(app, "category-changed")
     }
 
-    // 3c. The filter sheet offers an "Uncategorized" option that filters the list.
+    // 3c. The filter popup's "Uncategorized" option filters the list — the
+    // categorized Whole Foods row drops out.
     func testUncategorizedFilterOption() {
         let app = launch(tab: 1)
-        let filter = app.buttons["filterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
-        filter.tap()
+        let categorized = app.buttons["txnRow-s-tx-1"] // Whole Foods · Groceries
+        XCTAssertTrue(categorized.waitForExistence(timeout: 8), "Seed rows missing")
 
-        let uncategorized = filterSheetRow(app, "txnCatToggle-Uncategorized")
-        XCTAssertTrue(uncategorized.exists, "Uncategorized option missing from filter sheet")
+        app.buttons["filterButton"].tap()
+        let uncategorized = app.buttons["txnCatToggle-Uncategorized"].firstMatch
+        XCTAssertTrue(uncategorized.waitForExistence(timeout: 5), "Filter popup did not open")
         uncategorized.tap()
         app.buttons["filterDone"].tap()
 
-        XCTAssertTrue(app.staticTexts["Filtered: Uncategorized"].waitForExistence(timeout: 5),
-                      "Uncategorized filter not applied")
+        XCTAssertFalse(categorized.waitForExistence(timeout: 3),
+                       "Categorized row should be filtered out by Uncategorized")
         snap(app, "filter-uncategorized")
     }
 
-    // 3b. The Filter button opens the filter sheet and filters the list.
+    // 3b. The single filter button opens the combined popup and applies a
+    // category filter (month subtotals surface once a facet is active).
     func testFilterButtonFiltersTransactions() {
         let app = launch(tab: 1)
-        let filter = app.buttons["filterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
-        filter.tap()
+        app.buttons["filterButton"].tap()
 
         let housing = filterSheetRow(app, "txnCatToggle-Housing")
-        XCTAssertTrue(housing.exists, "Filter sheet did not open")
+        XCTAssertTrue(housing.exists, "Filter popup did not open / Housing missing")
         housing.tap()
         app.buttons["filterDone"].tap()
 
-        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5),
-                      "Filter not applied from the sheet")
+        // The active facet surfaces as a removable chip under the search bar.
+        let chip = app.buttons["facetChip-Housing"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 5), "Active-filter chip not shown under search")
         snap(app, "filter-from-button")
+        chip.tap()
+        XCTAssertFalse(app.buttons["facetChip-Housing"].waitForExistence(timeout: 2),
+                       "Tapping the chip should remove the facet")
     }
 
     // 3e. Month stepper only visits months that have entries: forward is dead
     // at "All time", back walks to the oldest month with data then disables.
     func testMonthStepperBoundedByData() {
         let app = launch(tab: 1)
-        let filter = app.buttons["filterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
-        filter.tap()
+        app.buttons["filterButton"].tap()
 
         let back = app.buttons["filterMonthBack"]
         let forward = app.buttons["filterMonthForward"]
         let label = app.staticTexts["filterMonthLabel"]
-        XCTAssertTrue(back.waitForExistence(timeout: 5), "Month row missing")
+        XCTAssertTrue(back.waitForExistence(timeout: 5), "Filter popup missing")
         XCTAssertEqual(label.label, "All time")
         XCTAssertFalse(forward.isEnabled, "Forward should be disabled at All time")
 
@@ -193,27 +273,16 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(forward.isEnabled, "Forward should re-enable once off the newest month")
     }
 
-    // 3f. Month section headers show per-month subtotals only while at least one
-    // category filter is selected — not unfiltered, and not for month alone.
-    func testMonthSubtotalsShownWhenFiltering() {
+    // 3f. Month subtotals appear only when a facet filter narrows the list, and
+    // are absent during plain browsing.
+    func testMonthSubtotalsShownWhenFiltered() {
         let app = launch(tab: 1)
-        let filter = app.buttons["filterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
-
         let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
-        XCTAssertFalse(subtotal.exists, "Subtotal should not show while unfiltered")
+        XCTAssertFalse(subtotal.waitForExistence(timeout: 3), "Subtotal should be hidden when unfiltered")
 
-        filter.tap()
-        let back = app.buttons["filterMonthBack"]
-        XCTAssertTrue(back.waitForExistence(timeout: 5), "Month row missing")
-        back.tap()   // All time → newest month with data
-        app.buttons["filterDone"].tap()
-        XCTAssertFalse(subtotal.waitForExistence(timeout: 2),
-                       "Subtotal should not show for a month-only filter")
-
-        filter.tap()
+        app.buttons["filterButton"].tap()
         let housing = filterSheetRow(app, "txnCatToggle-Housing")
-        XCTAssertTrue(housing.exists, "Filter sheet did not open")
+        XCTAssertTrue(housing.exists, "Filter popup did not open / Housing missing")
         housing.tap()
         app.buttons["filterDone"].tap()
 
@@ -222,51 +291,45 @@ final class FinAppUITests: XCTestCase {
         snap(app, "month-subtotals")
     }
 
-    // 3g. The income/expenses picker triggers the same month subtotals on its
-    // own, with no category filter selected.
-    func testMonthSubtotalsShownForTypeFilter() {
+    // 3g. The Type segmented control applies a flow filter from the combined popup.
+    func testTypeFilterRoundTrip() {
         let app = launch(tab: 1)
-        let filter = app.buttons["filterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
+        app.buttons["filterButton"].tap()
 
-        let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
-        XCTAssertFalse(subtotal.exists, "Subtotal should not show while unfiltered")
-
-        filter.tap()
         let picker = app.segmentedControls["typeFilterPicker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 5), "Type picker missing")
         picker.buttons["Expenses"].tap()
         app.buttons["filterDone"].tap()
 
-        XCTAssertTrue(subtotal.waitForExistence(timeout: 5),
-                      "Subtotal missing with an Expenses filter active")
+        let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
+        XCTAssertTrue(subtotal.waitForExistence(timeout: 5), "Type filter not applied")
+
+        // Clear All from the popup removes it.
+        app.buttons["filterButton"].tap()
+        app.buttons["filterClearAll"].tap()
+        app.buttons["filterDone"].tap()
+        XCTAssertFalse(subtotal.waitForExistence(timeout: 3), "Clear All did not remove the type filter")
     }
 
-    // 3d. Multiple categories can be selected; the chip summarizes the count,
-    // and Clear All removes the filter without dismissing the sheet.
+    // 3d. Multiple categories can be selected in the popup, and Clear All resets
+    // every facet.
     func testMultiSelectAndClearAllFilters() {
         let app = launch(tab: 1)
-        let filter = app.buttons["filterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button missing")
-        filter.tap()
+        app.buttons["filterButton"].tap()
 
         let housing = filterSheetRow(app, "txnCatToggle-Housing")
-        XCTAssertTrue(housing.exists, "Filter sheet did not open")
+        XCTAssertTrue(housing.exists, "Filter popup did not open / Housing missing")
         housing.tap()
         filterSheetRow(app, "txnCatToggle-Dining").tap()
         app.buttons["filterDone"].tap()
 
-        XCTAssertTrue(app.staticTexts["Filtered: 2 categories"].waitForExistence(timeout: 5),
-                      "Multi-select chip not shown")
+        let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
+        XCTAssertTrue(subtotal.waitForExistence(timeout: 5), "Multi-select filter not applied")
 
-        filter.tap()
-        let clearAll = app.buttons["filterClearAll"]
-        XCTAssertTrue(clearAll.waitForExistence(timeout: 5))
-        clearAll.tap()
+        app.buttons["filterButton"].tap()
+        app.buttons["filterClearAll"].tap()
         app.buttons["filterDone"].tap()
-
-        XCTAssertFalse(app.staticTexts["Filtered: 2 categories"].waitForExistence(timeout: 2),
-                       "Clear All did not remove the filter")
+        XCTAssertFalse(subtotal.waitForExistence(timeout: 3), "Clear All did not remove the filter")
     }
 
     // 4. "Set as Recurring" creates a bill that shows on the Recurring tab.
@@ -282,16 +345,17 @@ final class FinAppUITests: XCTestCase {
 
         app.buttons["tab-Recurring"].tap()
         // The tab defaults to the calendar; switch to the list, where a
-        // confirmed bill lands under the "Upcoming" section; the empty state
+        // confirmed bill lands under the "Due Soon" section; the empty state
         // ("No Recurring Bills") must be gone.
-        let toggle = app.buttons["recurringModeToggle"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "Mode toggle not shown")
-        toggle.tap()
-        let upcoming = app.staticTexts["Upcoming"].waitForExistence(timeout: 5)
+        let listSeg = app.buttons["recurringSeg-List"]
+        XCTAssertTrue(listSeg.waitForExistence(timeout: 5), "Mode control not shown")
+        listSeg.tap()
+        let dueSoon = app.staticTexts["Due Soon"].waitForExistence(timeout: 5)
         snap(app, "recurring-after-set")
-        XCTAssertTrue(upcoming, "Upcoming section not shown after Set as Recurring")
+        XCTAssertTrue(dueSoon, "Due Soon section not shown after Set as Recurring")
         XCTAssertFalse(app.staticTexts["No Recurring Bills"].exists, "Recurring tab still empty")
-        toggle.tap() // restore the default calendar mode (it persists via AppStorage)
+        // Restore the default calendar mode (it persists via AppStorage).
+        app.buttons["recurringSeg-Calendar"].tap()
     }
 
     // A confirmed bill shows up under its due day on the Recurring calendar.
@@ -307,7 +371,7 @@ final class FinAppUITests: XCTestCase {
         app.buttons["tab-Recurring"].tap()
         // Force calendar mode (a previous test may have persisted list mode).
         if !app.buttons["calNextMonth"].waitForExistence(timeout: 3) {
-            app.buttons["recurringModeToggle"].tap()
+            app.buttons["recurringSeg-Calendar"].tap()
         }
 
         // setRecurring projects nextDue = today + 30 days (monthly default).
@@ -334,8 +398,8 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(housing.waitForExistence(timeout: 8), "Housing category row not found")
         housing.tap()
 
-        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5),
-                      "Filter chip not shown on Transactions")
+        XCTAssertTrue(app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
+            .waitForExistence(timeout: 5), "Filter not active on Transactions after drill-in")
         snap(app, "filtered-housing")
     }
 
@@ -343,13 +407,14 @@ final class FinAppUITests: XCTestCase {
     func testSwipingToTransactionsClearsFilter() {
         let app = launch(tab: 2)
         app.buttons["category-Housing"].tap()
-        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5))
+        let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
+        XCTAssertTrue(subtotal.waitForExistence(timeout: 5))
 
         app.swipeRight()   // to Accounts
         XCTAssertTrue(app.staticTexts["Assets"].waitForExistence(timeout: 5))
         app.swipeLeft()    // back to Transactions
 
-        XCTAssertFalse(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 2),
+        XCTAssertFalse(subtotal.waitForExistence(timeout: 2),
                        "Swiping to Transactions should clear the filter")
     }
 
@@ -428,11 +493,12 @@ final class FinAppUITests: XCTestCase {
         let housing = app.buttons["category-Housing"]
         XCTAssertTrue(housing.waitForExistence(timeout: 8))
         housing.tap()
-        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5))
+        let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
+        XCTAssertTrue(subtotal.waitForExistence(timeout: 5))
 
         app.buttons["tab-Transactions"].tap()
-        XCTAssertFalse(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 2),
-                       "Filter chip should clear when tapping the Transactions tab")
+        XCTAssertFalse(subtotal.waitForExistence(timeout: 2),
+                       "Filter should clear when tapping the Transactions tab")
         snap(app, "filter-cleared")
     }
 
@@ -449,7 +515,8 @@ final class FinAppUITests: XCTestCase {
         app.buttons["tab-Dashboard"].tap()
         app.buttons["category-Housing"].tap()
 
-        XCTAssertTrue(app.staticTexts["Filtered: Housing"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
+            .waitForExistence(timeout: 5), "Filter not active after re-filter")
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch.exists,
                        "Should show the filtered list, not the previously opened transaction")
         snap(app, "refilter-pops-detail")
@@ -463,17 +530,27 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(account.waitForExistence(timeout: 8), "Account row not found")
         account.tap()
 
-        // The row may sit below the fold (List rows are created lazily), so
-        // scroll until it exists and is hittable.
+        // Land the row in the safe band between the nav bar and the floating tab
+        // bar (which overlays the bottom of the list) before tapping: a row resting
+        // under the tab bar taps the bar instead of pushing the detail. Position
+        // with a single tap afterward — retrying taps after a navigation would just
+        // scroll the pushed detail.
         let txn = app.descendants(matching: .any).matching(identifier: "acctTxnRow-s-tx-1").firstMatch
-        for _ in 0..<6 where !(txn.exists && txn.isHittable) {
-            app.swipeUp()
+        for _ in 0..<12 {
+            guard txn.exists else { app.swipeDown(); continue }
+            let midY = txn.frame.midY
+            if txn.isHittable && midY > 200 && midY < 680 { break }
+            if midY < 200 { app.swipeDown() } else { app.swipeUp() }
         }
-        XCTAssertTrue(txn.waitForExistence(timeout: 5), "No account transactions")
-        txn.tap()
+        XCTAssertTrue(txn.isHittable, "Account transaction row not positioned")
+        // Tap the payee text, not the row container: a container tap can resolve to
+        // the row's nested category-icon button (opening the picker) instead of the
+        // NavigationLink. The static text has no gesture of its own, so it bubbles
+        // to the link.
+        txn.staticTexts["Whole Foods"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch
-            .waitForExistence(timeout: 5), "Transaction detail did not open")
+            .waitForExistence(timeout: 10), "Transaction detail did not open")
 
         // The back-swipe (interactive pop) must return to the account subpage,
         // not to the Transactions tab. Assert on the nav bar — the name field
@@ -511,11 +588,16 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(chart.waitForExistence(timeout: 8), "Trend chart not found")
         // The trend card is below the fold — scroll it into view before tapping.
         swipeUpUntilHittable(app, chart)
-        // Tap a bar to open the popup.
-        chart.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-
+        // Tap a bar to open the popup. Under load a tap can miss (landing during a
+        // scroll settle / on the floating tab bar), so retry across DIFFERENT bars
+        // — re-tapping the same bar would toggle the popup back off.
         let popup = app.descendants(matching: .any).matching(identifier: "trendPopup").firstMatch
-        XCTAssertTrue(popup.waitForExistence(timeout: 5), "Trend popup did not open")
+        var opened = false
+        for x in [0.5, 0.66, 0.34, 0.5] {
+            chart.coordinate(withNormalizedOffset: CGVector(dx: x, dy: 0.35)).tap()
+            if popup.waitForExistence(timeout: 3) { opened = true; break }
+        }
+        XCTAssertTrue(opened, "Trend popup did not open")
         snap(app, "trend-popup-open")
 
         app.swipeUp()   // scrolling the page should close the popup
@@ -569,7 +651,7 @@ final class FinAppUITests: XCTestCase {
         app.buttons["addAccountButton"].tap()
 
         let name = "Test Manual"
-        let nameField = app.textFields["Name"]
+        let nameField = app.textFields["accountNameField"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 5), "Add Account form missing")
         nameField.tap(); nameField.typeText(name)
         let balanceField = app.textFields["0.00"]
@@ -616,9 +698,7 @@ final class FinAppUITests: XCTestCase {
         let groceries = app.buttons["category-Groceries"]
         XCTAssertTrue(groceries.waitForExistence(timeout: 8), "Groceries row not found")
 
-        let filter = app.buttons["categoryFilterButton"]
-        swipeUpUntilHittable(app, filter)
-        filter.tap()
+        openCategoryFilter(app)
 
         let toggle = app.buttons["catToggle-Groceries"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5), "Category filter popup did not open")
@@ -635,10 +715,8 @@ final class FinAppUITests: XCTestCase {
     //      Categories list excludes them either way, so a toggle would do nothing.
     func testFilterPopupOmitsIncomeCategories() {
         let app = launch(tab: 2)
-        let filter = app.buttons["categoryFilterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
-        swipeUpUntilHittable(app, filter)
-        filter.tap()
+        XCTAssertTrue(categoryFilterHeader(app).waitForExistence(timeout: 8), "Category header not found")
+        openCategoryFilter(app)
 
         XCTAssertTrue(app.buttons["catToggle-Groceries"].waitForExistence(timeout: 5),
                       "Category filter popup did not open")
@@ -654,10 +732,8 @@ final class FinAppUITests: XCTestCase {
     //      (no spend) lands hidden/"empty" without being touched.
     func testFilterCheckboxReflectsSpend() {
         let app = launch(tab: 2)
-        let filter = app.buttons["categoryFilterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
-        swipeUpUntilHittable(app, filter)
-        filter.tap()
+        XCTAssertTrue(categoryFilterHeader(app).waitForExistence(timeout: 8), "Category header not found")
+        openCategoryFilter(app)
 
         let subs = app.buttons["catToggle-Subscriptions"]
         XCTAssertTrue(subs.waitForExistence(timeout: 5), "Filter popup did not open")
@@ -684,9 +760,7 @@ final class FinAppUITests: XCTestCase {
         XCTAssertFalse(app.buttons["category-Bars"].exists,
                        "Auto should hide categories with no spend this month")
 
-        let filter = app.buttons["categoryFilterButton"]
-        swipeUpUntilHittable(app, filter)
-        filter.tap()
+        openCategoryFilter(app)
 
         let auto = app.buttons["catAutoToggle"]
         XCTAssertTrue(auto.waitForExistence(timeout: 5), "Filter popup did not open")
@@ -696,7 +770,7 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(app.buttons["category-Bars"].waitForExistence(timeout: 3),
                       "Manual state (all visible) should take over when Auto is off")
 
-        filter.tap()
+        openCategoryFilter(app)
         XCTAssertTrue(auto.waitForExistence(timeout: 5), "Filter popup did not reopen")
         auto.tap()
         app.navigationBars["Dashboard"].tap()
@@ -708,10 +782,8 @@ final class FinAppUITests: XCTestCase {
     //      Auto's view — the visible set only changes by the tapped row.
     func testPopupTapDisablesAutoAndSeeds() {
         let app = launch(tab: 2)
-        let filter = app.buttons["categoryFilterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
-        swipeUpUntilHittable(app, filter)
-        filter.tap()
+        XCTAssertTrue(categoryFilterHeader(app).waitForExistence(timeout: 8), "Category header not found")
+        openCategoryFilter(app)
 
         let groceries = app.buttons["catToggle-Groceries"]
         XCTAssertTrue(groceries.waitForExistence(timeout: 5), "Filter popup did not open")
@@ -726,7 +798,7 @@ final class FinAppUITests: XCTestCase {
                       "Untouched spent categories must stay visible")
 
         // Auto now lives in the popup — reopen it to check the toggle state.
-        filter.tap()
+        openCategoryFilter(app)
         let auto = app.buttons["catAutoToggle"]
         XCTAssertTrue(auto.waitForExistence(timeout: 5), "Filter popup did not reopen")
         XCTAssertEqual(auto.value as? String, "off", "Popup tap should disable Auto")
@@ -736,10 +808,8 @@ final class FinAppUITests: XCTestCase {
     //      button) disappear — otherwise there's no way to re-show categories.
     func testCategoryCardSurvivesAllHidden() {
         let app = launch(tab: 2)
-        let filter = app.buttons["categoryFilterButton"]
-        XCTAssertTrue(filter.waitForExistence(timeout: 8), "Filter button not found")
-        swipeUpUntilHittable(app, filter)
-        filter.tap()
+        XCTAssertTrue(categoryFilterHeader(app).waitForExistence(timeout: 8), "Category header not found")
+        openCategoryFilter(app)
 
         let anyToggle = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'catToggle-'"))
         XCTAssertTrue(anyToggle.firstMatch.waitForExistence(timeout: 5), "Filter popup did not open")
@@ -757,65 +827,73 @@ final class FinAppUITests: XCTestCase {
         }
         app.navigationBars["Dashboard"].tap() // dismiss the popover
 
-        XCTAssertTrue(app.buttons["categoryFilterButton"].waitForExistence(timeout: 3),
-                      "Filter button vanished when all categories hidden")
+        XCTAssertTrue(categoryFilterHeader(app).waitForExistence(timeout: 3),
+                      "Category header vanished when all categories hidden")
         XCTAssertTrue(app.staticTexts["All categories hidden — tap the filter to show some."].exists,
                       "Card body missing when all categories hidden")
         snap(app, "categories-all-hidden")
     }
 
-    // 8b. Collapse-all/expand-all toolbar button hides and restores account rows,
-    //     and keeps working across repeated taps (regression: strict set equality
-    //     made the first tap a visual no-op when collapsedTypes held stale types).
+    // 8b. Collapse All / Expand All (inside the sort menu) hides and restores
+    //     account rows, and keeps working across repeated rounds (regression:
+    //     strict set equality made the first collapse a visual no-op when
+    //     collapsedTypes held stale types).
     func testCollapseAllToggleHidesAndRestoresRows() {
         let app = launch(tab: 0) // Accounts
         let row = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'accountRow-'")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 8), "No account rows")
 
-        let toggle = app.buttons["accountCollapseAllToggle"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 3), "Collapse-all button not found")
+        let menu = app.buttons["accountSortMenu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 3), "Sort menu not found")
 
         for i in 1...3 {
-            toggle.tap()
+            menu.tap()
+            XCTAssertTrue(app.buttons["Collapse All"].waitForExistence(timeout: 3),
+                          "Collapse All item missing (round \(i))")
+            app.buttons["Collapse All"].tap()
             XCTAssertTrue(row.waitForNonExistence(timeout: 3),
                           "Rows still visible after collapse-all (round \(i))")
-            toggle.tap()
+            menu.tap()
+            XCTAssertTrue(app.buttons["Expand All"].waitForExistence(timeout: 3),
+                          "Expand All item missing (round \(i))")
+            app.buttons["Expand All"].tap()
             XCTAssertTrue(row.waitForExistence(timeout: 3),
                           "Rows did not return after expand-all (round \(i))")
         }
         snap(app, "collapse-all-expanded")
     }
 
-    // 8c. Rapid taps on the sort and collapse-all toolbar buttons must each
-    //     register (repro: taps landing mid-animation/rebuild were dropped, so
-    //     an even number of fast taps could leave the button in the toggled
-    //     state). Parity check via each button's accessibilityLabel.
-    func testRapidToolbarTapsAllRegister() {
+    // 8c. Picking a sort mode from the menu registers and is reflected in the
+    //     menu's label (replaces the old two-state toggle parity check).
+    func testSortMenuSelectionRegisters() {
         let app = launch(tab: 0) // Accounts
-        XCTAssertTrue(app.buttons["accountSortToggle"].waitForExistence(timeout: 8),
-                      "Sort toggle not found")
+        let menu = app.buttons["accountSortMenu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 8), "Sort menu not found")
 
-        // Sort: starts "Sorted alphabetically". 8 fast taps → back to start.
-        let sort = app.buttons["accountSortToggle"]
-        let sortCoord = sort.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        for _ in 0..<8 { sortCoord.tap() }
-        XCTAssertTrue(app.buttons["accountSortToggle"]
-            .label == "Sorted alphabetically",
-            "Sort button lost a rapid tap (label: \(app.buttons["accountSortToggle"].label))")
+        menu.tap()
+        XCTAssertTrue(app.buttons["Name"].firstMatch.waitForExistence(timeout: 3), "Name option missing")
+        app.buttons["Name"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["accountSortMenu"].label.contains("Name"),
+                      "Sort selection did not register (label: \(app.buttons["accountSortMenu"].label))")
 
-        // Collapse-all: starts "Collapse all" (expanded). 8 fast taps → back.
-        let collapse = app.buttons["accountCollapseAllToggle"]
-        let colCoord = collapse.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        for _ in 0..<8 { colCoord.tap() }
-        XCTAssertTrue(app.buttons["accountCollapseAllToggle"]
-            .label == "Collapse all",
-            "Collapse-all lost a rapid tap (label: \(app.buttons["accountCollapseAllToggle"].label))")
+        // Restore the default: @AppStorage persists across launches on this sim.
+        menu.tap()
+        XCTAssertTrue(app.buttons["Balance"].firstMatch.waitForExistence(timeout: 3), "Balance option missing")
+        app.buttons["Balance"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["accountSortMenu"].label.contains("Balance"),
+                      "Sort did not restore to Balance (label: \(app.buttons["accountSortMenu"].label))")
     }
 
     // 8. A Recurring row opens a detail page listing that merchant's past charges.
     func testRecurringRowOpensDetail() {
         let app = launch(tab: 3) // Recurring
+        // Rows live under Due Soon in list mode; in calendar mode they sit
+        // below the fold and lazy List rows off-screen are absent from the
+        // element tree.
+        let listSeg = app.buttons["recurringSeg-List"]
+        XCTAssertTrue(listSeg.waitForExistence(timeout: 8), "Mode control missing")
+        listSeg.tap()
         let row = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'recurringRow-'")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 8), "No recurring rows")

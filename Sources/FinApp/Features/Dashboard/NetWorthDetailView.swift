@@ -24,6 +24,8 @@ enum NWRange: String, CaseIterable, Identifiable {
 struct NetWorthDetailView: View {
     @Environment(AppRouter.self) private var router
     @Query(sort: \NetWorthSnapshot.day) private var snapshots: [NetWorthSnapshot]
+    @Query(sort: \AccountBalanceSnapshot.day) private var accountSnapshots: [AccountBalanceSnapshot]
+    @Query private var accounts: [Account]
     @State private var range: NWRange = .sixMonths
     @State private var selectedDate: Date?
     /// True while a finger is down on the chart, so page swiping is blocked from
@@ -86,6 +88,7 @@ struct NetWorthDetailView: View {
                         }
                     }
                     .listRowBackground(Color.surface)
+                    contributionSection
                 }
                 .screenBackground()
             }
@@ -230,6 +233,47 @@ struct NetWorthDetailView: View {
             )
             .accessibilityIdentifier("netWorthChart")
         }
+    }
+
+    /// Per-account contribution deltas over the selected range.
+    private var contributions: [(account: Account, delta: Decimal)] {
+        let end = Date()
+        let start = range.start() ?? accountSnapshots.first?.day ?? end
+        guard start < end else { return [] }
+        return Analytics.accountRangeDeltas(accountSnapshots, accounts: accounts,
+                                            in: DateInterval(start: start, end: end))
+    }
+
+    @ViewBuilder
+    private var contributionSection: some View {
+        let rows = contributions
+        if !rows.isEmpty {
+            Section {
+                ForEach(rows, id: \.account.id) { row in
+                    HStack {
+                        Text(row.account.displayName)
+                            .font(.system(size: 14.5))
+                            .foregroundStyle(Color.textPrimary)
+                        Spacer()
+                        Text(signedWhole(row.delta))
+                            .font(.system(size: 14.5, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            // Gains earn green; losses stay neutral (red is
+                            // reserved for liabilities).
+                            .foregroundStyle(row.delta > 0 ? Color.positive : Color.textPrimary)
+                    }
+                    .listRowBackground(Color.surface)
+                }
+            } header: {
+                Text("Change this range")
+            }
+        }
+    }
+
+    /// "+$1,024" / "−$88" — signed, whole dollars.
+    private func signedWhole(_ value: Decimal) -> String {
+        let magnitude = abs(value).formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        return value < 0 ? "−\(magnitude)" : "+\(magnitude)"
     }
 
     private func scrubLabel(_ snapshot: NetWorthSnapshot) -> some View {

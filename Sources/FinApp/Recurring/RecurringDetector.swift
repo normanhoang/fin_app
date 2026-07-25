@@ -12,11 +12,20 @@ enum RecurringDetector {
         var lastSeen: Date
         var nextDue: Date
         var category: Category?
+        /// Set when the newest charge broke from a stable prior amount — the
+        /// old amount and when the new one first posted. nil while stable.
+        var previousAmount: Decimal?
+        var amountChangedAt: Date?
     }
 
     static let minOccurrences = 3
     /// Average gap must be within ±this fraction of a cadence's nominal days.
     static let tolerance = 0.25
+    /// Prior charges required at one amount before a differing newest charge
+    /// counts as a price change.
+    static let minStableCharges = 3
+    /// Newest charge must differ from the stable amount by more than this fraction.
+    static let priceChangeThreshold = 0.02
 
     static func detectCandidates(from txns: [Transaction], calendar: Calendar = .current) -> [Candidate] {
         let outflows = txns.filter { $0.amount < 0 }
@@ -26,22 +35,31 @@ enum RecurringDetector {
 
         return groups.compactMap { merchant, items -> Candidate? in
             guard items.count >= minOccurrences, !merchant.isEmpty else { return nil }
-            let dates = items.map(\.posted).sorted()
+            let chronological = items.sorted { $0.posted < $1.posted }
+            let dates = chronological.map(\.posted)
             guard let cadence = inferCadence(from: dates) else { return nil }
 
-            let amounts = items.map { abs($0.amount) }.sorted()
             let lastSeen = dates.last!
             let nextDue = calendar.date(byAdding: .day, value: cadence.days, to: lastSeen) ?? lastSeen
             // Most recent assigned category from this merchant's transactions.
-            let category = items.sorted { $0.posted > $1.posted }.compactMap(\.category).first
+            let category = chronological.reversed().compactMap(\.category).first
+
+            let change = priceChange(in: chronological)
+            // On a price change the newest amount is the real obligation;
+            // the median would keep reporting the stale price.
+            let expected = change != nil
+                ? abs(chronological.last!.amount)
+                : median(chronological.map { abs($0.amount) }.sorted())
 
             return Candidate(
                 merchantName: merchant,
-                expectedAmount: median(amounts),
+                expectedAmount: expected,
                 cadence: cadence,
                 lastSeen: lastSeen,
                 nextDue: nextDue,
-                category: category
+                category: category,
+                previousAmount: change?.previousAmount,
+                amountChangedAt: change?.changedAt
             )
         }
         .sorted { $0.merchantName < $1.merchantName }
@@ -59,6 +77,20 @@ enum RecurringDetector {
             }
         }
         return nil
+    }
+
+    /// A price change: the newest charge differs by more than
+    /// `priceChangeThreshold` from the last `minStableCharges`+ charges, which
+    /// all shared one amount. `txns` must be chronological.
+    private static func priceChange(in txns: [Transaction])
+        -> (previousAmount: Decimal, changedAt: Date)? {
+        guard txns.count > minStableCharges, let newest = txns.last else { return nil }
+        let prior = txns.dropLast().suffix(minStableCharges).map { abs($0.amount) }
+        guard let old = prior.first, prior.allSatisfy({ $0 == old }), old != 0 else { return nil }
+        let new = abs(newest.amount)
+        let delta = (((new - old) / old) as NSDecimalNumber).doubleValue
+        guard abs(delta) > priceChangeThreshold else { return nil }
+        return (old, newest.posted)
     }
 
     private static func median(_ sorted: [Decimal]) -> Decimal {
@@ -89,6 +121,10 @@ enum RecurringDetector {
                 bill.expectedAmount = candidate.expectedAmount
                 bill.cadence = candidate.cadence
                 bill.lastSeen = candidate.lastSeen
+                // Unconditional copy: nil clears the alert once charges settle
+                // at the new amount.
+                bill.previousAmount = candidate.previousAmount
+                bill.amountChangedAt = candidate.amountChangedAt
                 // A user-set next-due date sticks until a charge posts on/after it,
                 // then auto-projection resumes.
                 if bill.nextDueSetByUser, let userDate = bill.nextDue,
@@ -100,7 +136,7 @@ enum RecurringDetector {
                 }
                 if bill.category == nil { bill.category = candidate.category }
             } else {
-                context.insert(RecurringBill(
+                let bill = RecurringBill(
                     merchantName: candidate.merchantName,
                     expectedAmount: candidate.expectedAmount,
                     cadence: candidate.cadence,
@@ -108,7 +144,10 @@ enum RecurringDetector {
                     nextDue: candidate.nextDue,
                     confirmed: false,
                     category: candidate.category
-                ))
+                )
+                bill.previousAmount = candidate.previousAmount
+                bill.amountChangedAt = candidate.amountChangedAt
+                context.insert(bill)
             }
         }
         try? context.save()

@@ -25,6 +25,7 @@ extension Color {
     static let hairline = Color(lightHex: "#E3E6EB", darkHex: "#2C2F34")
     static let textPrimary = Color(lightHex: "#14161A", darkHex: "#F2F4F7")
     static let textSecondary = Color(lightHex: "#6B7280", darkHex: "#9AA0A8")
+    static let textTertiary = Color(lightHex: "#8A919B", darkHex: "#5C636B")
     static let positive = Color(lightHex: "#0FA37F", darkHex: "#34E5B0")
     static let negative = Color(lightHex: "#E5484D", darkHex: "#FF6B6B")
     /// Brand tint (mint). Darkened in light mode for contrast on white.

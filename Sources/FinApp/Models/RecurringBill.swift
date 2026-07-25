@@ -38,6 +38,18 @@ final class RecurringBill {
     /// posts on/after that date, then auto-projection resumes. Defaulted for
     /// lightweight migration.
     var nextDueSetByUser: Bool = false
+    /// The previous stable charge amount when the newest charge changed price
+    /// (`expectedAmount` then holds the new amount). nil while the price is
+    /// stable — detection clears it once charges settle at the new amount.
+    /// Defaulted for lightweight migration.
+    var previousAmount: Decimal? = nil
+    /// When the price change was observed (posted date of the first charge at
+    /// the new amount). Defaulted for lightweight migration.
+    var amountChangedAt: Date? = nil
+    /// The `expectedAmount` the user acknowledged via the price-alert close button;
+    /// the alert stays hidden while this equals the current amount, and reappears
+    /// if the price moves again. Defaulted for lightweight migration.
+    var priceAckAmount: Decimal? = nil
     @Relationship(deleteRule: .nullify) var category: Category?
 
     var cadence: Cadence {

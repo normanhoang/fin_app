@@ -7,6 +7,7 @@ struct BudgetsView: View {
     @Query(sort: \Category.name) private var categories: [Category]
     @Query private var transactions: [Transaction]
     @State private var showingAdd = false
+    @State private var editingBudget: Budget?
 
     private var now: Date { Date() }
     private var calendar: Calendar { .current }
@@ -33,16 +34,28 @@ struct BudgetsView: View {
                     }
                 } else {
                     List {
-                        ForEach(budgets) { budget in
-                            BudgetRow(
-                                budget: budget,
-                                spent: budget.category.map {
-                                    Analytics.spending(for: $0, in: transactions, inMonthOf: now, calendar: calendar)
-                                } ?? 0
-                            )
-                            .listRowBackground(Color.surface)
+                        Section {
+                            ForEach(budgets) { budget in
+                                Button { editingBudget = budget } label: {
+                                    BudgetRow(
+                                        budget: budget,
+                                        spent: budget.category.map {
+                                            Analytics.spending(for: $0, in: transactions, inMonthOf: now, calendar: calendar)
+                                        } ?? 0
+                                    )
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .listRowBackground(Color.surface)
+                                .accessibilityIdentifier("budgetRow-\(budget.category?.name ?? "none")")
+                            }
+                            .onDelete(perform: delete)
+                        } footer: {
+                            if budgets.count > 6 {
+                                Text("Only the first 6 budgets appear on the Dashboard card.")
+                                    .foregroundStyle(Color.textSecondary)
+                            }
                         }
-                        .onDelete(perform: delete)
                     }
                     .listRowSeparatorTint(Color.hairline)
                     .screenBackground()
@@ -55,6 +68,9 @@ struct BudgetsView: View {
             }
             .sheet(isPresented: $showingAdd) {
                 AddBudgetView(categories: availableCategories)
+            }
+            .sheet(item: $editingBudget) { budget in
+                EditBudgetView(budget: budget)
             }
         }
     }
@@ -151,6 +167,55 @@ struct AddBudgetView: View {
     private func save() {
         guard let selected, let amount, amount > 0 else { return }
         context.insert(Budget(monthlyLimit: amount, category: selected))
+        try? context.save()
+        dismiss()
+    }
+}
+
+/// Edit an existing budget's monthly limit. The category is fixed (it keys the
+/// budget); to change it, delete this one and add another.
+struct EditBudgetView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
+    let budget: Budget
+
+    @State private var amount: Decimal?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack(spacing: 8) {
+                        Image(systemName: budget.category?.systemIcon ?? "tag")
+                            .foregroundStyle(Color(hex: budget.category?.colorHex ?? "#8E8E93"))
+                        Text(budget.category?.name ?? "—")
+                            .foregroundStyle(Color.textPrimary)
+                    }
+                    TextField("Monthly limit", value: $amount, format: .currency(code: "USD"))
+                        .keyboardType(.decimalPad)
+                        .accessibilityIdentifier("editBudgetLimitField")
+                }
+                .listRowBackground(Color.surface)
+            }
+            .screenBackground()
+            .navigationTitle("Edit Budget")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", action: save)
+                        .disabled((amount ?? 0) <= 0)
+                }
+            }
+            .onAppear { amount = budget.monthlyLimit }
+        }
+    }
+
+    private func save() {
+        guard let amount, amount > 0 else { return }
+        budget.monthlyLimit = amount
         try? context.save()
         dismiss()
     }

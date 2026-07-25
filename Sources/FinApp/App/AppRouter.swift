@@ -90,6 +90,8 @@ final class AppRouter {
     /// tap or swipe leaves this false, so Transactions resets its filter + search.
     /// Consumed by TransactionsView on arrival.
     var txnArrivalIsDeepLink = false
+    /// Presents the full-screen uncategorized triage swipe flow (TriageView).
+    var showTriage = false
     /// True while the active tab has a pushed subpage; pauses pager swiping so the
     /// native back-swipe pops instead of changing tabs.
     var subpageOpen = false
@@ -105,11 +107,25 @@ final class AppRouter {
         self.selectedTab = selectedTab
     }
 
+    /// Search text to seed the Transactions list on the next deep-link arrival
+    /// (the "This merchant" card). Consumed by TransactionsView.
+    var pendingSearch: String?
+
     /// Switch to a filtered Transactions list (root), clearing any pushed detail.
     func showTransactions(_ filter: TransactionFilter) {
         txnFilter = TransactionFilterState(filter)
         txnArrivalIsDeepLink = filter != .all
         pendingTxnID = nil
+        resetToken = UUID()
+        selectedTab = AppTab.transactions.rawValue
+    }
+
+    /// Switch to the Transactions list seeded with a search (merchant drill-in).
+    func showTransactions(searching text: String) {
+        txnFilter = TransactionFilterState()
+        txnArrivalIsDeepLink = true
+        pendingTxnID = nil
+        pendingSearch = text
         resetToken = UUID()
         selectedTab = AppTab.transactions.rawValue
     }

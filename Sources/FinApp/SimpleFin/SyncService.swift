@@ -46,6 +46,7 @@ enum SyncService {
             account.balance = dto.balance
             account.availableBalance = dto.availableBalance
             account.balanceDate = dto.balanceDate
+            account.lastSyncedAt = Date()
             return account
         }
 
@@ -55,6 +56,7 @@ enum SyncService {
             balanceDate: dto.balanceDate,
             typeRaw: AccountTypeDetector.infer(name: dto.name, balance: dto.balance).rawValue
         )
+        account.lastSyncedAt = Date()
         context.insert(account)
         return account
     }

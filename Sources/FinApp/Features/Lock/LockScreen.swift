@@ -6,25 +6,48 @@ struct LockScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        VStack(spacing: 22) {
-            BrandMark(size: 92)
-                .shadow(color: .black.opacity(0.4), radius: 20, y: 8)
-            Text("FinApp is locked")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(Color.textPrimary)
-            Button {
-                Task { await lock.authenticate() }
-            } label: {
-                Label("Unlock", systemImage: "faceid")
-                    .frame(maxWidth: 200)
-            }
-            .buttonStyle(.borderedProminent)
-            if let error = lock.lastError {
-                Text(error).font(.footnote).foregroundStyle(Color.negative)
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
+            // Faint brand radial glow behind the mark.
+            RadialGradient(colors: [Color.brand.opacity(0.10), .clear],
+                           center: .center, startRadius: 0, endRadius: 260)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                BrandMark(size: 88)
+                    .shadow(color: .black.opacity(0.4), radius: 20, y: 8)
+                VStack(spacing: 8) {
+                    Text("FinApp is locked")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Your balances stay hidden until you unlock.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 4)
+                Button {
+                    Task { await lock.authenticate() }
+                } label: {
+                    Label("Unlock with Face ID", systemImage: "faceid")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.black)
+                        .frame(width: 220)
+                        .frame(height: 52)
+                        .background(Color.brand, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .shadow(color: .brand.opacity(0.4), radius: 16, y: 4)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+                if let error = lock.lastError {
+                    Text(error)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.negative)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.appBackground.ignoresSafeArea())
         // The lock screen is inserted while the app is heading to the background
         // (lock() fires on .background), and LocalAuthentication fails with
         // biometryNotAvailable (-6) unless the app is foreground-active — so only

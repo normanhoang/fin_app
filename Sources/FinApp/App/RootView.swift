@@ -144,6 +144,12 @@ struct RootView: View {
         // Keep the keyboard from resizing the pager (it would shift paging offsets
         // and make a swipe jump two pages).
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .fullScreenCover(isPresented: Binding(
+            get: { router.showTriage },
+            set: { router.showTriage = $0 }
+        )) {
+            TriageView()
+        }
         .environment(router)
         .background(KeyboardDismisser())
         // Dismiss the keyboard when changing pages (tab tap or swipe).

@@ -49,6 +49,18 @@ final class SyncServiceTests: XCTestCase {
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).first?.transactions.count, 2)
     }
 
+    func testSyncStampsLastSyncedAt() throws {
+        let ctx = makeContext()
+        try SyncService.sync(accounts: [account(txns: [])], into: ctx)
+        let acct = try ctx.fetch(FetchDescriptor<Account>()).first
+        XCTAssertNotNil(acct?.lastSyncedAt)
+        // Re-sync moves the stamp on the existing row too.
+        let before = acct?.lastSyncedAt
+        try SyncService.sync(accounts: [account(txns: [])], into: ctx)
+        XCTAssertNotNil(acct?.lastSyncedAt)
+        XCTAssertGreaterThanOrEqual(acct!.lastSyncedAt!, before!)
+    }
+
     func testBalanceAndAvailableStoredAsReported() throws {
         let ctx = makeContext()
         let dto = AccountDTO(

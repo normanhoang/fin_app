@@ -22,16 +22,21 @@ private extension View {
 
 struct DashboardView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(\.modelContext) private var context
     @Query private var accounts: [Account]
     @Query(sort: \Transaction.posted, order: .reverse) private var transactions: [Transaction]
     @Query(sort: \NetWorthSnapshot.day) private var snapshots: [NetWorthSnapshot]
     @Query(sort: \Category.name) private var categories: [Category]
+    @Query private var bills: [RecurringBill]
+    @Query private var budgets: [Budget]
 
     private let calendar = Calendar.current
     private var now: Date { Date() }
     @State private var path = NavigationPath()
     @State private var selectedTrendMonth: Date?
     @State private var showCategoryFilter = false
+    @State private var showBudgetsSheet = false
+    @State private var showAddBudget = false
     /// Hide the synthetic "Uncategorized" row from the Spending Categories list.
     @AppStorage("dashHideUncategorized") private var hideUncategorized = false
     /// Auto mode: show only categories with real spend this month; the manual
@@ -57,6 +62,8 @@ struct DashboardView: View {
                         VStack(spacing: 16) {
                             heroCard
                             monthRow
+                            triageChip
+                            budgetsCard
                             if !categories.isEmpty { categoryCard }
                             trendCard
                         }
@@ -134,6 +141,8 @@ struct DashboardView: View {
                         .font(.caption)
                         .foregroundStyle(Color.textSecondary)
                 }
+                Divider().overlay(Color.hairline)
+                safeToSpendRow
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -170,29 +179,288 @@ struct DashboardView: View {
         .background((up ? Color.positive : Color.negative).opacity(0.12), in: Capsule())
     }
 
+    // MARK: Safe to spend
+
+    private var safeToSpendRow: some View {
+        let amount = Analytics.safeToSpend(transactions, bills: bills, asOf: now, calendar: calendar)
+        let until = calendar.dateInterval(of: .month, for: now)?.end
+            .formatted(.dateTime.month(.abbreviated).day()) ?? ""
+        return HStack {
+            (Text("Safe to spend").foregroundStyle(Color.textSecondary)
+                + Text(" · until \(until)").foregroundStyle(Color.textTertiary))
+                .font(.system(size: 13))
+            Spacer()
+            MoneyText(value: amount, size: 16, weight: .semibold,
+                      color: amount < 0 ? .negative : .brand)
+        }
+        .accessibilityIdentifier("safeToSpendRow")
+    }
+
     // MARK: This month
 
     private var monthRow: some View {
-        HStack(spacing: 12) {
+        let incomeDelta = Analytics.monthOverMonthChange(.income, txns: transactions,
+                                                         asOf: now, calendar: calendar)
+        let spendingDelta = Analytics.monthOverMonthChange(.spending, txns: transactions,
+                                                           asOf: now, calendar: calendar)
+        return HStack(alignment: .top, spacing: 12) {
             monthCard("Income", Analytics.monthlyIncome(transactions, inMonthOf: now, calendar: calendar),
-                      .positive) { router.showTransactions(.income) }
+                      amountColor: .positive, delta: incomeDelta,
+                      deltaColor: .textSecondary) { router.showTransactions(.income) }
+            // A spending drop is the good direction — that delta earns green.
             monthCard("Spending", Analytics.monthlySpending(transactions, inMonthOf: now, calendar: calendar),
-                      .negative) { router.showTransactions(.spending) }
+                      amountColor: .textPrimary, delta: spendingDelta,
+                      deltaColor: (spendingDelta ?? 0) < 0 ? .positive : .textSecondary) {
+                router.showTransactions(.spending)
+            }
         }
     }
 
-    private func monthCard(_ label: String, _ value: Decimal, _ color: Color, _ action: @escaping () -> Void) -> some View {
+    private func monthCard(_ label: String, _ value: Decimal, amountColor: Color,
+                           delta: Double?, deltaColor: Color,
+                           _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Circle().fill(color).frame(width: 7, height: 7)
-                    SectionLabel(label)
+            VStack(alignment: .leading, spacing: 6) {
+                SectionLabel(label)
+                MoneyText(value: value, size: 20, weight: .bold, color: amountColor)
+                if let delta {
+                    Text(deltaLine(delta))
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(deltaColor)
                 }
-                MoneyText(value: value, size: 22, weight: .semibold, color: color)
             }
             .cardStyle()
         }
         .buttonStyle(.plain)
+    }
+
+    /// "+4% vs Jun" / "−8% vs Jun".
+    private func deltaLine(_ change: Double) -> String {
+        let percent = abs(change).formatted(.percent.precision(.fractionLength(0)))
+        let lastMonth = calendar.date(byAdding: .month, value: -1, to: now)?
+            .formatted(.dateTime.month(.abbreviated)) ?? ""
+        return "\(change < 0 ? "−" : "+")\(percent) vs \(lastMonth)"
+    }
+
+    // MARK: Uncategorized triage
+
+    @ViewBuilder
+    private var triageChip: some View {
+        let count = Analytics.uncategorizedCount(transactions, inMonthOf: now, calendar: calendar)
+        if count > 0 {
+            Button { router.showTriage = true } label: {
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle().fill(Color.brand.opacity(0.12))
+                        Image(systemName: "clock.badge.questionmark")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.brand)
+                    }
+                    .frame(width: 26, height: 26)
+                    Text("Review \(count) uncategorized")
+                        .font(.system(size: 13.5, weight: .medium))
+                        .foregroundStyle(Color.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.hairline, lineWidth: 1))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("uncategorizedChip")
+        }
+    }
+
+    // MARK: Budgets
+
+    /// Non-income categories that don't already have a budget — what the add form
+    /// offers (mirrors BudgetsView's own filter).
+    private var budgetableCategories: [Category] {
+        let taken = Set(budgets.compactMap { $0.category?.name })
+        return categories.filter { !$0.isIncome && !taken.contains($0.name) }
+    }
+
+    @ViewBuilder
+    private var budgetsCard: some View {
+        // Each branch owns its own single sheet — two `.sheet` modifiers on one
+        // view present unreliably in SwiftUI.
+        if budgets.isEmpty {
+            emptyBudgetsCard
+                .sheet(isPresented: $showAddBudget) { AddBudgetView(categories: budgetableCategories) }
+        } else {
+            populatedBudgetsCard
+                .sheet(isPresented: $showBudgetsSheet) { BudgetsView() }
+        }
+    }
+
+    private var populatedBudgetsCard: some View {
+        // Up to 6 budgets shown on the card, laid out three per row.
+        let rows: [(budget: Budget, spent: Decimal)] = budgets.prefix(6).map { budget in
+            (budget, budget.category.map {
+                Analytics.spending(for: $0, in: transactions, inMonthOf: now, calendar: calendar)
+            } ?? 0)
+        }
+        let monthStart = calendar.dateInterval(of: .month, for: now)?.start
+        let overBudget = rows.filter {
+            $0.spent > $0.budget.monthlyLimit && $0.budget.overBudgetDismissedMonth != monthStart
+        }
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                SectionLabel("Budgets")
+                Spacer()
+                Button("Edit") { showBudgetsSheet = true }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.brand)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("budgetsEditButton")
+            }
+            ringRow(Array(rows.prefix(3)))
+            if rows.count > 3 {
+                ringRow(Array(rows.dropFirst(3)))
+            }
+            ForEach(overBudget, id: \.budget.id) { row in
+                overBudgetCallout(row.budget, spent: row.spent) {
+                    row.budget.overBudgetDismissedMonth = monthStart
+                    try? context.save()
+                }
+            }
+        }
+        .cardStyle()
+        // No container identifier: it propagates onto children and clobbers the
+        // Edit button's id in the AX tree (only leaf controls get ids).
+    }
+
+    /// A three-up row of budget rings. Each ring occupies exactly one third of the
+    /// width, and the row is centered — so a partial row of one or two rings sits
+    /// centered rather than pinned left, matching the row above. Fonts are fixed
+    /// size, so the row height is deterministic.
+    private func ringRow(_ items: [(budget: Budget, spent: Decimal)]) -> some View {
+        GeometryReader { geo in
+            let columnWidth = (geo.size.width - 24) / 3 // two 12pt gaps
+            HStack(spacing: 12) {
+                ForEach(items, id: \.budget.id) { row in
+                    budgetRing(row.budget, spent: row.spent)
+                        .frame(width: columnWidth)
+                }
+            }
+            .frame(width: geo.size.width, alignment: .center)
+        }
+        .frame(height: 116)
+    }
+
+    /// Shown when no budgets exist so the feature stays reachable from the Dashboard.
+    private var emptyBudgetsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionLabel("Budgets")
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.brand.opacity(0.12))
+                    Image(systemName: "chart.bar")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.brand)
+                }
+                .frame(width: 40, height: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Set a monthly budget")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Track spending by category")
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(Color.textSecondary)
+                }
+                Spacer()
+            }
+            Button { showAddBudget = true } label: {
+                Text("Add budget")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("addBudgetButton")
+        }
+        .cardStyle()
+        // No container identifier: it propagates onto children and clobbers the
+        // Add button's id in the AX tree (only leaf controls get ids).
+    }
+
+    private func budgetRing(_ budget: Budget, spent: Decimal) -> some View {
+        let limit = (budget.monthlyLimit as NSDecimalNumber).doubleValue
+        let fraction = limit > 0 ? (spent as NSDecimalNumber).doubleValue / limit : 0
+        let over = spent > budget.monthlyLimit
+        let tint: Color = over ? .negative : .brand
+        let whole = Decimal.FormatStyle.Currency.currency(code: "USD").precision(.fractionLength(0))
+        return Button {
+            if let name = budget.category?.name { router.showTransactions(.category(name)) }
+        } label: {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle().stroke(Color.hairline, lineWidth: 6)
+                    Circle().trim(from: 0, to: min(fraction, 1))
+                        .stroke(tint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Text("\(Int((fraction * 100).rounded()))%")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(over ? Color.negative : Color.textPrimary)
+                }
+                .frame(width: 64, height: 64)
+                Text(budget.category?.name ?? "—")
+                    .font(.system(size: 13.5, weight: .medium))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                Text("\(spent.formatted(whole)) of \(budget.monthlyLimit.formatted(whole))")
+                    .font(.system(size: 12))
+                    .foregroundStyle(over ? Color.negative : Color.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("budgetRing-\(budget.category?.name ?? "none")")
+    }
+
+    private func overBudgetCallout(_ budget: Budget, spent: Decimal,
+                                   onDismiss: @escaping () -> Void) -> some View {
+        let overBy = (spent - budget.monthlyLimit)
+            .formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        let daysLeft = calendar.dateInterval(of: .month, for: now).map {
+            calendar.dateComponents([.day], from: now, to: $0.end).day ?? 0
+        } ?? 0
+        return HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.negative)
+            (Text("\(budget.category?.name ?? "A budget") is ").foregroundStyle(Color.textSecondary)
+                + Text("\(overBy) over").fontWeight(.semibold).foregroundStyle(Color.negative)
+                + Text(" with \(daysLeft) days left").foregroundStyle(Color.textSecondary))
+                .font(.system(size: 13))
+            Spacer(minLength: 4)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(5)
+                    .background(Color.negative.opacity(0.12), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss over-budget alert")
+            .accessibilityIdentifier("dismissOverBudget-\(budget.category?.name ?? "none")")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.negative.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .strokeBorder(Color.negative.opacity(0.25), lineWidth: 1))
     }
 
     // MARK: Spending by category
@@ -228,25 +496,32 @@ struct DashboardView: View {
         // One transaction scan shared by the category list and the filter popup.
         let monthSpend = Analytics.spendingByCategory(transactions, inMonthOf: now, calendar: calendar)
         let cats = topCategories(from: monthSpend)
-        let maxTotalRaw = cats.map(\.total).max() ?? 0
-        // Guarded against divide-by-zero: with every category at $0 the max is 0.
-        let maxTotal = maxTotalRaw > 0 ? maxTotalRaw : 1
-        return VStack(alignment: .leading, spacing: 16) {
+        let monthTotal = cats.reduce(Decimal(0)) { $0 + max($1.total, 0) }
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 SectionLabel("Spending Categories")
                 Spacer()
-                Button { showCategoryFilter = true } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.brand)
+                // Month name replaces the filter icon; the filter popup lives
+                // behind a long-press context menu on the header.
+                Text(now.formatted(.dateTime.month(.wide)))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textTertiary)
+            }
+            .contentShape(Rectangle())
+            .contextMenu {
+                Button("Filter Categories", systemImage: "line.3.horizontal.decrease.circle") {
+                    showCategoryFilter = true
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Show or hide categories")
-                .accessibilityIdentifier("categoryFilterButton")
-                .popover(isPresented: $showCategoryFilter) {
-                    categoryFilterPopup(monthSpend: monthSpend)
-                        .presentationCompactAdaptation(.popover)
-                }
+            }
+            .accessibilityIdentifier("categoryFilterButton")
+            .popover(isPresented: $showCategoryFilter) {
+                categoryFilterPopup(monthSpend: monthSpend)
+                    .presentationCompactAdaptation(.popover)
+            }
+            if monthTotal > 0 {
+                stackedShareBar(cats, monthTotal: monthTotal)
+                    .padding(.bottom, 4)
+                    .accessibilityHidden(true)
             }
             ForEach(cats) { item in
                 let color = Color(hex: item.category?.colorHex ?? "#8E8E93")
@@ -258,18 +533,25 @@ struct DashboardView: View {
                         router.showTransactions(.uncategorized)
                     }
                 } label: {
-                    VStack(spacing: 8) {
-                        HStack(spacing: 10) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(color.opacity(0.14))
                             Image(systemName: item.category?.systemIcon ?? "questionmark.circle")
                                 .font(.system(size: 14))
                                 .foregroundStyle(color)
-                                .frame(width: 22)
-                            Text(name).foregroundStyle(Color.textPrimary)
-                            Spacer()
-                            MoneyText(value: item.total, size: 16, weight: .medium, color: .textSecondary)
                         }
-                        shareBar(item.total, color, maxTotal: maxTotal)
+                        .frame(width: 32, height: 32)
+                        Text(name)
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.textPrimary)
+                        Spacer()
+                        MoneyText(value: item.total, size: 15, weight: .semibold, color: .textPrimary)
+                        Text(percentLabel(item.total, of: monthTotal))
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.textSecondary)
+                            .frame(width: 34, alignment: .trailing)
                     }
+                    .padding(.vertical, 4)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -285,16 +567,28 @@ struct DashboardView: View {
         .cardStyle()
     }
 
-    private func shareBar(_ total: Decimal, _ color: Color, maxTotal: Decimal) -> some View {
-        let fraction = max(0.04, NSDecimalNumber(decimal: total / maxTotal).doubleValue)
-        return GeometryReader { geo in
-            Capsule().fill(Color.hairline)
-                .overlay(alignment: .leading) {
-                    Capsule().fill(color.opacity(0.85))
-                        .frame(width: geo.size.width * fraction)
+    /// One 8pt pill, a segment per spent category butted edge-to-edge, width ∝
+    /// share of month spend. The whole bar is clipped to a single capsule so it
+    /// reads as one pill rather than separate chips.
+    private func stackedShareBar(_ cats: [Analytics.CategoryTotal], monthTotal: Decimal) -> some View {
+        GeometryReader { geo in
+            let spent = cats.filter { $0.total > 0 }
+            let totalD = (monthTotal as NSDecimalNumber).doubleValue
+            HStack(spacing: 0) {
+                ForEach(spent) { item in
+                    Color(hex: item.category?.colorHex ?? "#8E8E93")
+                        .frame(width: max(3, geo.size.width * CGFloat((item.total as NSDecimalNumber).doubleValue / totalD)))
                 }
+            }
+            .clipShape(Capsule())
         }
-        .frame(height: 4)
+        .frame(height: 8)
+    }
+
+    private func percentLabel(_ total: Decimal, of monthTotal: Decimal) -> String {
+        guard monthTotal > 0, total > 0 else { return "0%" }
+        let fraction = ((total / monthTotal) as NSDecimalNumber).doubleValue
+        return "\(Int((fraction * 100).rounded()))%"
     }
 
     /// This-month spend keyed by category name (uncategorized under ""). Flags

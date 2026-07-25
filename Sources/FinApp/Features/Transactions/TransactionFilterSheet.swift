@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Multi-facet filter sheet for the Transactions list: month, flow type, and
+/// One combined filter popup for the Transactions list: month, flow type, and
 /// categories (multi-select). Every toggle writes straight back through the
 /// binding so the list live-updates behind the medium detent; "Done" just
-/// dismisses.
+/// dismisses, "Clear All" resets every facet.
 struct TransactionFilterSheet: View {
     @Binding var filter: TransactionFilterState
     let categories: [Category]
@@ -61,6 +61,8 @@ struct TransactionFilterSheet: View {
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     private var monthRow: some View {

@@ -11,6 +11,7 @@ enum AppSchema {
         Budget.self,
         RecurringBill.self,
         NetWorthSnapshot.self,
+        AccountBalanceSnapshot.self,
     ]
 
     /// Shared on-disk container for the app.
