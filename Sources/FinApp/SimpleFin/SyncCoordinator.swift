@@ -98,10 +98,12 @@ final class SyncCoordinator {
         providerErrors = []
     }
 
-    /// Snapshot current net worth so the dashboard graph builds history over time.
+    /// Snapshot current net worth (dashboard graph) and per-account balances
+    /// (account-row sparklines) so both build history over time.
     private func recordNetWorthSnapshot() {
         let accounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
         NetWorthSnapshotService.record(value: Analytics.netWorth(accounts), in: context)
+        AccountBalanceSnapshotService.record(accounts, in: context)
     }
 
     private func nextSyncStartDate() -> Date {

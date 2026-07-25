@@ -59,4 +59,34 @@ extension RecurringBill {
     var effectiveNextDue: Date? {
         nextDue.map { RecurringSchedule.nextOccurrence(onOrAfter: .now, anchor: $0, cadence: cadence) }
     }
+
+    /// Cost normalized to a monthly figure (annual ÷ 12, weekly × 52/12, …)
+    /// for the Recurring summary card.
+    var monthlyEquivalent: Decimal {
+        switch cadence {
+        case .weekly: expectedAmount * 52 / 12
+        case .biweekly: expectedAmount * 26 / 12
+        case .monthly: expectedAmount
+        case .quarterly: expectedAmount / 3
+        case .yearly: expectedAmount / 12
+        }
+    }
+
+    /// How many charges land in a year, for the price-alert "+$X/yr" figure.
+    var chargesPerYear: Decimal {
+        switch cadence {
+        case .weekly: 52
+        case .biweekly: 26
+        case .monthly: 12
+        case .quarterly: 4
+        case .yearly: 1
+        }
+    }
+
+    /// True when detection saw the newest charge rise above the stable amount and
+    /// the user hasn't acknowledged this particular amount yet.
+    var priceWentUp: Bool {
+        guard let previous = previousAmount, expectedAmount > previous else { return false }
+        return priceAckAmount != expectedAmount
+    }
 }

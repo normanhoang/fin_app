@@ -12,32 +12,37 @@ struct AddAccountView: View {
     @State private var type: AccountType = .cash
     @State private var balanceText = ""
 
+    /// Grid order + short labels per the 5d mock (Cash · Property · Investment /
+    /// Credit · Loan · Other), distinct from the plural Accounts-section names.
+    private static let typeTiles: [(type: AccountType, label: String, icon: String)] = [
+        (.cash, "Cash", "banknote"),
+        (.property, "Property", "house"),
+        (.investment, "Investment", "chart.line.uptrend.xyaxis"),
+        (.creditCard, "Credit", "creditcard"),
+        (.loan, "Loan", "mappin.and.ellipse"),
+        (.other, "Other", "plus.circle"),
+    ]
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+
     private var balance: Decimal? { Decimal(string: balanceText, locale: .current) }
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    TextField("Name", text: $name)
-                    Picker("Type", selection: $type) {
-                        ForEach(AccountType.allCases) { type in
-                            Label(type.displayName, systemImage: type.icon).tag(type)
-                        }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    nameCard
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionLabel("Type")
+                        typeGrid
                     }
-                    .tint(Color.textPrimary)
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionLabel("Balance")
+                        balanceCard
+                    }
+                    infoCard
                 }
-                .listRowBackground(Color.surface)
-                Section("Balance") {
-                    TextField("0.00", text: $balanceText)
-                        .keyboardType(.numbersAndPunctuation)
-                }
-                .listRowBackground(Color.surface)
-                if type.isDebt {
-                    Text("Debts are stored as negative balances. Enter the amount owed as a negative number (e.g. -1500).")
-                        .font(.caption)
-                        .foregroundStyle(Color.textSecondary)
-                        .listRowBackground(Color.surface)
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
             .screenBackground()
             .navigationTitle("Add Account")
@@ -54,8 +59,87 @@ struct AddAccountView: View {
         }
     }
 
+    private var nameCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Name")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.textSecondary)
+            TextField("Family home", text: $name)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(Color.textPrimary)
+                .accessibilityIdentifier("accountNameField")
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(Color.hairline, lineWidth: 1))
+    }
+
+    private var typeGrid: some View {
+        LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(Self.typeTiles, id: \.type) { tile in
+                let selected = type == tile.type
+                Button {
+                    type = tile.type
+                } label: {
+                    VStack(spacing: 8) {
+                        Image(systemName: tile.icon)
+                            .font(.system(size: 20, weight: .regular))
+                        Text(tile.label)
+                            .font(.system(size: 15, weight: selected ? .semibold : .regular))
+                    }
+                    .foregroundStyle(selected ? Color.brand : Color.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 80)
+                    .background(selected ? Color.brand.opacity(0.10) : Color.surface,
+                               in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(selected ? Color.brand.opacity(0.6) : Color.hairline, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("accountType-\(tile.label)")
+            }
+        }
+    }
+
+    private var balanceCard: some View {
+        HStack(spacing: 6) {
+            Text("$")
+                .font(.system(size: 26, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.textSecondary)
+            TextField("0.00", text: $balanceText)
+                .font(.system(size: 26, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.textPrimary)
+                .keyboardType(.numbersAndPunctuation)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(Color.hairline, lineWidth: 1))
+    }
+
+    private var infoCard: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.textSecondary)
+            Text("Manual accounts aren't synced — update the balance yourself. Enter liability accounts (credit cards, loans) as negative numbers.")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.textSecondary)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(Color.hairline, lineWidth: 1))
+    }
+
     private func save() {
         guard let balance else { return }
+        // Store the balance as entered — liabilities are typed as negative numbers
+        // (see the info note), so the sign is the user's to set.
         let account = Account(
             id: "manual-\(UUID().uuidString)",
             org: "Manual",

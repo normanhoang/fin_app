@@ -47,11 +47,7 @@ struct RecurringView: View {
             .toolbar {
                 if !(confirmed.isEmpty && candidates.isEmpty) {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button { showCalendar.toggle() } label: {
-                            Image(systemName: showCalendar ? "list.bullet" : "calendar")
-                        }
-                        .accessibilityLabel(showCalendar ? "Show list" : "Show calendar")
-                        .accessibilityIdentifier("recurringModeToggle")
+                        modeControl
                     }
                 }
             }
@@ -69,14 +65,43 @@ struct RecurringView: View {
         }
     }
 
-    /// The original mode: upcoming confirmed bills plus detected candidates.
+    /// Labeled List | Calendar segments, bound to the persisted mode flag.
+    /// No own capsule/track: the iOS 26 toolbar wraps this in a glass capsule that
+    /// is the sole container — a second capsule here read as a doubled border.
+    /// Only the active segment draws its green pill. No container identifier
+    /// either: it would propagate onto the child buttons and clobber their
+    /// recurringSeg-* identifiers in the AX tree.
+    private var modeControl: some View {
+        HStack(spacing: 2) {
+            modeSegment("List", selected: !showCalendar) { showCalendar = false }
+            modeSegment("Calendar", selected: showCalendar) { showCalendar = true }
+        }
+    }
+
+    private func modeSegment(_ label: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundStyle(selected ? Color.appBackground : Color.textSecondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(selected ? Color.brand : .clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Show \(label.lowercased())")
+        .accessibilityIdentifier("recurringSeg-\(label)")
+    }
+
+    /// List mode: monthly summary, price alerts, due-soon bills, candidates.
     private var upcomingList: some View {
         List {
+            summarySection
+            priceAlertSection
             if !confirmed.isEmpty {
                 Section {
                     ForEach(confirmed) { billRow($0) }
                 } header: {
-                    Text("Upcoming")
+                    Text("Due Soon")
                 }
                 .listRowBackground(Color.surface)
             }
@@ -89,6 +114,8 @@ struct RecurringView: View {
 
     private var calendarList: some View {
         List {
+            summarySection
+            priceAlertSection
             Section {
                 CalendarMonthCard(
                     month: displayedMonth,
@@ -117,17 +144,220 @@ struct RecurringView: View {
         .id(topReset)
     }
 
+    // MARK: This-month summary
+
+    private var summarySection: some View {
+        Section {
+            summaryCard
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
+    }
+
+    private var summaryCard: some View {
+        let monthlyTotal = confirmed.reduce(Decimal(0)) { $0 + $1.monthlyEquivalent }
+        return VStack(alignment: .leading, spacing: 10) {
+            SectionLabel("This month")
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                MoneyText(value: monthlyTotal, size: 30, weight: .bold)
+                Text("/mo · \(confirmed.count) \(confirmed.count == 1 ? "bill" : "bills")")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textSecondary)
+            }
+            if let next = nextCharge {
+                (Text("Next charge ").foregroundStyle(Color.textSecondary)
+                    + Text(next.date.formatted(.dateTime.month(.abbreviated).day()))
+                        .fontWeight(.medium).foregroundStyle(Color.textPrimary)
+                    + Text(" — ").foregroundStyle(Color.textSecondary)
+                    + Text(next.names).fontWeight(.medium).foregroundStyle(Color.textPrimary)
+                    + Text(", \(Money.string(next.total))").foregroundStyle(Color.textSecondary))
+                    .font(.system(size: 12.5))
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.surface)
+                .overlay(
+                    LinearGradient(colors: [.brand.opacity(0.10), .clear],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Color.hairline, lineWidth: 1)
+        )
+        .accessibilityIdentifier("recurringSummaryCard")
+    }
+
+    /// Earliest upcoming charge; bills due the same day are combined.
+    private var nextCharge: (date: Date, names: String, total: Decimal)? {
+        let dated = confirmed.compactMap { bill in bill.effectiveNextDue.map { (bill, $0) } }
+        guard let earliest = dated.min(by: { $0.1 < $1.1 }) else { return nil }
+        let cal = Calendar.current
+        let sameDay = dated.filter { cal.isDate($0.1, inSameDayAs: earliest.1) }
+        let names = sameDay.map { $0.0.merchantName.capitalized }.joined(separator: " + ")
+        let total = sameDay.reduce(Decimal(0)) { $0 + $1.0.expectedAmount }
+        return (earliest.1, names, total)
+    }
+
+    // MARK: Price-change alerts
+
+    @ViewBuilder private var priceAlertSection: some View {
+        let flagged = confirmed.filter(\.priceWentUp)
+        if !flagged.isEmpty {
+            Section {
+                ForEach(flagged) { bill in
+                    priceAlertCard(bill)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
+        }
+    }
+
+    private func priceAlertCard(_ bill: RecurringBill) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.negative)
+            // Tap the body to open the bill's detail.
+            Button { path.append(bill) } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(bill.merchantName.capitalized) price went up")
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(Color.textPrimary)
+                    priceChangeLine(bill)
+                        .font(.system(size: 12))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Button { acknowledgePrice(bill) } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(6)
+                    .background(Color.negative.opacity(0.12), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss price alert")
+            .accessibilityIdentifier("dismissPriceAlert-\(bill.merchantName)")
+        }
+        .padding(14)
+        .background(Color.negative.opacity(0.10),
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .strokeBorder(Color.negative.opacity(0.35), lineWidth: 1))
+        .padding(.horizontal, 16)
+        .accessibilityIdentifier("priceChangeAlert-\(bill.merchantName)")
+    }
+
+    /// Hide the price-increase alert for this bill's current amount. A further
+    /// increase changes `expectedAmount`, so `priceWentUp` fires again.
+    private func acknowledgePrice(_ bill: RecurringBill) {
+        bill.priceAckAmount = bill.expectedAmount
+        try? context.save()
+    }
+
+    /// "$13.99 → $15.49 since June · +$18/yr"
+    private func priceChangeLine(_ bill: RecurringBill) -> Text {
+        let old = Money.string(bill.previousAmount ?? 0)
+        let new = Money.string(bill.expectedAmount)
+        let since = bill.amountChangedAt.map { " since \($0.formatted(.dateTime.month(.wide)))" } ?? ""
+        let yearly = (bill.expectedAmount - (bill.previousAmount ?? 0)) * bill.chargesPerYear
+        let perYear = yearly.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        return Text("\(old) → ").foregroundStyle(Color.textSecondary)
+            + Text(new).fontWeight(.semibold).foregroundStyle(Color.negative)
+            + Text("\(since) · +\(perYear)/yr").foregroundStyle(Color.textSecondary)
+    }
+
+    // MARK: Detected candidates
+
     @ViewBuilder private var detectedSection: some View {
         if !candidates.isEmpty {
             Section {
-                ForEach(candidates) { billRow($0) }
+                ForEach(candidates) { candidateRow($0) }
             } header: {
-                Text("Detected")
-            } footer: {
-                Text("Tap a detected bill to confirm it or remove a false match.")
+                Text("Detected — Needs Review")
             }
             .listRowBackground(Color.surface)
         }
+    }
+
+    /// Candidate with inline triage: Confirm / Not a bill. The row itself still
+    /// links to the detail page; dismiss sets `dismissed` — never deletes — so
+    /// re-detection can't resurface it.
+    private func candidateRow(_ bill: RecurringBill) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            NavigationLink(value: bill) {
+                HStack(spacing: 12) {
+                    let color = Color(hex: bill.category?.colorHex ?? "#8E8E93")
+                    ZStack {
+                        Circle().fill(color.opacity(0.15))
+                        Image(systemName: bill.category?.systemIcon ?? "questionmark.circle")
+                            .font(.system(size: 14))
+                            .foregroundStyle(color)
+                    }
+                    .frame(width: 36, height: 36)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(bill.merchantName.capitalized)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.textPrimary)
+                        Text(evidence(for: bill))
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+            }
+            .accessibilityIdentifier("recurringRow-\(bill.merchantName)")
+            HStack(spacing: 10) {
+                Button {
+                    bill.confirmed = true
+                    try? context.save()
+                } label: {
+                    Text("Confirm")
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(Color.appBackground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(Color.brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.borderless)
+                .accessibilityIdentifier("confirmRecurringInline-\(bill.merchantName)")
+                Button {
+                    bill.dismissed = true
+                    try? context.save()
+                } label: {
+                    Text("Not a bill")
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(Color.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color.hairline, lineWidth: 1))
+                }
+                .buttonStyle(.borderless)
+                .accessibilityIdentifier("dismissRecurringInline-\(bill.merchantName)")
+            }
+        }
+        .padding(.vertical, 4)
+        // No container identifier — it would propagate down and clobber the
+        // row/button identifiers inside (same AX quirk as the mode control).
+    }
+
+    /// "Looks monthly · 3 charges of $2.99" — the why behind a candidate.
+    private func evidence(for bill: RecurringBill) -> String {
+        let count = allTransactions.count {
+            CategorizationEngine.normalizeMerchant($0.payee ?? $0.detail) == bill.merchantName
+        }
+        return "Looks \(bill.cadence.rawValue) · \(count) charges of \(Money.string(bill.expectedAmount))"
     }
 
     private var monthInterval: DateInterval {
@@ -327,8 +557,17 @@ private struct CalendarMonthCard: View {
 struct RecurringRow: View {
     let bill: RecurringBill
 
-    private var dueText: String? {
-        bill.effectiveNextDue.map { "next \($0.formatted(.dateTime.month().day()))" }
+    /// "in 11 days" / "today" / "tomorrow" from the rolled-forward due date.
+    private var relativeDue: String? {
+        guard let due = bill.effectiveNextDue else { return nil }
+        let cal = Calendar.current
+        let days = cal.dateComponents([.day], from: cal.startOfDay(for: .now),
+                                      to: cal.startOfDay(for: due)).day ?? 0
+        switch days {
+        case ...0: return "today"
+        case 1: return "tomorrow"
+        default: return "in \(days) days"
+        }
     }
 
     var body: some View {
@@ -340,18 +579,34 @@ struct RecurringRow: View {
                     .font(.system(size: 14))
                     .foregroundStyle(color)
             }
-            .frame(width: 38, height: 38)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(bill.merchantName.capitalized).foregroundStyle(Color.textPrimary)
+            .frame(width: 36, height: 36)
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Chip(bill.cadence.rawValue.capitalized, color: .brand)
-                    if let dueText {
-                        Text(dueText).font(.caption).foregroundStyle(Color.textSecondary)
+                    Text(bill.merchantName.capitalized)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.textPrimary)
+                    if bill.priceWentUp {
+                        Text("PRICE UP")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.negative)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.negative.opacity(0.12), in: Capsule())
                     }
                 }
+                Text("\(bill.cadence.rawValue.capitalized)\(relativeDue.map { " · \($0)" } ?? "")")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textSecondary)
             }
             Spacer()
-            MoneyText(value: bill.expectedAmount, size: 16, weight: .semibold, color: .textSecondary)
+            VStack(alignment: .trailing, spacing: 3) {
+                MoneyText(value: bill.expectedAmount, size: 15, weight: .semibold, color: .textPrimary)
+                if let due = bill.effectiveNextDue {
+                    Text(due.formatted(.dateTime.month(.abbreviated).day()))
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
         }
         .padding(.vertical, 2)
     }
@@ -381,85 +636,40 @@ struct RecurringDetailView: View {
         return grouped.map { (month: $0.key, txns: $0.value) }.sorted { $0.month > $1.month }
     }
 
-    var body: some View {
-        List {
-            Section {
-                categoryMenu
-                Picker("Cadence", selection: $bill.cadence) {
-                    ForEach(Cadence.allCases, id: \.self) { cadence in
-                        Text(cadence.rawValue.capitalized).tag(cadence)
-                    }
-                }
-                .tint(Color.textPrimary)
-                LabeledContent("Typical amount") {
-                    TextField("0.00", text: $amountText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .accessibilityIdentifier("recurringAmountField")
-                }
-                // Editing marks the date user-set, so detection won't overwrite it
-                // until a new charge posts on/after it (see RecurringDetector.refresh).
-                DatePicker("Next payment",
-                           selection: Binding(
-                               get: { bill.nextDue ?? Date() },
-                               set: {
-                                   bill.nextDue = $0
-                                   bill.nextDueSetByUser = true
-                                   try? context.save()
-                               }
-                           ),
-                           displayedComponents: .date)
-                    .accessibilityIdentifier("recurringNextDuePicker")
-                if !bill.confirmed {
-                    Button {
-                        bill.confirmed = true
-                        try? context.save()
-                    } label: {
-                        Label("Confirm Recurring", systemImage: "checkmark.circle")
-                    }
-                    .accessibilityIdentifier("confirmRecurringButton")
-                }
-                Button(role: .destructive) {
-                    bill.dismissed = true
-                    try? context.save()
-                    dismiss()
-                } label: {
-                    Label("Delete Recurring", systemImage: "trash")
-                }
-                .accessibilityIdentifier("deleteRecurringButton")
-            }
-            .listRowBackground(Color.surface)
+    private var categoryColor: Color { Color(hex: bill.category?.colorHex ?? "#8E8E93") }
 
-            if matched.isEmpty {
-                Section("Past charges") {
-                    Text("No past charges found for this merchant.")
-                        .foregroundStyle(Color.textSecondary)
-                }
-                .listRowBackground(Color.surface)
-            } else {
-                ForEach(monthGroups, id: \.month) { group in
-                    Section {
-                        ForEach(group.txns) { txn in
-                            Button { router.openTransaction(id: txn.id) } label: {
-                                // contentShape makes the transparent gaps (Spacer,
-                                // padding) hit-testable — plain buttons only hit
-                                // opaque pixels otherwise.
-                                TransactionRow(transaction: txn)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("recurringTxnRow-\(txn.id)")
-                        }
-                    } header: {
-                        Text(group.month.formatted(.dateTime.month(.wide).year()))
-                    }
-                    .listRowBackground(Color.surface)
-                }
-            }
+    /// Suffix for the hero amount, matching the bill's cadence.
+    private var unitSuffix: String {
+        switch bill.cadence {
+        case .weekly: "/wk"
+        case .biweekly: "/2wk"
+        case .monthly: "/mo"
+        case .quarterly: "/qtr"
+        case .yearly: "/yr"
         }
-        .listRowSeparatorTint(Color.hairline)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                hero
+                if bill.priceWentUp { priceContextCard }
+                SectionLabel("Details").padding(.horizontal, 4)
+                detailsCard
+                SectionLabel("Charge history").padding(.horizontal, 4)
+                historyCard
+                removeButton
+                Text("Removing hides the bill — its transactions are kept.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textTertiary)
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
+        }
+        .scrollIndicators(.hidden)
         .screenBackground()
-        .navigationTitle(bill.merchantName.capitalized)
+        .navigationTitle("Bill")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             amountText = NSDecimalNumber(decimal: bill.expectedAmount).stringValue
@@ -469,6 +679,225 @@ struct RecurringDetailView: View {
         }
         .onChange(of: amountText) { applyAmount() }
         .onChange(of: bill.cadenceRaw) { try? context.save() }
+    }
+
+    private var hero: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle().fill(categoryColor.opacity(0.14))
+                Image(systemName: bill.category?.systemIcon ?? "questionmark.circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(categoryColor)
+            }
+            .frame(width: 56, height: 56)
+            HStack(spacing: 6) {
+                Text(bill.merchantName.capitalized)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.textPrimary)
+                if bill.priceWentUp {
+                    Text("PRICE UP")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.negative)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.negative.opacity(0.12), in: Capsule())
+                }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                MoneyText(value: bill.expectedAmount, size: 34, weight: .bold)
+                Text(unitSuffix)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.textSecondary)
+            }
+            Text(nextChargeLine)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+    }
+
+    private var nextChargeLine: String {
+        var parts: [String] = []
+        if let due = bill.effectiveNextDue {
+            parts.append("Next charge \(due.formatted(.dateTime.month(.abbreviated).day()))")
+        }
+        if let account = matched.first?.account {
+            parts.append(account.displayName)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private var priceContextCard: some View {
+        let old = Money.string(bill.previousAmount ?? 0)
+        let new = Money.string(bill.expectedAmount)
+        let yearly = (bill.expectedAmount - (bill.previousAmount ?? 0)) * bill.chargesPerYear
+        let perYear = yearly.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        let until = bill.amountChangedAt
+            .flatMap { Calendar.current.date(byAdding: .month, value: -1, to: $0) }
+            .map { " until \($0.formatted(.dateTime.month(.wide)))" } ?? ""
+        return HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.negative)
+            (Text("Was ").foregroundStyle(Color.textSecondary)
+                + Text(old).fontWeight(.semibold).foregroundStyle(Color.textPrimary)
+                + Text("\(until) · now ").foregroundStyle(Color.textSecondary)
+                + Text(new).fontWeight(.semibold).foregroundStyle(Color.negative)
+                + Text(" — costs ").foregroundStyle(Color.textSecondary)
+                + Text("\(perYear) more per year").fontWeight(.semibold).foregroundStyle(Color.textPrimary))
+                .font(.system(size: 13))
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.negative.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .strokeBorder(Color.negative.opacity(0.25), lineWidth: 1))
+    }
+
+    private var detailsCard: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Cadence").font(.system(size: 14)).foregroundStyle(Color.textSecondary)
+                Spacer()
+                Menu {
+                    Picker("Cadence", selection: $bill.cadence) {
+                        ForEach(Cadence.allCases, id: \.self) { cadence in
+                            Text(cadence.rawValue.capitalized).tag(cadence)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(bill.cadence.rawValue.capitalized)
+                            .font(.system(size: 14, weight: .medium))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.textPrimary)
+                }
+                .accessibilityIdentifier("recurringCadenceMenu")
+            }
+            .padding(.vertical, 13)
+            Divider().overlay(Color.hairline)
+            categoryMenu
+            Divider().overlay(Color.hairline)
+            HStack {
+                Text("Typical amount").font(.system(size: 14)).foregroundStyle(Color.textSecondary)
+                Spacer()
+                TextField("0.00", text: $amountText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.textPrimary)
+                    .frame(maxWidth: 120)
+                    .accessibilityIdentifier("recurringAmountField")
+            }
+            .padding(.vertical, 13)
+            Divider().overlay(Color.hairline)
+            // Editing marks the date user-set, so detection won't overwrite it
+            // until a new charge posts on/after it (see RecurringDetector.refresh).
+            DatePicker("Next payment",
+                       selection: Binding(
+                           get: { bill.nextDue ?? Date() },
+                           set: {
+                               bill.nextDue = $0
+                               bill.nextDueSetByUser = true
+                               try? context.save()
+                           }
+                       ),
+                       displayedComponents: .date)
+                .font(.system(size: 14))
+                .foregroundStyle(Color.textSecondary)
+                .padding(.vertical, 7)
+                .accessibilityIdentifier("recurringNextDuePicker")
+            Divider().overlay(Color.hairline)
+            HStack {
+                Text("Yearly cost").font(.system(size: 14)).foregroundStyle(Color.textSecondary)
+                Spacer()
+                MoneyText(value: bill.expectedAmount * bill.chargesPerYear,
+                          size: 14, weight: .medium)
+            }
+            .padding(.vertical, 13)
+            if !bill.confirmed {
+                Divider().overlay(Color.hairline)
+                Button {
+                    bill.confirmed = true
+                    try? context.save()
+                } label: {
+                    Label("Confirm Recurring", systemImage: "checkmark.circle")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.brand)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 13)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("confirmRecurringButton")
+            }
+        }
+        .padding(.horizontal, 16)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(Color.hairline, lineWidth: 1))
+    }
+
+    private var historyCard: some View {
+        VStack(spacing: 0) {
+            if matched.isEmpty {
+                Text("No past charges found for this merchant.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 13)
+            } else {
+                ForEach(Array(matched.prefix(12).enumerated()), id: \.element.id) { index, txn in
+                    if index > 0 { Divider().overlay(Color.hairline) }
+                    Button { router.openTransaction(id: txn.id) } label: {
+                        HStack {
+                            Text(txn.posted.formatted(date: .abbreviated, time: .omitted))
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.textPrimary)
+                            Spacer()
+                            // The changed amount stays tinted so the jump is scannable.
+                            MoneyText(value: abs(txn.amount), size: 14, weight: .semibold,
+                                      color: bill.priceWentUp && abs(txn.amount) == bill.expectedAmount
+                                          ? .negative : .textPrimary)
+                        }
+                        .padding(.vertical, 13)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("recurringTxnRow-\(txn.id)")
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(Color.hairline, lineWidth: 1))
+    }
+
+    private var removeButton: some View {
+        Button {
+            // Dismissed, never deleted — re-detection can't resurface it and
+            // the merchant's transactions are untouched.
+            bill.dismissed = true
+            try? context.save()
+            dismiss()
+        } label: {
+            Text("Remove from Recurring")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.negative)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(Color.negative.opacity(0.08),
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.negative.opacity(0.25), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("deleteRecurringButton")
+        .padding(.top, 4)
     }
 
     /// Persist an edited typical amount (ignores unparseable input).
@@ -483,24 +912,28 @@ struct RecurringDetailView: View {
             showCategoryPicker = true
         } label: {
             HStack {
-                Label {
-                    Text(bill.category?.name ?? "Uncategorized").foregroundStyle(.primary)
-                } icon: {
-                    Image(systemName: bill.category?.systemIcon ?? "questionmark.circle")
-                        .foregroundStyle(Color(hex: bill.category?.colorHex ?? "#8E8E93"))
-                }
+                Text("Category")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.textSecondary)
                 Spacer()
-                Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(.secondary)
+                Text(bill.category?.name ?? "Uncategorized")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(bill.category.map { Color(hex: $0.colorHex) } ?? Color.textSecondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.textSecondary)
             }
+            .padding(.vertical, 13)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("recurringCategoryMenu")
-        .popover(isPresented: $showCategoryPicker) {
-            CategoryPickerPopup(
+        .sheet(isPresented: $showCategoryPicker) {
+            CategoryPickerSheet(
                 categories: categories,
                 selectedName: bill.category?.name,
                 isUncategorizedSelected: bill.category == nil,
+                merchant: bill.merchantName,
                 onSelect: { selected in
                     if let category = selected {
                         setCategory(category)
@@ -510,7 +943,6 @@ struct RecurringDetailView: View {
                     }
                 }
             )
-            .presentationCompactAdaptation(.popover)
         }
     }
 

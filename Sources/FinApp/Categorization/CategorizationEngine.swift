@@ -80,6 +80,41 @@ enum CategorizationEngine {
         }
     }
 
+    /// Ranked category suggestions for a merchant's match text: matching rules
+    /// first (user-learned rules outrank seeds), then the categories used most
+    /// across `transactions`. Confidence is a display heuristic for the picker
+    /// ("92% match"), not a probability.
+    static func suggestions(forMatchText text: String, rules: [CategoryRule],
+                            transactions: [Transaction], limit: Int = 2)
+        -> [(category: Category, confidence: Double)] {
+        var out: [(category: Category, confidence: Double)] = []
+        var seen = Set<String>()
+
+        let matching = rules
+            .filter { $0.category != nil && $0.matches(text) }
+            .sorted { $0.priority < $1.priority }
+        for rule in matching {
+            guard let category = rule.category, !seen.contains(category.name) else { continue }
+            seen.insert(category.name)
+            out.append((category, rule.createdByUser ? 0.95 : 0.92))
+            if out.count == limit { return out }
+        }
+
+        // Fallback: the user's most-used spending categories.
+        var counts: [String: (category: Category, count: Int)] = [:]
+        for txn in transactions {
+            guard let category = txn.category, !category.isIncome, category.name != "Transfers" else { continue }
+            counts[category.name, default: (category, 0)].count += 1
+        }
+        for entry in counts.values.sorted(by: { $0.count > $1.count }) {
+            guard !seen.contains(entry.category.name) else { continue }
+            seen.insert(entry.category.name)
+            out.append((entry.category, 0.6))
+            if out.count == limit { break }
+        }
+        return out
+    }
+
     /// Lowercase and drop tokens that contain digits or punctuation noise, so
     /// "COFFEE SHOP #42" and "COFFEE SHOP #99" collapse to "coffee shop".
     static func normalizeMerchant(_ raw: String) -> String {

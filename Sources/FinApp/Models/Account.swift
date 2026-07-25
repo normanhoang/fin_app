@@ -20,6 +20,12 @@ final class Account {
     /// keeps overwriting — so a rename survives re-syncs. Defaulted nil for
     /// lightweight migration.
     var customName: String? = nil
+    /// When this account last came through a SimpleFin sync. nil for manual
+    /// accounts (never synced). Defaulted for lightweight migration.
+    var lastSyncedAt: Date? = nil
+    /// User-arranged position within its type group ("Custom" sort). Defaulted
+    /// for lightweight migration.
+    var customSortIndex: Int = 0
 
     @Relationship(deleteRule: .cascade, inverse: \Transaction.account)
     var transactions: [Transaction]

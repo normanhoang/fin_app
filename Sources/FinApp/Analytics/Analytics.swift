@@ -30,16 +30,26 @@ enum Analytics {
 
     /// Inflows in income categories for the month.
     static func monthlyIncome(_ txns: [Transaction], inMonthOf date: Date, calendar: Calendar = .current) -> Decimal {
-        inMonth(txns, of: date, calendar: calendar)
-            .filter { $0.category?.isIncome == true && $0.amount > 0 }
-            .reduce(Decimal(0)) { $0 + $1.amount }
+        guard let interval = calendar.dateInterval(of: .month, for: date) else { return 0 }
+        return income(txns, in: interval)
     }
 
     /// Outflows (positive magnitude) excluding income and Transfers categories for the month.
     /// Transfers move money between a user's own accounts — not real spending.
     static func monthlySpending(_ txns: [Transaction], inMonthOf date: Date, calendar: Calendar = .current) -> Decimal {
-        inMonth(txns, of: date, calendar: calendar)
-            .filter { $0.amount < 0 && $0.category?.isIncome != true && $0.category?.name != "Transfers" }
+        guard let interval = calendar.dateInterval(of: .month, for: date) else { return 0 }
+        return spending(txns, in: interval)
+    }
+
+    /// Inflows in income categories within `interval`.
+    static func income(_ txns: [Transaction], in interval: DateInterval) -> Decimal {
+        txns.filter { interval.contains($0.posted) && $0.category?.isIncome == true && $0.amount > 0 }
+            .reduce(Decimal(0)) { $0 + $1.amount }
+    }
+
+    /// Outflows (positive magnitude) excluding income and Transfers within `interval`.
+    static func spending(_ txns: [Transaction], in interval: DateInterval) -> Decimal {
+        txns.filter { interval.contains($0.posted) && $0.amount < 0 && $0.category?.isIncome != true && $0.category?.name != "Transfers" }
             .reduce(Decimal(0)) { $0 - $1.amount }
     }
 
@@ -91,6 +101,97 @@ enum Analytics {
                 $0.total != $1.total ? $0.total > $1.total
                                      : ($0.category?.name ?? "") < ($1.category?.name ?? "")
             }
+    }
+
+    /// Transactions in `date`'s month with no category — the triage-chip count.
+    static func uncategorizedCount(_ txns: [Transaction], inMonthOf date: Date, calendar: Calendar = .current) -> Int {
+        inMonth(txns, of: date, calendar: calendar).filter { $0.category == nil }.count
+    }
+
+    /// What a flow metric measures for `monthOverMonthChange`.
+    enum FlowMetric {
+        case income, spending
+    }
+
+    /// Fractional month-over-month change of a month-to-date metric: this month
+    /// through `date` vs last month through the same day (Jul 1–23 vs Jun 1–23,
+    /// calendar-aware). nil when last month's span had none of the metric.
+    static func monthOverMonthChange(_ metric: FlowMetric, txns: [Transaction],
+                                     asOf date: Date, calendar: Calendar = .current) -> Double? {
+        guard let thisMonth = calendar.dateInterval(of: .month, for: date),
+              let lastCutoff = calendar.date(byAdding: .month, value: -1, to: date),
+              let lastMonth = calendar.dateInterval(of: .month, for: lastCutoff),
+              date > thisMonth.start
+        else { return nil }
+        let currentSpan = DateInterval(start: thisMonth.start, end: date)
+        let previousSpan = DateInterval(start: lastMonth.start, end: lastCutoff)
+
+        let value: (DateInterval) -> Decimal = { interval in
+            switch metric {
+            case .income: income(txns, in: interval)
+            case .spending: spending(txns, in: interval)
+            }
+        }
+        let previous = value(previousSpan)
+        guard previous != 0 else { return nil }
+        let current = value(currentSpan)
+        return (((current - previous) / previous) as NSDecimalNumber).doubleValue
+    }
+
+    /// Safe-to-spend for `date`'s month: income so far, minus spending so far,
+    /// minus confirmed recurring charges still due before month end. Bills are
+    /// projected calendar-aware from their stored `nextDue`, so a weekly bill
+    /// with several charges left this month counts each one.
+    static func safeToSpend(_ txns: [Transaction], bills: [RecurringBill],
+                            asOf date: Date, calendar: Calendar = .current) -> Decimal {
+        guard let month = calendar.dateInterval(of: .month, for: date) else { return 0 }
+        let remaining = DateInterval(start: date, end: month.end)
+        let upcoming = bills
+            .filter { $0.confirmed && !$0.dismissed }
+            .reduce(Decimal(0)) { sum, bill in
+                guard let stored = bill.nextDue else { return sum }
+                let anchor = RecurringSchedule.nextOccurrence(
+                    onOrAfter: date, anchor: stored, cadence: bill.cadence, calendar: calendar)
+                let due = RecurringSchedule.occurrences(
+                    anchor: anchor, cadence: bill.cadence, in: remaining, calendar: calendar)
+                return sum + bill.expectedAmount * Decimal(due.count)
+            }
+        return monthlyIncome(txns, inMonthOf: date, calendar: calendar)
+            - monthlySpending(txns, inMonthOf: date, calendar: calendar)
+            - upcoming
+    }
+
+    /// Visits/total/average for one merchant's charges in `date`'s year — the
+    /// transaction-detail "This merchant" card. `txns` must already be filtered
+    /// to the merchant (see `CategorizationEngine.normalizeMerchant`).
+    static func merchantYearStats(_ txns: [Transaction], inYearOf date: Date, calendar: Calendar = .current)
+        -> (visits: Int, total: Decimal, average: Decimal)? {
+        guard let year = calendar.dateInterval(of: .year, for: date) else { return nil }
+        let charges = txns.filter { year.contains($0.posted) && $0.amount < 0 }
+        guard !charges.isEmpty else { return nil }
+        let total = charges.reduce(Decimal(0)) { $0 - $1.amount }
+        return (charges.count, total, total / Decimal(charges.count))
+    }
+
+    /// Per-account balance change across `interval`, from recorded snapshots —
+    /// the net-worth detail's "Change this range" card. Baseline is the last
+    /// snapshot on/before the range start (or the earliest inside it, mirroring
+    /// `recentChange`'s young-history fallback); accounts with fewer than two
+    /// usable snapshots are omitted. `snapshots` must be day-ascending.
+    /// Sorted by delta, biggest gain first.
+    static func accountRangeDeltas(_ snapshots: [AccountBalanceSnapshot], accounts: [Account],
+                                   in interval: DateInterval) -> [(account: Account, delta: Decimal)] {
+        let byAccount = Dictionary(grouping: snapshots, by: \.accountId)
+        return accounts.compactMap { account -> (Account, Decimal)? in
+            guard let rows = byAccount[account.id] else { return nil }
+            let inRange = rows.filter { $0.day <= interval.end }
+            guard let latest = inRange.last else { return nil }
+            let baseline = inRange.last(where: { $0.day <= interval.start })
+                ?? inRange.first(where: { $0.day >= interval.start })
+            guard let baseline, baseline.day < latest.day else { return nil }
+            return (account, latest.balance - baseline.balance)
+        }
+        .sorted { $0.1 > $1.1 }
     }
 
     /// Net-worth change over the trailing `window` days: latest snapshot vs. the most

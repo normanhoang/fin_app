@@ -1,8 +1,23 @@
 import SwiftUI
 import SwiftData
 
+/// Row order within each type group.
+enum AccountSortMode: String, CaseIterable, Identifiable {
+    case balance, name, custom
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .balance: "Balance"
+        case .name: "Name"
+        case .custom: "Custom"
+        }
+    }
+}
+
 struct AccountsView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(SyncCoordinator.self) private var coordinator
+    @Environment(\.modelContext) private var context
     @Query(sort: \Account.name) private var accounts: [Account]
     @State private var showingAdd = false
     @State private var path = NavigationPath()
@@ -10,8 +25,17 @@ struct AccountsView: View {
     @State private var topReset = 0
     /// Type groups the user has collapsed; empty = all expanded (default).
     @State private var collapsedTypes: Set<AccountType> = []
-    /// Sort accounts within each type group by amount (highest first) instead of name.
-    @AppStorage("accountsSortByAmount") private var sortByAmount = false
+    /// Row order within each type group, persisted across launches.
+    @AppStorage("accountsSortMode") private var sortModeRaw = AccountSortMode.balance.rawValue
+
+    private var sortMode: AccountSortMode {
+        // Custom sort is retired from the menu; treat any persisted value as Balance.
+        get {
+            let mode = AccountSortMode(rawValue: sortModeRaw) ?? .balance
+            return mode == .custom ? .balance : mode
+        }
+        nonmutating set { sortModeRaw = newValue.rawValue }
+    }
 
     /// Accounts of one type, kept together as a subsection.
     private struct TypeGroup: Identifiable {
@@ -25,10 +49,14 @@ struct AccountsView: View {
         Dictionary(grouping: accounts.filter { $0.accountType.isDebt == debt }, by: \.accountType)
             .map { type, accts in
                 TypeGroup(type: type, accounts: accts.sorted {
-                    if sortByAmount && $0.balance.magnitude != $1.balance.magnitude {
+                    switch sortMode {
+                    case .balance where $0.balance.magnitude != $1.balance.magnitude:
                         return $0.balance.magnitude > $1.balance.magnitude
+                    case .custom where $0.customSortIndex != $1.customSortIndex:
+                        return $0.customSortIndex < $1.customSortIndex
+                    default:
+                        return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
                     }
-                    return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
                 })
             }
             .sorted { $0.type.sortIndex < $1.type.sortIndex }
@@ -53,8 +81,9 @@ struct AccountsView: View {
                     )
                 } else {
                     List {
+                        netWorthSection
                         // One Section per type so the inset card rounds at each type's
-                        // top and bottom. The Assets/Debts eyebrows get their own
+                        // top and bottom. The Assets/Liabilities eyebrows get their own
                         // header-only Sections so the List's section spacing applies
                         // uniformly — eyebrow-to-type and type-to-type gaps match,
                         // expanded or collapsed.
@@ -63,9 +92,10 @@ struct AccountsView: View {
                             ForEach(assetGroups) { typeSection($0) }
                         }
                         if !debtGroups.isEmpty {
-                            eyebrowSection("Debts", total: total(debtGroups))
+                            eyebrowSection("Liabilities", total: total(debtGroups))
                             ForEach(debtGroups) { typeSection($0) }
                         }
+                        syncFooterSection
                     }
                     .listRowSeparatorTint(Color.hairline)
                     .screenBackground()
@@ -80,36 +110,49 @@ struct AccountsView: View {
             .navigationDestination(for: Transaction.self) { TransactionDetailView(transaction: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingAdd = true } label: { Image(systemName: "plus") }
-                        .accessibilityLabel("Add account")
-                        .accessibilityIdentifier("addAccountButton")
-                }
-                if #available(iOS 26.0, *) {
-                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    // Glyph shows the current mode: "$" when sorted by value,
-                    // stacked A/Z when alphabetical.
-                    Button { sortByAmount.toggle() } label: {
-                        SortGlyph(alphabetical: sortByAmount)
+                    Button { showingAdd = true } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.brand)
+                            Text("Add")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.textPrimary)
+                        }
                     }
-                    .accessibilityLabel(sortByAmount ? "Sorted by amount" : "Sorted alphabetically")
-                    .accessibilityIdentifier("accountSortToggle")
+                    .accessibilityLabel("Add account")
+                    .accessibilityIdentifier("addAccountButton")
                 }
                 if #available(iOS 26.0, *) {
-                    // Split each button into its own glass pill instead of
+                    // Split each control into its own glass pill instead of
                     // sharing one capsule.
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        collapsedTypes = allCollapsed ? [] : allTypes
+                    Menu {
+                        Picker("Sort", selection: Binding(
+                            get: { sortMode },
+                            set: { sortModeRaw = $0.rawValue }
+                        )) {
+                            ForEach(AccountSortMode.allCases.filter { $0 != .custom }) { mode in
+                                Text(mode.label).tag(mode)
+                            }
+                        }
+                        Divider()
+                        Button(allCollapsed ? "Expand All" : "Collapse All") {
+                            collapsedTypes = allCollapsed ? [] : allTypes
+                        }
+                        .accessibilityIdentifier("accountCollapseAllToggle")
                     } label: {
-                        Image(systemName: "chevron.down")
-                            .rotationEffect(.degrees(allCollapsed ? -90 : 0))
+                        HStack(spacing: 3) {
+                            Text(sortMode.label)
+                                .font(.system(size: 13, weight: .medium))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.textPrimary)
                     }
-                    .accessibilityLabel(allCollapsed ? "Expand all" : "Collapse all")
-                    .accessibilityIdentifier("accountCollapseAllToggle")
+                    .accessibilityIdentifier("accountSortMenu")
                 }
             }
             .sheet(isPresented: $showingAdd) { AddAccountView() }
@@ -125,22 +168,98 @@ struct AccountsView: View {
         }
     }
 
+    // MARK: Net-worth summary
+
+    private var netWorthSection: some View {
+        Section {
+            netWorthCard
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
+    }
+
+    private var netWorthCard: some View {
+        let assets = total(assetGroups)
+        let liabilities = -total(debtGroups) // positive magnitude
+        return VStack(alignment: .leading, spacing: 12) {
+            SectionLabel("Net worth")
+            MoneyText(value: assets - liabilities, size: 30, weight: .bold,
+                      color: balanceColor(assets - liabilities))
+            if assets > 0 || liabilities > 0 {
+                splitBar(assets: assets, liabilities: liabilities)
+                    .accessibilityHidden(true)
+                HStack(spacing: 12) {
+                    legend(color: .brand, label: "Assets", value: assets)
+                    Spacer()
+                    legend(color: .negative, label: "Liabilities", value: liabilities)
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.surface)
+                .overlay(
+                    LinearGradient(colors: [.brand.opacity(0.10), .clear],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Color.hairline, lineWidth: 1)
+        )
+        .accessibilityIdentifier("accountsNetWorthCard")
+    }
+
+    /// 6pt bar split brand/negative in proportion to assets vs |liabilities|.
+    /// One continuous pill: segments butt together and the whole bar is clipped to
+    /// a single capsule so it reads as one pill, not two.
+    private func splitBar(assets: Decimal, liabilities: Decimal) -> some View {
+        GeometryReader { geo in
+            let a = (assets as NSDecimalNumber).doubleValue
+            let l = (liabilities as NSDecimalNumber).doubleValue
+            let magnitude = max(a, 0) + max(l, 0)
+            if magnitude > 0 {
+                HStack(spacing: 0) {
+                    if a > 0 {
+                        Color.brand
+                            .frame(width: max(4, geo.size.width * a / magnitude))
+                    }
+                    if l > 0 {
+                        Color.negative
+                    }
+                }
+                .clipShape(Capsule())
+            }
+        }
+        .frame(height: 6)
+    }
+
+    private func legend(color: Color, label: String, value: Decimal) -> some View {
+        HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 7, height: 7)
+            Text("\(label) \(Money.string(value))")
+                .font(.system(size: 12.5))
+                .foregroundStyle(Color.textSecondary)
+        }
+    }
+
+    // MARK: Sections
+
     private func eyebrowSection(_ title: String, total: Decimal) -> some View {
         Section {
         } header: {
             HStack {
-                Text(title)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Color.textPrimary)
+                SectionLabel(title)
+                    .accessibilityLabel(title)
                 Spacer()
-                Text(Money.string(total))
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(balanceColor(total))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(balanceColor(total).opacity(0.14), in: Capsule())
+                MoneyText(value: total, size: 13, weight: .semibold,
+                          color: balanceColor(total))
             }
-            .padding(.top, 8)
+            .padding(.top, 4)
             .textCase(nil)
         }
     }
@@ -153,8 +272,14 @@ struct AccountsView: View {
                         row(account)
                     }
                     .listRowBackground(Color.surface)
+                    // Separator starts after the icon column (36pt icon + 12pt gap).
+                    .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] + 48 }
                     .accessibilityIdentifier("accountRow-\(account.id)")
                 }
+                // Long-press drag to rearrange, only in Custom sort mode.
+                .onMove(perform: sortMode == .custom ? { from, to in
+                    move(in: group, from: from, to: to)
+                } : nil)
             }
         } header: {
             HStack {
@@ -182,55 +307,89 @@ struct AccountsView: View {
         }
     }
 
+    // MARK: Rows
+
+    /// Tint for the row's icon circle: investments brand, cash sky blue,
+    /// debts red, property gold.
+    private func roleColor(_ type: AccountType) -> Color {
+        switch type {
+        case .investment: .brand
+        case .cash: Color(hex: "#38BDF8")
+        case .creditCard, .loan: .negative
+        case .property: Color(hex: "#C4A46A")
+        case .other: .textSecondary
+        }
+    }
+
     private func row(_ account: Account) -> some View {
         HStack(spacing: 12) {
-            Text(account.displayName).foregroundStyle(Color.textPrimary)
-            Spacer()
-            MoneyText(value: account.balance, code: account.currency, size: 17, weight: .semibold,
+            ZStack {
+                Circle().fill(roleColor(account.accountType).opacity(0.10))
+                Image(systemName: account.accountType.icon)
+                    .font(.system(size: 15))
+                    .foregroundStyle(roleColor(account.accountType))
+            }
+            .frame(width: 36, height: 36)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(account.displayName)
+                    .font(.system(size: 15.5, weight: .medium))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                Text(metaLine(account))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textSecondary)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 8)
+            MoneyText(value: account.balance, code: account.currency, size: 15.5, weight: .semibold,
                       color: balanceColor(account.balance))
+                .lineLimit(1)
+                .layoutPriority(1)
         }
         .padding(.vertical, 4)
     }
-}
 
-/// Classic "sort" glyph: up arrow beside a character slot showing either
-/// stacked A/Z or $ (no SF Symbol exists for this composition).
-private struct SortGlyph: View {
-    let alphabetical: Bool
+    /// Account type, plus a "manual" tag for local accounts. Per-account sync time
+    /// is dropped from the row; the overall "synced" stamp lives in the footer.
+    private func metaLine(_ account: Account) -> String {
+        let type = account.accountType.displayName
+        return account.isManual ? "\(type) · manual" : type
+    }
 
-    private var letters: some View {
-        VStack(spacing: -1.5) {
-            Text("A")
-            Text("Z")
+    /// Persist a Custom-mode drag: rewrite the group's order indexes.
+    private func move(in group: TypeGroup, from source: IndexSet, to destination: Int) {
+        var reordered = group.accounts
+        reordered.move(fromOffsets: source, toOffset: destination)
+        for (index, account) in reordered.enumerated() {
+            account.customSortIndex = index
         }
-        .font(.system(size: 8.5, weight: .heavy, design: .rounded))
+        try? context.save()
     }
 
-    private var dollar: some View {
-        Text("$")
-            .font(.system(size: 15, weight: .bold, design: .rounded))
-    }
+    // MARK: Sync footer
 
-    var body: some View {
-        HStack(spacing: 2.5) {
-            Image(systemName: alphabetical ? "arrow.down" : "arrow.up")
-                .font(.system(size: 13, weight: .semibold))
-            ZStack {
-                // Both variants sized invisibly so the slot (and the
-                // toolbar pill) keeps one width across toggles.
-                letters.hidden()
-                dollar.hidden()
-                if alphabetical { dollar } else { letters }
+    private var syncFooterSection: some View {
+        Section {
+        } footer: {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 11))
+                Text(syncFooterText)
+                    .font(.system(size: 12))
             }
+            .foregroundStyle(Color.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 4)
         }
     }
-}
 
-/// Red for negative, green for positive, white for exactly zero.
-func balanceColor(_ value: Decimal) -> Color {
-    if value < 0 { return .negative }
-    if value == 0 { return .textPrimary }
-    return .positive
+    private var syncFooterText: String {
+        guard let last = coordinator.lastSyncDate else { return "Not synced yet" }
+        if Calendar.current.isDateInToday(last) {
+            return "Last full sync today, \(last.formatted(date: .omitted, time: .shortened))"
+        }
+        return "Last full sync \(last.formatted(date: .abbreviated, time: .shortened))"
+    }
 }
 
 struct AccountDetailView: View {

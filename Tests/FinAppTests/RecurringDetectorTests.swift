@@ -105,6 +105,66 @@ final class RecurringDetectorTests: XCTestCase {
         XCTAssertNotEqual(bill?.nextDue, staleUserDate, "Projection resumes from detection")
     }
 
+    // MARK: - Price-change detection
+
+    /// Charges at `amounts`, oldest first, spaced `gapDays` apart ending today.
+    private func priceSeries(merchant: String, amounts: [String], gapDays: Int = 30) {
+        for (i, amount) in amounts.enumerated() {
+            let posted = cal.date(byAdding: .day, value: -gapDays * (amounts.count - 1 - i), to: Date())!
+            ctx.insert(Transaction(id: "\(merchant)-p\(i)", posted: posted,
+                                   amount: Decimal(string: amount)!, detail: merchant, payee: merchant))
+        }
+    }
+
+    func testDetectsPriceIncrease() {
+        priceSeries(merchant: "Netflix", amounts: ["-13.99", "-13.99", "-13.99", "-15.49"])
+        let c = RecurringDetector.detectCandidates(from: allTxns, calendar: cal)[0]
+        XCTAssertEqual(c.previousAmount, Decimal(string: "13.99"))
+        XCTAssertEqual(c.expectedAmount, Decimal(string: "15.49"), "Newest amount is the real obligation")
+        XCTAssertNotNil(c.amountChangedAt)
+    }
+
+    func testNoPriceChangeWithinTwoPercent() {
+        priceSeries(merchant: "Gym", amounts: ["-100.00", "-100.00", "-100.00", "-101.00"])
+        let c = RecurringDetector.detectCandidates(from: allTxns, calendar: cal)[0]
+        XCTAssertNil(c.previousAmount)
+        XCTAssertEqual(c.expectedAmount, Decimal(string: "100.00"))
+    }
+
+    func testPriceChangeRequiresStablePriorCharges() {
+        // The three charges before the newest don't share one amount → no flag.
+        priceSeries(merchant: "Water", amounts: ["-10.00", "-11.00", "-10.00", "-15.00"])
+        let c = RecurringDetector.detectCandidates(from: allTxns, calendar: cal)[0]
+        XCTAssertNil(c.previousAmount)
+        XCTAssertNil(c.amountChangedAt)
+    }
+
+    func testRefreshStoresPriceChangeOnBill() {
+        priceSeries(merchant: "Netflix", amounts: ["-13.99", "-13.99", "-13.99", "-15.49"])
+        RecurringDetector.refresh(in: ctx, calendar: cal)
+        let bill = ((try? ctx.fetch(FetchDescriptor<RecurringBill>())) ?? [])
+            .first { $0.merchantName == "netflix" }
+        XCTAssertEqual(bill?.previousAmount, Decimal(string: "13.99"))
+        XCTAssertEqual(bill?.expectedAmount, Decimal(string: "15.49"))
+    }
+
+    func testRefreshClearsPriceChangeOnceStable() {
+        series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30)
+        let bill = RecurringBill(merchantName: "netflix", expectedAmount: Decimal(string: "15.49")!,
+                                 cadence: .monthly, lastSeen: Date())
+        bill.previousAmount = Decimal(string: "13.99")
+        bill.amountChangedAt = Date()
+        ctx.insert(bill)
+        try? ctx.save()
+
+        RecurringDetector.refresh(in: ctx, calendar: cal)
+
+        let stored = ((try? ctx.fetch(FetchDescriptor<RecurringBill>())) ?? [])
+            .first { $0.merchantName == "netflix" }
+        XCTAssertNil(stored?.previousAmount, "Alert clears once charges are stable again")
+        XCTAssertNil(stored?.amountChangedAt)
+    }
+
     func testRefreshDoesNotResurrectDismissedBill() {
         // A merchant that detection will find...
         series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30)

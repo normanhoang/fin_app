@@ -17,3 +17,6 @@ exportOptions.plist
 # Swift Package Manager (none today, but future-proof)
 .build/
 .swiftpm/
+
+# Design handoff assets (local reference only)
+design_handoff_finapp_redesign 2/

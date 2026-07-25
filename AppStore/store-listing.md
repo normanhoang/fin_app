@@ -32,10 +32,15 @@ WHAT YOU GET
   Transport, Subscriptions, and more, with rules you can tune and a Dashboard
   list that curates itself around where you actually spend.
 • Spending insight — see your top categories each month and a six-month trend.
-• Recurring bills — FinApp spots subscriptions and repeating charges, and a
-  calendar view shows what's due when.
-• Transactions, searchable — filter by category, month, income, or spending,
-  and attach your own notes to any charge.
+• Budgets — set a monthly limit per category and track it right on your
+  Dashboard, with an alert the moment you go over.
+• Quick review — file uncategorized charges in seconds with a swipe-to-categorize
+  flow that suggests the right category for you.
+• Recurring bills — FinApp spots subscriptions and repeating charges, flags price
+  increases, and a calendar view shows what's due when.
+• Transactions, searchable — one filter for category, month, and income vs.
+  spending, with active filters shown as chips; attach your own notes to any
+  charge and export everything to CSV.
 • Accounts, your way — group by type, collapse and sort sections, rename
   accounts, and add manual accounts (property, loans, cash) alongside synced
   ones.
@@ -69,12 +74,19 @@ service; see https://simplefin.org.
 ## Privacy Policy URL
 `https://normanhoang.github.io/fin_app/privacy`
 
-## What's New (version 1.5.0)
-`Synced accounts now land in the right group automatically — FinApp recognizes
-credit cards, loans, and investment accounts by name on first sync, and your own
-reclassifications always stick. Plus: scrub through your net-worth history across
-time ranges, add notes to transactions, filter them by month, collapse and sort
-account groups, and see recurring bills on a calendar.`
+## What's New (version 1.7.0)
+`A fresh look across the whole app, plus a few things you asked for:
+
+• Budgets on your Dashboard — set a monthly limit per category, see at-a-glance
+  progress rings, and get an alert when you go over (dismiss it for the month
+  with a tap).
+• Review uncategorized charges fast — a new swipe-to-file flow suggests the right
+  category and clears your backlog in seconds.
+• Simpler filtering — one filter button opens category, month, and
+  income/expenses in a single popup, and your active filters show as chips under
+  the search bar.
+• Export your transactions to CSV, right from Settings.
+• Cleaner Accounts, Recurring, and Add Account screens throughout.`
 
 ## App Review notes (paste into "Notes" for the reviewer)
 FinApp connects to a user's bank through SimpleFin, which requires a user-provided
