@@ -74,11 +74,17 @@ struct AccountsView: View {
         NavigationStack(path: $path) {
             Group {
                 if accounts.isEmpty {
-                    ContentUnavailableView(
-                        "No Accounts",
-                        systemImage: "building.columns",
-                        description: Text("Connect SimpleFin or add a manual account with the + button.")
-                    )
+                    ContentUnavailableView {
+                        Label("No Accounts", systemImage: "building.columns")
+                    } description: {
+                        Text("Connect SimpleFin or add a manual account with the + button.")
+                    } actions: {
+                        Link("SimpleFin Setup Guide",
+                             destination: URL(string: "https://normanhoang.github.io/fin_app/simplefin-setup")!)
+                            .font(.system(size: 13.5, weight: .medium))
+                            .foregroundStyle(Color.brand)
+                            .accessibilityIdentifier("simplefinSetupLink")
+                    }
                 } else {
                     List {
                         netWorthSection

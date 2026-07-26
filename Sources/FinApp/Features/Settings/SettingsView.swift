@@ -227,6 +227,12 @@ struct SettingsView: View {
         Text("Get a setup token from your SimpleFin account. Your bank data is fetched through SimpleFin Bridge and stored only on this device.")
             .font(.system(size: 12))
             .foregroundStyle(Color.textTertiary)
+        Link(destination: URL(string: "https://normanhoang.github.io/fin_app/simplefin-setup")!) {
+            Text("How to set up SimpleFin →")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.brand)
+        }
+        .accessibilityIdentifier("simplefinSetupLink")
     }
 
     /// Provider notices (orange) and sync errors (negative), as tinted cards.
