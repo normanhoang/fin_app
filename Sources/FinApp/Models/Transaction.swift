@@ -6,6 +6,9 @@ import SwiftData
 @Model
 final class Transaction {
     @Attribute(.unique) var id: String
+    /// Raw transaction ID reported by SimpleFIN. The unique `id` is scoped by
+    /// account; this optional field supports in-place migration of legacy rows.
+    var providerID: String? = nil
     var posted: Date
     var amount: Decimal
     var detail: String          // SimpleFin "description"

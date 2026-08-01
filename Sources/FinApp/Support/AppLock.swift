@@ -14,6 +14,9 @@ final class AppLock {
 
     /// One automatic Face ID prompt per lock cycle; `lock()` re-arms it.
     private var autoAttempted = false
+    /// Invalidates authentication results that return after a later lock or
+    /// enable/disable transition.
+    private var generation = 0
 
     /// Injectable for tests; production evaluates the device-owner policy.
     /// Must only be invoked while the app is foreground-active — LocalAuthentication
@@ -27,6 +30,7 @@ final class AppLock {
 
     var isEnabled: Bool {
         didSet {
+            generation += 1
             UserDefaults.standard.set(isEnabled, forKey: enabledKey)
             if isEnabled { isUnlocked = true } // just enabled in an unlocked session
         }
@@ -44,6 +48,7 @@ final class AppLock {
 
     func lock() {
         if isEnabled {
+            generation += 1
             isUnlocked = false
             autoAttempted = false
         }
@@ -60,10 +65,14 @@ final class AppLock {
 
     func authenticate() async {
         guard isEnabled, !isUnlocked else { return }
+        let attemptGeneration = generation
         do {
-            isUnlocked = try await evaluator("Unlock to view your financial data")
+            let authenticated = try await evaluator("Unlock to view your financial data")
+            guard attemptGeneration == generation, isEnabled, !isUnlocked else { return }
+            isUnlocked = authenticated
             lastError = nil
         } catch {
+            guard attemptGeneration == generation, isEnabled, !isUnlocked else { return }
             lastError = Self.friendlyMessage(for: error)
         }
     }

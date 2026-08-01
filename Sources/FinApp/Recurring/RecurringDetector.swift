@@ -40,26 +40,21 @@ enum RecurringDetector {
             guard let cadence = inferCadence(from: dates) else { return nil }
 
             let lastSeen = dates.last!
-            let nextDue = calendar.date(byAdding: .day, value: cadence.days, to: lastSeen) ?? lastSeen
+            let nextDue = RecurringSchedule.advance(lastSeen, by: cadence, calendar: calendar) ?? lastSeen
             // Most recent assigned category from this merchant's transactions.
             let category = chronological.reversed().compactMap(\.category).first
 
-            let change = priceChange(in: chronological)
-            // On a price change the newest amount is the real obligation;
-            // the median would keep reporting the stale price.
-            let expected = change != nil
-                ? abs(chronological.last!.amount)
-                : median(chronological.map { abs($0.amount) }.sorted())
+            let amountAnalysis = analyzeAmounts(in: chronological)
 
             return Candidate(
                 merchantName: merchant,
-                expectedAmount: expected,
+                expectedAmount: amountAnalysis.expected,
                 cadence: cadence,
                 lastSeen: lastSeen,
                 nextDue: nextDue,
                 category: category,
-                previousAmount: change?.previousAmount,
-                amountChangedAt: change?.changedAt
+                previousAmount: amountAnalysis.change?.previousAmount,
+                amountChangedAt: amountAnalysis.change?.changedAt
             )
         }
         .sorted { $0.merchantName < $1.merchantName }
@@ -82,15 +77,28 @@ enum RecurringDetector {
     /// A price change: the newest charge differs by more than
     /// `priceChangeThreshold` from the last `minStableCharges`+ charges, which
     /// all shared one amount. `txns` must be chronological.
-    private static func priceChange(in txns: [Transaction])
-        -> (previousAmount: Decimal, changedAt: Date)? {
-        guard txns.count > minStableCharges, let newest = txns.last else { return nil }
-        let prior = txns.dropLast().suffix(minStableCharges).map { abs($0.amount) }
-        guard let old = prior.first, prior.allSatisfy({ $0 == old }), old != 0 else { return nil }
-        let new = abs(newest.amount)
+    private static func analyzeAmounts(in txns: [Transaction])
+        -> (expected: Decimal, change: (previousAmount: Decimal, changedAt: Date)?) {
+        let amounts = txns.map { abs($0.amount) }
+        guard let new = amounts.last else { return (0, nil) }
+        let newRun = amounts.reversed().prefix { $0 == new }.count
+        if newRun >= minStableCharges {
+            return (new, nil)
+        }
+
+        let prior = amounts.dropLast(newRun).suffix(minStableCharges)
+        guard prior.count == minStableCharges,
+              let old = prior.first,
+              prior.allSatisfy({ $0 == old }),
+              old != 0 else {
+            return (median(amounts.sorted()), nil)
+        }
         let delta = (((new - old) / old) as NSDecimalNumber).doubleValue
-        guard abs(delta) > priceChangeThreshold else { return nil }
-        return (old, newest.posted)
+        guard abs(delta) > priceChangeThreshold else {
+            return (median(amounts.sorted()), nil)
+        }
+        let changedAt = txns[txns.count - newRun].posted
+        return (new, (old, changedAt))
     }
 
     private static func median(_ sorted: [Decimal]) -> Decimal {
@@ -112,9 +120,30 @@ enum RecurringDetector {
     /// share one fetch across its post-sync steps.
     @MainActor
     static func refresh(_ txns: [Transaction], in context: ModelContext, calendar: Calendar = .current) {
+        try? stageRefresh(txns, in: context, calendar: calendar)
+        try? context.save()
+    }
+
+    @MainActor
+    static func stageRefresh(
+        _ txns: [Transaction], in context: ModelContext, calendar: Calendar = .current
+    ) throws {
         let candidates = detectCandidates(from: txns, calendar: calendar)
-        let existing = (try? context.fetch(FetchDescriptor<RecurringBill>())) ?? []
-        let byName = Dictionary(existing.map { ($0.merchantName, $0) }, uniquingKeysWith: { a, _ in a })
+        let existing = try context.fetch(FetchDescriptor<RecurringBill>())
+        let byName = Dictionary(grouping: existing, by: \.merchantName).mapValues { bills in
+            bills.first(where: { $0.confirmed && !$0.dismissed })
+                ?? bills.first(where: \.confirmed)
+                ?? bills[0]
+        }
+        let detectedNames = Set(candidates.map(\.merchantName))
+
+        // Retire stale unconfirmed candidates, but never ones carrying a user
+        // edit (custom next-due) — a detection flicker must not destroy those.
+        for bill in existing
+            where !bill.confirmed && !bill.dismissed && !bill.nextDueSetByUser
+                && !detectedNames.contains(bill.merchantName) {
+            context.delete(bill)
+        }
 
         for candidate in candidates {
             if let bill = byName[candidate.merchantName] {
@@ -150,7 +179,6 @@ enum RecurringDetector {
                 context.insert(bill)
             }
         }
-        try? context.save()
-        RecurringStore.dedupe(in: context)
+        try RecurringStore.stageDedupe(in: context)
     }
 }

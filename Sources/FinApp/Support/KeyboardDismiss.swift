@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 
+@MainActor
 enum Keyboard {
     /// Resign the first responder app-wide, dismissing the keyboard.
     static func dismiss() {
@@ -34,6 +35,7 @@ struct KeyboardDismisser: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {}
 
+    @MainActor
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var recognizer: UITapGestureRecognizer?
 
@@ -101,15 +103,18 @@ struct KeyboardReveal: UIViewRepresentable {
             ) { [weak self] note in
                 guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
                 else { return }
-                self?.keyboardTop = frame.minY
-                // Let the keyboard-show and safe-area-padding animations settle
-                // before measuring the overlap.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.reveal() }
+                Task { @MainActor [weak self] in
+                    self?.keyboardTop = frame.minY
+                    // Let the keyboard-show and safe-area-padding animations settle
+                    // before measuring the overlap.
+                    try? await Task.sleep(for: .seconds(0.3))
+                    self?.reveal()
+                }
             })
             observers.append(center.addObserver(
                 forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main
             ) { [weak self] _ in
-                self?.keyboardTop = nil
+                Task { @MainActor [weak self] in self?.keyboardTop = nil }
             })
         }
 

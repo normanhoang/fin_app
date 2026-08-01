@@ -33,6 +33,22 @@ final class AppLockTests: XCTestCase {
         XCTAssertFalse(lock.isUnlocked)
     }
 
+    func testAuthenticationFromAnOlderLockCycleCannotUnlock() async {
+        let lock = makeLockedLock()
+        var continuation: CheckedContinuation<Bool, Error>?
+        lock.evaluator = { _ in
+            try await withCheckedThrowingContinuation { continuation = $0 }
+        }
+
+        let attempt = Task { await lock.authenticate() }
+        while continuation == nil { await Task.yield() }
+        lock.lock()
+        continuation?.resume(returning: true)
+        await attempt.value
+
+        XCTAssertFalse(lock.isUnlocked)
+    }
+
     // MARK: error mapping
 
     func testCancelErrorsProduceNoMessage() async {
@@ -100,5 +116,25 @@ final class AppLockTests: XCTestCase {
         await lock.autoAuthenticate()
         await lock.authenticate() // user tapped Unlock
         XCTAssertEqual(attempts, 2)
+    }
+
+    func testPrivacyShieldStateCoversInactiveScenesAndThenShowsLock() {
+        XCTAssertEqual(
+            PrivacyShieldState.resolve(isInactive: true, lockEnabled: false, unlocked: true),
+            .privacy
+        )
+        XCTAssertEqual(
+            PrivacyShieldState.resolve(isInactive: false, lockEnabled: true, unlocked: false),
+            .lock
+        )
+        XCTAssertEqual(
+            PrivacyShieldState.resolve(isInactive: true, lockEnabled: true, unlocked: false),
+            .lock,
+            "Keep the lock host alive while LocalAuthentication makes the scene inactive"
+        )
+        XCTAssertEqual(
+            PrivacyShieldState.resolve(isInactive: false, lockEnabled: true, unlocked: true),
+            .hidden
+        )
     }
 }

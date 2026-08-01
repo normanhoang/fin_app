@@ -22,14 +22,6 @@ enum SimpleFinError: Error, LocalizedError {
 struct SimpleFinClient {
     var session: URLSession = .shared
 
-    /// Construct the client. Pass `pinned: true` to require the SimpleFin Bridge
-    /// certificate chain to match the pinned CA keys (`CertificatePinner`).
-    /// Off by default — enable only after verifying connectivity on-device, since
-    /// pinning is fail-closed (see CertificatePinner docs).
-    static func live(pinned: Bool = false) -> SimpleFinClient {
-        SimpleFinClient(session: pinned ? CertificatePinner.makeSession() : .shared)
-    }
-
     // MARK: Pure helpers
 
     /// A setup token is base64 that decodes to a one-time claim URL.
@@ -46,9 +38,14 @@ struct SimpleFinClient {
 
     static func accountsURL(accessURL: URL, since: Date?) -> URL {
         let base = accessURL.appending(path: "accounts")
-        guard let since else { return base }
         var comps = URLComponents(url: base, resolvingAgainstBaseURL: false)!
-        comps.queryItems = [URLQueryItem(name: "start-date", value: String(Int(since.timeIntervalSince1970)))]
+        var queryItems = [URLQueryItem(name: "pending", value: "1")]
+        if let since {
+            queryItems.append(URLQueryItem(
+                name: "start-date", value: String(Int(since.timeIntervalSince1970))
+            ))
+        }
+        comps.queryItems = queryItems
         return comps.url ?? base
     }
 

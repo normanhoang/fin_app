@@ -405,6 +405,7 @@ struct AccountDetailView: View {
     @State private var editedName = ""
     @State private var balanceText = ""
     @State private var pendingDelete = false
+    @State private var showDeleteConfirmation = false
 
     private var transactions: [Transaction] {
         account.transactions.sorted { $0.posted > $1.posted }
@@ -459,10 +460,7 @@ struct AccountDetailView: View {
             .listRowBackground(Color.surface)
             Section {
                 Button(role: .destructive) {
-                    // Pop first, then delete once the view is gone, so the
-                    // detail never re-renders against a deleted model.
-                    pendingDelete = true
-                    dismiss()
+                    showDeleteConfirmation = true
                 } label: {
                     Label("Delete Account", systemImage: "trash")
                 }
@@ -505,6 +503,21 @@ struct AccountDetailView: View {
         .onChange(of: editedName) { applyRename() }
         .onChange(of: balanceText) { applyBalance() }
         .onChange(of: account.typeRaw) { try? context.save() }
+        .confirmationDialog(
+            "Delete \(account.displayName)?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Confirm Delete", role: .destructive) {
+                // Pop first, then delete once the view is gone, so the detail
+                // never re-renders against a deleted model.
+                pendingDelete = true
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes the account and its transactions.")
+        }
         .onDisappear {
             if pendingDelete {
                 context.delete(account)

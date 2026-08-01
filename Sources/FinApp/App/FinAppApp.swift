@@ -5,7 +5,7 @@ import SwiftData
 struct FinAppApp: App {
     let container: ModelContainer
     @State private var coordinator: SyncCoordinator
-    @State private var lock = AppLock()
+    @State private var lock: AppLock
     @State private var showSplash = true
     /// True while the scene isn't frontmost. iOS snapshots the app for the
     /// app switcher during `.inactive` — before the `.background` lock fires —
@@ -19,6 +19,18 @@ struct FinAppApp: App {
     init() {
         #if DEBUG
         let isUITest = ProcessInfo.processInfo.environment["FINAPP_UITEST"] == "1"
+        if isUITest {
+            UserDefaults.standard.removeObject(forKey: "appLockEnabled")
+        }
+        let appLock = AppLock()
+        if isUITest && ProcessInfo.processInfo.environment["FINAPP_UI_LOCK_ON_BACKGROUND"] == "1" {
+            appLock.isEnabled = true
+            appLock.evaluator = { _ in false }
+            // isEnabled's didSet persisted the flag; scrub it so it can't leak
+            // into a later non-UI-test launch on the same simulator/device.
+            UserDefaults.standard.removeObject(forKey: "appLockEnabled")
+        }
+        _lock = State(initialValue: appLock)
         let container = isUITest ? AppSchema.makeInMemoryContainer() : AppSchema.makeContainer()
         self.container = container
         _coordinator = State(initialValue: SyncCoordinator(context: container.mainContext))
@@ -34,6 +46,7 @@ struct FinAppApp: App {
             UserDefaults.standard.removeObject(forKey: "dashHideUncategorized")
         }
         #else
+        _lock = State(initialValue: AppLock())
         let container = AppSchema.makeContainer()
         self.container = container
         _coordinator = State(initialValue: SyncCoordinator(context: container.mainContext))
@@ -51,15 +64,6 @@ struct FinAppApp: App {
                 RootView()
                     .environment(coordinator)
                     .environment(lock)
-                if lock.isEnabled && !lock.isUnlocked {
-                    LockScreen()
-                        .environment(lock)
-                } else if isInactive {
-                    // Privacy cover: keeps balances out of the app-switcher
-                    // snapshot. NOT a lock — Face ID itself makes the scene
-                    // inactive, so locking here would block unlocking.
-                    SplashView()
-                }
                 if showSplash {
                     SplashView()
                         .transition(.opacity)
@@ -68,6 +72,15 @@ struct FinAppApp: App {
                             withAnimation(.easeOut(duration: 0.3)) { showSplash = false }
                         }
                 }
+                PrivacyShieldHost(
+                    lock: lock,
+                    state: .resolve(
+                        isInactive: isInactive,
+                        lockEnabled: lock.isEnabled,
+                        unlocked: lock.isUnlocked
+                    )
+                )
+                .frame(width: 0, height: 0)
             }
             .tint(.brand)
             .preferredColorScheme(appearance.colorScheme)

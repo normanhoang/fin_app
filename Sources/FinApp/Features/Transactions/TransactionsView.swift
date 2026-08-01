@@ -8,7 +8,7 @@ struct TransactionsView: View {
     @Query(sort: \Category.name) private var categories: [Category]
     @State private var search = ""
     @State private var showFilterSheet = false
-    @State private var path: [Transaction] = []
+    @State private var path = NavigationPath()
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
 
@@ -41,20 +41,7 @@ struct TransactionsView: View {
                 VStack(spacing: 0) {
                     searchBar
                     activeFilterChips
-                    List {
-                        ForEach(monthGroups, id: \.month) { group in
-                            Section {
-                                ForEach(group.txns) { txn in
-                                    txnLink(txn)
-                                }
-                            } header: {
-                                monthHeader(group)
-                            }
-                        }
-                    }
-                    .listRowSeparatorTint(Color.hairline)
-                    .screenBackground()
-                    .id(topReset)
+                    transactionList
                 }
                 .background(Color.appBackground.ignoresSafeArea())
                 .navigationTitle("Transactions")
@@ -90,13 +77,13 @@ struct TransactionsView: View {
             if scenePhase != .active { showFilterSheet = false }
         }
         .onChange(of: router.resetToken) {
-            path = []
+            path = NavigationPath()
             search = router.pendingSearch ?? ""
             router.pendingSearch = nil
         }
         .onChange(of: router.pendingTxnID) { openPendingTransaction() }
         .onChange(of: router.selectedTab) { handleTabChange() }
-        .onChange(of: path) { handlePathChange() }
+        .onChange(of: path.count) { handlePathChange() }
         .onAppear { openPendingTransaction() }
     }
 
@@ -106,6 +93,27 @@ struct TransactionsView: View {
         }
         .listRowBackground(Color.surface)
         .accessibilityIdentifier("txnRow-\(txn.id)")
+    }
+
+    private var transactionList: some View {
+        List {
+            ForEach(monthGroups, id: \.month) { group in
+                transactionSection(month: group.month, transactions: group.txns)
+            }
+        }
+        .listRowSeparatorTint(Color.hairline)
+        .screenBackground()
+        .id(topReset)
+    }
+
+    private func transactionSection(month: Date, transactions: [Transaction]) -> some View {
+        Section {
+            ForEach(transactions) { transaction in
+                txnLink(transaction)
+            }
+        } header: {
+            monthHeader((month: month, txns: transactions))
+        }
     }
 
     /// On arrival at the Transactions tab (tab tap or swipe), clear the filter and
@@ -121,7 +129,7 @@ struct TransactionsView: View {
             router.subpageOpen = !path.isEmpty
             topReset += 1   // arriving → rebuild the list at the very top
         } else {
-            path = []
+            path = NavigationPath()
         }
     }
 
@@ -169,7 +177,8 @@ struct TransactionsView: View {
     private func openPendingTransaction() {
         guard let id = router.pendingTxnID,
               let txn = transactions.first(where: { $0.id == id }) else { return }
-        path = [txn]
+        path = NavigationPath()
+        path.append(txn)
         router.pendingTxnID = nil
     }
 

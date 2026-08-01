@@ -9,13 +9,17 @@ struct NetWorthRoute: Hashable {}
 private extension View {
     /// Fires `action` whenever the scroll view's vertical offset changes — used to
     /// dismiss the trend popup on scroll without a gesture that would fight the
-    /// horizontal pager. No-op on iOS < 18 (no such device targets this app).
+    /// horizontal pager. iOS 17 uses a simultaneous vertical-drag fallback.
     @ViewBuilder
     func onTrendScroll(_ action: @escaping () -> Void) -> some View {
         if #available(iOS 18.0, *) {
             onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y }) { _, _ in action() }
         } else {
-            self
+            simultaneousGesture(
+                DragGesture(minimumDistance: 2).onChanged { value in
+                    if abs(value.translation.height) > abs(value.translation.width) { action() }
+                }
+            )
         }
     }
 }
@@ -501,19 +505,17 @@ struct DashboardView: View {
             HStack {
                 SectionLabel("Spending Categories")
                 Spacer()
-                // Month name replaces the filter icon; the filter popup lives
-                // behind a long-press context menu on the header.
                 Text(now.formatted(.dateTime.month(.wide)))
                     .font(.system(size: 12))
                     .foregroundStyle(Color.textTertiary)
-            }
-            .contentShape(Rectangle())
-            .contextMenu {
-                Button("Filter Categories", systemImage: "line.3.horizontal.decrease.circle") {
-                    showCategoryFilter = true
+                Button { showCategoryFilter = true } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .foregroundStyle(Color.textSecondary)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Filter categories")
+                .accessibilityIdentifier("categoryFilterButton")
             }
-            .accessibilityIdentifier("categoryFilterButton")
             .popover(isPresented: $showCategoryFilter) {
                 categoryFilterPopup(monthSpend: monthSpend)
                     .presentationCompactAdaptation(.popover)

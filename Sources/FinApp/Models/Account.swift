@@ -6,6 +6,10 @@ import SwiftData
 @Model
 final class Account {
     @Attribute(.unique) var id: String
+    /// Raw ID and organization scope reported by SimpleFIN. Optional defaults
+    /// allow existing stores to migrate in place on their next sync.
+    var providerID: String? = nil
+    var providerScope: String? = nil
     var org: String
     var name: String
     var currency: String
@@ -60,5 +64,15 @@ final class Account {
         self.typeRaw = typeRaw
         self.isManual = isManual
         self.transactions = transactions
+    }
+}
+
+extension Account: Hashable {
+    static func == (lhs: Account, rhs: Account) -> Bool {
+        lhs.persistentModelID == rhs.persistentModelID
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(persistentModelID)
     }
 }

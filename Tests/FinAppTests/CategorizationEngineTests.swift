@@ -77,6 +77,43 @@ final class CategorizationEngineTests: XCTestCase {
         XCTAssertEqual(CategorizationEngine.bestCategory(forMatchText: "coffee", rules: rules), coffeeShops)
     }
 
+    func testLongerKeywordWinsAnEqualPriorityTie() {
+        let transport = category("Transport")
+        let dining = category("Dining")
+        let rules = [
+            rule("uber", transport, priority: 100),
+            rule("uber eats", dining, priority: 100),
+        ]
+
+        XCTAssertEqual(
+            CategorizationEngine.bestCategory(forMatchText: "uber eats order", rules: rules),
+            dining
+        )
+    }
+
+    func testRelearningMerchantUpdatesOneUserRule() {
+        let dining = category("Dining")
+        let transport = category("Transport")
+        let first = Transaction(id: "t1", posted: Date(), amount: -10,
+                                detail: "UBER #1", payee: "UBER #1")
+        let second = Transaction(id: "t2", posted: Date(), amount: -12,
+                                 detail: "UBER #2", payee: "UBER #2")
+        ctx.insert(first)
+        ctx.insert(second)
+
+        CategorizationEngine.learn(from: first, category: dining, in: ctx)
+        CategorizationEngine.learn(from: second, category: transport, in: ctx)
+
+        let learned = ((try? ctx.fetch(FetchDescriptor<CategoryRule>())) ?? [])
+            .filter { $0.createdByUser && $0.keyword == "uber" }
+        XCTAssertEqual(learned.count, 1)
+        XCTAssertEqual(learned.first?.category, transport)
+        XCTAssertEqual(
+            CategorizationEngine.bestCategory(forMatchText: "uber #3", rules: learned),
+            transport
+        )
+    }
+
     func testCategorizeSkipsUserCategorized() {
         let food = category("Food")
         let txn = Transaction(id: "t1", posted: Date(), amount: -5, detail: "COFFEE", categorizedByUser: true)

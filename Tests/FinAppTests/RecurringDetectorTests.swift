@@ -61,8 +61,25 @@ final class RecurringDetectorTests: XCTestCase {
     func testNextDueProjectedFromLastSeen() {
         series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30, endDaysAgo: 10)
         let c = RecurringDetector.detectCandidates(from: allTxns)[0]
-        let expected = cal.date(byAdding: .day, value: 30, to: c.lastSeen)!
+        let expected = RecurringSchedule.advance(c.lastSeen, by: .monthly, calendar: cal)!
         XCTAssertEqual(cal.startOfDay(for: c.nextDue), cal.startOfDay(for: expected))
+    }
+
+    func testMonthlyNextDueUsesCalendarMonthAtMonthEnd() {
+        let dates = [
+            cal.date(from: DateComponents(year: 2025, month: 11, day: 30))!,
+            cal.date(from: DateComponents(year: 2025, month: 12, day: 31))!,
+            cal.date(from: DateComponents(year: 2026, month: 1, day: 31))!,
+        ]
+        for (index, date) in dates.enumerated() {
+            ctx.insert(Transaction(id: "month-end-\(index)", posted: date, amount: -10,
+                                   detail: "Month End", payee: "Month End"))
+        }
+
+        let candidate = RecurringDetector.detectCandidates(from: allTxns, calendar: cal)[0]
+
+        XCTAssertEqual(cal.dateComponents([.year, .month, .day], from: candidate.nextDue),
+                       DateComponents(year: 2026, month: 2, day: 28))
     }
 
     func testIgnoresInflows() {
@@ -148,6 +165,16 @@ final class RecurringDetectorTests: XCTestCase {
         XCTAssertEqual(bill?.expectedAmount, Decimal(string: "15.49"))
     }
 
+    func testPriceIncreaseRemainsDetectedOnSecondChargeAtNewPrice() {
+        priceSeries(merchant: "Netflix",
+                    amounts: ["-13.99", "-13.99", "-13.99", "-15.49", "-15.49"])
+
+        let candidate = RecurringDetector.detectCandidates(from: allTxns, calendar: cal)[0]
+
+        XCTAssertEqual(candidate.previousAmount, Decimal(string: "13.99"))
+        XCTAssertEqual(candidate.expectedAmount, Decimal(string: "15.49"))
+    }
+
     func testRefreshClearsPriceChangeOnceStable() {
         series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30)
         let bill = RecurringBill(merchantName: "netflix", expectedAmount: Decimal(string: "15.49")!,
@@ -179,5 +206,49 @@ final class RecurringDetectorTests: XCTestCase {
         let netflix = bills.filter { $0.merchantName == "netflix" }
         XCTAssertEqual(netflix.count, 1, "Dismissed merchant must not be re-inserted")
         XCTAssertTrue(netflix.first?.dismissed == true, "Dismissal must persist across refresh")
+    }
+
+    func testRefreshRetiresCandidateNoLongerDetected() {
+        ctx.insert(RecurringBill(merchantName: "obsolete", expectedAmount: 10,
+                                 cadence: .monthly, lastSeen: Date(),
+                                 confirmed: false, dismissed: false))
+        try? ctx.save()
+
+        RecurringDetector.refresh([], in: ctx, calendar: cal)
+
+        XCTAssertTrue(((try? ctx.fetch(FetchDescriptor<RecurringBill>())) ?? []).isEmpty)
+    }
+
+    func testRefreshKeepsUserEditedCandidateNoLongerDetected() {
+        // User set a custom next-due date on a detected-but-unconfirmed bill; a
+        // detection flicker must not hard-delete their edit.
+        let bill = RecurringBill(merchantName: "flaky", expectedAmount: 10,
+                                 cadence: .monthly, lastSeen: Date(),
+                                 confirmed: false, dismissed: false)
+        bill.nextDueSetByUser = true
+        ctx.insert(bill)
+        try? ctx.save()
+
+        RecurringDetector.refresh([], in: ctx, calendar: cal)
+
+        XCTAssertEqual((try? ctx.fetch(FetchDescriptor<RecurringBill>()))?.count, 1)
+    }
+
+    func testRefreshAppliesCandidateToActiveConfirmedDuplicateKeeper() {
+        series(merchant: "Netflix", amount: "-15.49", count: 5, gapDays: 30)
+        ctx.insert(RecurringBill(merchantName: "netflix", expectedAmount: 20,
+                                 cadence: .monthly, lastSeen: Date(), confirmed: false))
+        ctx.insert(RecurringBill(merchantName: "netflix", expectedAmount: 10,
+                                 cadence: .monthly, lastSeen: Date(),
+                                 confirmed: true, dismissed: false))
+        try? ctx.save()
+
+        RecurringDetector.refresh(in: ctx, calendar: cal)
+
+        let stored = (try? ctx.fetch(FetchDescriptor<RecurringBill>())) ?? []
+        XCTAssertEqual(stored.count, 1)
+        XCTAssertTrue(stored[0].confirmed)
+        XCTAssertFalse(stored[0].dismissed)
+        XCTAssertEqual(stored[0].expectedAmount, Decimal(string: "15.49"))
     }
 }

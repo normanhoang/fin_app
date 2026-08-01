@@ -46,6 +46,7 @@ final class SimpleFinDecodingTests: XCTestCase {
 
         let acct = response.accounts[0]
         XCTAssertEqual(acct.id, "acct-123")
+        XCTAssertEqual(acct.providerScope, "mybank.com")
         XCTAssertEqual(acct.org, "My Bank")
         XCTAssertEqual(acct.name, "Checking")
         XCTAssertEqual(acct.currency, "USD")
@@ -71,5 +72,67 @@ final class SimpleFinDecodingTests: XCTestCase {
         XCTAssertEqual(payroll.amount, Decimal(string: "2000.00"))
         XCTAssertNil(payroll.payee)
         XCTAssertTrue(payroll.pending)
+    }
+
+    func testOrgWithOnlyNameFallsBackToNameForScope() throws {
+        // Some bridges omit sfin-url and domain. One odd org must not fail the
+        // whole response — fall back to the display name for scope.
+        let data = Data("""
+        {
+          "errors": [],
+          "accounts": [{
+            "org": { "name": "Mutable Display Name" },
+            "id": "acct-123", "name": "Checking", "currency": "USD",
+            "balance": "1.00", "balance-date": 1718000000, "transactions": []
+          }]
+        }
+        """.utf8)
+
+        let response = try SimpleFinResponse.decode(from: data)
+        XCTAssertEqual(response.accounts.count, 1)
+        XCTAssertEqual(response.accounts[0].org, "Mutable Display Name")
+        XCTAssertEqual(response.accounts[0].providerScope, "Mutable Display Name")
+    }
+
+    func testPendingTransactionUsesTransactedAtWhenPostedZero() throws {
+        let data = Data("""
+        {
+          "errors": [],
+          "accounts": [{
+            "org": { "domain": "mybank.com" },
+            "id": "acct-123", "name": "Checking", "currency": "USD",
+            "balance": "1.00", "balance-date": 1718000000,
+            "transactions": [{
+              "id": "tx-p", "posted": 0, "transacted_at": 1717900000,
+              "amount": "-5.00", "description": "HOLD", "pending": true
+            }]
+          }]
+        }
+        """.utf8)
+
+        let response = try SimpleFinResponse.decode(from: data)
+        XCTAssertEqual(response.accounts[0].transactions[0].posted,
+                       Date(timeIntervalSince1970: 1717900000))
+    }
+
+    func testPendingTransactionUsesTransactedAtWhenPostedNull() throws {
+        let data = Data("""
+        {
+          "errors": [],
+          "accounts": [{
+            "org": { "domain": "mybank.com" },
+            "id": "acct-123", "name": "Checking", "currency": "USD",
+            "balance": "1.00", "balance-date": 1718000000,
+            "transactions": [{
+              "id": "tx-p", "posted": null, "transacted_at": 1717900000,
+              "amount": "-5.00", "description": "HOLD", "pending": true
+            }]
+          }]
+        }
+        """.utf8)
+
+        let response = try SimpleFinResponse.decode(from: data)
+        XCTAssertEqual(response.accounts[0].transactions[0].posted,
+                       Date(timeIntervalSince1970: 1717900000))
     }
 }

@@ -38,7 +38,7 @@ struct RootView: View {
         ZStack(alignment: .bottom) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
-                    HStack(spacing: 0) {
+                    LazyHStack(spacing: 0) {
                         // Order: Accounts · Transactions · Dashboard · Recurring · Settings.
                         // (Budgets hidden for now, kept in the codebase.)
                         pageView(AccountsView(), AppTab.accounts.rawValue)

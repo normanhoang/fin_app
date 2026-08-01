@@ -8,8 +8,16 @@ enum CategorizationEngine {
     static func bestCategory(forMatchText text: String, rules: [CategoryRule]) -> Category? {
         rules
             .filter { $0.category != nil && $0.matches(text) }
-            .min { $0.priority < $1.priority }?
+            .sorted(by: rulePrecedes)
+            .first?
             .category
+    }
+
+    private static func rulePrecedes(_ lhs: CategoryRule, _ rhs: CategoryRule) -> Bool {
+        if lhs.createdByUser != rhs.createdByUser { return lhs.createdByUser }
+        if lhs.priority != rhs.priority { return lhs.priority < rhs.priority }
+        if lhs.keyword.count != rhs.keyword.count { return lhs.keyword.count > rhs.keyword.count }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 
     /// Auto-categorize unless the user has already set the category.
@@ -31,12 +39,17 @@ enum CategorizationEngine {
     /// share one fetch across its post-sync steps.
     @MainActor
     static func categorizeAll(_ txns: [Transaction], in context: ModelContext) {
-        let rules = (try? context.fetch(FetchDescriptor<CategoryRule>())) ?? []
+        try? stageCategorizeAll(txns, in: context)
+        try? context.save()
+    }
+
+    @MainActor
+    static func stageCategorizeAll(_ txns: [Transaction], in context: ModelContext) throws {
+        let rules = try context.fetch(FetchDescriptor<CategoryRule>())
         guard !rules.isEmpty else { return }
         for txn in txns where !txn.categorizedByUser {
             categorize(txn, using: rules)
         }
-        try? context.save()
     }
 
     /// Apply a manual override and remember it as a high-priority user rule so
@@ -48,8 +61,19 @@ enum CategorizationEngine {
         txn.categorizedByUser = true
 
         let keyword = normalizeMerchant(txn.payee ?? txn.detail)
-        let rule = CategoryRule(keyword: keyword, priority: 0, createdByUser: true, category: category)
-        context.insert(rule)
+        let matches = ((try? context.fetch(FetchDescriptor<CategoryRule>())) ?? [])
+            .filter { $0.createdByUser && $0.keyword == keyword }
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+        let rule: CategoryRule
+        if let existing = matches.first {
+            existing.priority = 0
+            existing.category = category
+            for duplicate in matches.dropFirst() { context.delete(duplicate) }
+            rule = existing
+        } else {
+            rule = CategoryRule(keyword: keyword, priority: 0, createdByUser: true, category: category)
+            context.insert(rule)
+        }
         return rule
     }
 
@@ -92,7 +116,7 @@ enum CategorizationEngine {
 
         let matching = rules
             .filter { $0.category != nil && $0.matches(text) }
-            .sorted { $0.priority < $1.priority }
+            .sorted(by: rulePrecedes)
         for rule in matching {
             guard let category = rule.category, !seen.contains(category.name) else { continue }
             seen.insert(category.name)

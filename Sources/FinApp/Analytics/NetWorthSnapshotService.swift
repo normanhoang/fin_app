@@ -6,15 +6,21 @@ import SwiftData
 enum NetWorthSnapshotService {
     @MainActor
     static func record(value: Decimal, on date: Date = Date(), in context: ModelContext, calendar: Calendar = .current) {
+        try? stage(value: value, on: date, in: context, calendar: calendar)
+        try? context.save()
+    }
+
+    @MainActor
+    static func stage(
+        value: Decimal, on date: Date = Date(), in context: ModelContext,
+        calendar: Calendar = .current
+    ) throws {
         let day = calendar.startOfDay(for: date)
-        let existing = (try? context.fetch(FetchDescriptor<NetWorthSnapshot>())) ?? []
+        let existing = try context.fetch(FetchDescriptor<NetWorthSnapshot>())
         if let match = existing.first(where: { calendar.isDate($0.day, inSameDayAs: day) }) {
             match.value = value
         } else {
             context.insert(NetWorthSnapshot(day: day, value: value))
         }
-        // Persist explicitly — this runs last in the sync pipeline, so there's
-        // no later save to piggyback on.
-        try? context.save()
     }
 }

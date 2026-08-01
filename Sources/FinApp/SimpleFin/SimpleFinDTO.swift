@@ -13,6 +13,7 @@ struct SimpleFinResponse: Decodable {
 
 struct AccountDTO: Decodable {
     var id: String
+    var providerScope: String
     var org: String
     var name: String
     var currency: String
@@ -29,14 +30,16 @@ struct AccountDTO: Decodable {
 
     private enum OrgKeys: String, CodingKey {
         case name, domain
+        case sfinURL = "sfin-url"
     }
 
     init(
-        id: String, org: String, name: String, currency: String,
+        id: String, providerScope: String, org: String, name: String, currency: String,
         balance: Decimal, availableBalance: Decimal?, balanceDate: Date,
         transactions: [TransactionDTO]
     ) {
         self.id = id
+        self.providerScope = providerScope
         self.org = org
         self.name = name
         self.currency = currency
@@ -56,13 +59,16 @@ struct AccountDTO: Decodable {
         balanceDate = Date(timeIntervalSince1970: try c.decode(TimeInterval.self, forKey: .balanceDate))
         transactions = try c.decodeIfPresent([TransactionDTO].self, forKey: .transactions) ?? []
 
-        // `org` is an object; prefer its name, fall back to domain.
+        // Account IDs are scoped to the organization. Names are display values
+        // and may change, so identity requires a stable URL or domain.
         let org = try c.nestedContainer(keyedBy: OrgKeys.self, forKey: .org)
-        if let orgName = try org.decodeIfPresent(String.self, forKey: .name) {
-            self.org = orgName
-        } else {
-            self.org = try org.decodeIfPresent(String.self, forKey: .domain) ?? "Unknown"
-        }
+        let orgName = try org.decodeIfPresent(String.self, forKey: .name)
+        let domain = try org.decodeIfPresent(String.self, forKey: .domain)
+        let sfinURL = try org.decodeIfPresent(String.self, forKey: .sfinURL)
+        self.org = orgName ?? domain ?? "Unknown"
+        // Prefer a stable URL/domain; fall back to the display name (or a fixed
+        // sentinel) rather than failing the whole response over one odd org.
+        providerScope = sfinURL ?? domain ?? orgName ?? "unknown-org"
     }
 
     private static func decimal(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys) throws -> Decimal {
@@ -91,6 +97,7 @@ struct TransactionDTO: Decodable {
     private enum CodingKeys: String, CodingKey {
         case id, posted, amount, payee, memo, pending
         case detail = "description"
+        case transactedAt = "transacted_at"
     }
 
     init(
@@ -109,7 +116,23 @@ struct TransactionDTO: Decodable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
-        posted = Date(timeIntervalSince1970: try c.decode(TimeInterval.self, forKey: .posted))
+        // Pending transactions may carry posted=0 or null, with the real date in
+        // transacted_at.
+        let postedRaw = try c.decodeIfPresent(TimeInterval.self, forKey: .posted)
+        let transactedAt = try c.decodeIfPresent(TimeInterval.self, forKey: .transactedAt)
+        if let postedRaw, postedRaw > 0 {
+            posted = Date(timeIntervalSince1970: postedRaw)
+        } else if let transactedAt {
+            posted = Date(timeIntervalSince1970: transactedAt)
+        } else if let postedRaw {
+            posted = Date(timeIntervalSince1970: postedRaw)
+        } else {
+            throw DecodingError.keyNotFound(
+                CodingKeys.posted,
+                .init(codingPath: c.codingPath,
+                      debugDescription: "Transaction has neither posted nor transacted_at")
+            )
+        }
         let amountStr = try c.decode(String.self, forKey: .amount)
         guard let amount = Decimal(string: amountStr) else {
             throw DecodingError.dataCorruptedError(forKey: .amount, in: c, debugDescription: "Not a decimal: \(amountStr)")

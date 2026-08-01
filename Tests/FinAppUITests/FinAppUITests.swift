@@ -4,6 +4,7 @@ import XCTest
 /// List `NavigationLink`s and `Menu`s fire deterministically (synthetic cursor
 /// clicks don't). Launches with FINAPP_UITEST=1 → clean in-memory store seeded
 /// with sample data.
+@MainActor
 final class FinAppUITests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
@@ -13,10 +14,13 @@ final class FinAppUITests: XCTestCase {
     /// Recurring 3 · Settings 4. Must move with any app page reorder.
     private static let tabTitles = ["Accounts", "Transactions", "Dashboard", "Recurring", "Settings"]
 
-    private func launch(tab: Int = 0) -> XCUIApplication {
+    private func launch(tab: Int = 0, lockOnBackground: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["FINAPP_UITEST"] = "1"
         app.launchEnvironment["FINAPP_TAB"] = String(tab)
+        if lockOnBackground {
+            app.launchEnvironment["FINAPP_UI_LOCK_ON_BACKGROUND"] = "1"
+        }
         app.launch()
         // The pager builds all pages up-front, so `exists` is true even for
         // elements on off-screen pages (their frames sit a page-width off to the
@@ -32,29 +36,28 @@ final class FinAppUITests: XCTestCase {
     }
 
     /// Scrolls until `element` is hittable, bounded so a wrong page or missing
-    /// element fails fast instead of swiping forever.
+    /// element fails fast instead of swiping forever. "Hittable" alone is not
+    /// enough: an element whose frame pokes into the floating tab-bar band
+    /// reports hittable, but the tap lands on the bar and is swallowed — so
+    /// also require the element to sit clear of the bottom band.
     private func swipeUpUntilHittable(_ app: XCUIApplication, _ element: XCUIElement,
                                       maxSwipes: Int = 6) {
+        let clearOfTabBar = app.windows.firstMatch.frame.maxY - 120
+        func ready() -> Bool { element.isHittable && element.frame.maxY < clearOfTabBar }
         var swipes = 0
-        while !element.isHittable && swipes < maxSwipes { app.swipeUp(); swipes += 1 }
-        XCTAssertTrue(element.isHittable, "\(element) not hittable after \(maxSwipes) swipes")
+        while !ready() && swipes < maxSwipes { app.swipeUp(); swipes += 1 }
+        XCTAssertTrue(ready(), "\(element) not hittable clear of the tab bar after \(maxSwipes) swipes")
     }
 
-    /// The Spending Categories header (identifier `categoryFilterButton`) —
-    /// no longer a Button; the filter popup opens from its context menu.
+    /// The visible Spending Categories filter button.
     private func categoryFilterHeader(_ app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: "categoryFilterButton").firstMatch
     }
 
-    /// Long-press the Spending Categories header and open the filter popup
-    /// from its context menu.
     private func openCategoryFilter(_ app: XCUIApplication) {
         let header = categoryFilterHeader(app)
         swipeUpUntilHittable(app, header)
-        header.press(forDuration: 0.8)
-        let item = app.buttons["Filter Categories"]
-        XCTAssertTrue(item.waitForExistence(timeout: 3), "Filter context menu did not open")
-        item.tap()
+        header.tap()
     }
 
     /// Find a category toggle in the filter sheet, which is a medium-detent List:
@@ -171,12 +174,14 @@ final class FinAppUITests: XCTestCase {
     // 1e. Over-budget budgets show a dismissible alert on the Dashboard card.
     func testOverBudgetAlertDismiss() {
         let app = launch(tab: 2)
-        // Sample data: Groceries $421/$400 and Dining $77/$30 are both over.
-        let alert = app.buttons["dismissOverBudget-Groceries"]
-        for _ in 0..<6 where !alert.isHittable { app.swipeUp() }
+        // Sample data: Dining is over its $30 budget on every calendar day —
+        // its month-pinned rows alone total $35.75. (Groceries is only over
+        // mid-month, when the day-ago rows land inside the current month.)
+        let alert = app.buttons["dismissOverBudget-Dining"]
         XCTAssertTrue(alert.waitForExistence(timeout: 8), "Over-budget alert missing")
+        swipeUpUntilHittable(app, alert)
         alert.tap()
-        XCTAssertFalse(app.buttons["dismissOverBudget-Groceries"].waitForExistence(timeout: 3),
+        XCTAssertFalse(app.buttons["dismissOverBudget-Dining"].waitForExistence(timeout: 3),
                        "Dismissing should hide the over-budget alert")
     }
 
@@ -217,7 +222,10 @@ final class FinAppUITests: XCTestCase {
     // categorized Whole Foods row drops out.
     func testUncategorizedFilterOption() {
         let app = launch(tab: 1)
-        let categorized = app.buttons["txnRow-s-tx-1"] // Whole Foods · Groceries
+        // Netflix's newest recurring charge posts "today", so this row is at the
+        // top of the list on every calendar date (day-ago seed rows can fall
+        // into the previous month and scroll off-screen on the 1st).
+        let categorized = app.buttons["txnRow-s-rec-Netflix-0"] // Netflix · Subscriptions
         XCTAssertTrue(categorized.waitForExistence(timeout: 8), "Seed rows missing")
 
         app.buttons["filterButton"].tap()
@@ -304,9 +312,10 @@ final class FinAppUITests: XCTestCase {
         let subtotal = app.staticTexts.matching(identifier: "monthSubtotal").firstMatch
         XCTAssertTrue(subtotal.waitForExistence(timeout: 5), "Type filter not applied")
 
-        // Clear All from the popup removes it.
+        // Clear All from the popup removes it. It sits below the category rows,
+        // which can push it under the medium sheet's fold — scroll the sheet.
         app.buttons["filterButton"].tap()
-        app.buttons["filterClearAll"].tap()
+        filterSheetRow(app, "filterClearAll").tap()
         app.buttons["filterDone"].tap()
         XCTAssertFalse(subtotal.waitForExistence(timeout: 3), "Clear All did not remove the type filter")
     }
@@ -327,7 +336,7 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(subtotal.waitForExistence(timeout: 5), "Multi-select filter not applied")
 
         app.buttons["filterButton"].tap()
-        app.buttons["filterClearAll"].tap()
+        filterSheetRow(app, "filterClearAll").tap()
         app.buttons["filterDone"].tap()
         XCTAssertFalse(subtotal.waitForExistence(timeout: 3), "Clear All did not remove the filter")
     }
@@ -374,9 +383,11 @@ final class FinAppUITests: XCTestCase {
             app.buttons["recurringSeg-Calendar"].tap()
         }
 
-        // setRecurring projects nextDue = today + 30 days (monthly default).
+        // The tapped row's newest charge posts "today", and setRecurring projects
+        // monthly bills with a calendar month step (+1 month, not +30 days — the
+        // two differ in 31-day months).
         let cal = Calendar.current
-        let due = cal.date(byAdding: .day, value: 30, to: .now)!
+        let due = cal.date(byAdding: .month, value: 1, to: .now)!
         if !cal.isDate(due, equalTo: .now, toGranularity: .month) {
             app.buttons["calNextMonth"].tap()
         }
@@ -535,7 +546,10 @@ final class FinAppUITests: XCTestCase {
         // under the tab bar taps the bar instead of pushing the detail. Position
         // with a single tap afterward — retrying taps after a navigation would just
         // scroll the pushed detail.
-        let txn = app.descendants(matching: .any).matching(identifier: "acctTxnRow-s-tx-1").firstMatch
+        // Netflix's newest recurring charge posts "today", so this row sits near
+        // the top of the card's list on every calendar date (day-ago seed rows
+        // can fall into the previous month and end up far down the list).
+        let txn = app.descendants(matching: .any).matching(identifier: "acctTxnRow-s-rec-Netflix-0").firstMatch
         for _ in 0..<12 {
             guard txn.exists else { app.swipeDown(); continue }
             let midY = txn.frame.midY
@@ -547,7 +561,7 @@ final class FinAppUITests: XCTestCase {
         // the row's nested category-icon button (opening the picker) instead of the
         // NavigationLink. The static text has no gesture of its own, so it bubbles
         // to the link.
-        txn.staticTexts["Whole Foods"].tap()
+        txn.staticTexts["Netflix"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "categoryMenu").firstMatch
             .waitForExistence(timeout: 10), "Transaction detail did not open")
@@ -579,6 +593,21 @@ final class FinAppUITests: XCTestCase {
         }
         // App still alive and responsive if the tab bar is still queryable.
         XCTAssertTrue(app.buttons["tab-Dashboard"].exists, "App crashed during swiping")
+    }
+
+    func testPresentedSheetIsCoveredAfterBackgroundLock() {
+        let app = launch(tab: 0, lockOnBackground: true)
+        let addButton = app.buttons["addAccountButton"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 8))
+        addButton.tap()
+        let nameField = app.textFields["accountNameField"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "Add Account sheet did not open")
+
+        XCUIDevice.shared.press(.home)
+        app.activate()
+
+        XCTAssertTrue(app.staticTexts["FinApp is locked"].waitForExistence(timeout: 8))
+        XCTAssertFalse(nameField.isHittable, "Presented sheet remained interactive above App Lock")
     }
 
     // 10. Tapping a trend bar shows the value popup; scrolling the page dismisses it.
@@ -667,7 +696,21 @@ final class FinAppUITests: XCTestCase {
                       "Manual balance not editable")
         let deleteBtn = app.buttons["deleteAccountButton"]
         XCTAssertTrue(deleteBtn.waitForExistence(timeout: 5), "Delete button missing")
+        swipeUpUntilHittable(app, deleteBtn)
         deleteBtn.tap()
+
+        // The confirmation renders as a popover anchored to the button: there is
+        // no Cancel button — tapping outside dismisses it.
+        let confirm = app.buttons["Confirm Delete"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3), "Delete confirmation missing")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+        XCTAssertFalse(confirm.waitForExistence(timeout: 3),
+                       "Tapping outside should dismiss the confirmation")
+        XCTAssertTrue(app.navigationBars[name].exists, "Cancelling deletion should keep the account")
+
+        deleteBtn.tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3), "Destructive confirmation missing")
+        confirm.tap()
 
         XCTAssertFalse(app.staticTexts[name].waitForExistence(timeout: 3), "Account not deleted")
     }

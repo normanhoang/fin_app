@@ -64,10 +64,9 @@ which sets `txnFilter` then `selectedTab = AppTab.transactions.rawValue` to deep
 pre-filtered Transactions list. Page order: Accounts · Transactions · Dashboard · Recurring ·
 Settings (Dashboard centre + default); the `AppTab` rawValue == physical pager position ==
 tab-bar item index == the `launch(tab:)` indices in `FinAppUITests.swift`, so all **four**
-must move together when reordering. The pager builds every page up-front, so XCUITest
-`exists` is true for elements on off-screen pages — a wrong tab index hangs
-`while !isHittable` loops instead of failing (the `launch` helper asserts the landing
-nav bar to catch this). The pager also `.ignoresSafeArea(.keyboard)` (keyboard resize
+must move together when reordering. The pager uses a `LazyHStack`, so off-screen pages
+may not exist yet; the `launch` helper asserts the landing navigation bar rather than
+querying another page. The pager also `.ignoresSafeArea(.keyboard)` (keyboard resize
 shifted paging offsets), which kills SwiftUI's automatic focus scroll — screens with text
 fields restore room via `keyboardAvoiding()` + `KeyboardReveal`
 (`Support/KeyboardDismiss.swift`); see `TransactionDetailView`'s note field.
@@ -80,9 +79,10 @@ must stay retained (held by `FinAppApp`); a dropped container makes `@Query` tra
 
 **Sync pipeline** (`SimpleFin/`): `SyncCoordinator` (UI-facing `@Observable`, `@MainActor`;
 loads the access URL from `CredentialStore`/Keychain; gated by `SyncThrottle`) →
-`SimpleFinClient` (networking; TLS pinning via `CertificatePinner`; HTTP basic-auth from the
+`SimpleFinClient` (networking; standard ATS certificate validation; HTTP basic-auth from the
 access URL) → decodes `SimpleFinDTO` → `SyncService.sync` upserts into SwiftData **keyed by
-SimpleFin id**, so re-syncing is idempotent. Manual accounts use `"manual-<uuid>"` ids that
+organization-scoped account id and account-scoped transaction id**, so re-syncing is
+idempotent without cross-account collisions. Manual accounts use `"manual-<uuid>"` ids that
 never collide, so sync leaves them untouched. After persisting, the coordinator runs
 `CategorizationEngine.categorizeAll`, `RecurringDetector.refresh`, and records a
 `NetWorthSnapshot`.

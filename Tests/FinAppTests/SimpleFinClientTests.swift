@@ -23,12 +23,13 @@ final class SimpleFinClientTests: XCTestCase {
 
         XCTAssertTrue(url.absoluteString.hasPrefix("https://user:pass@bridge.simplefin.org/simplefin/accounts"))
         XCTAssertTrue(url.absoluteString.contains("start-date=1700000000"))
+        XCTAssertTrue(url.absoluteString.contains("pending=1"))
     }
 
     func testBuildsAccountsURLWithoutStartDate() throws {
         let access = URL(string: "https://user:pass@bridge.simplefin.org/simplefin")!
         let url = SimpleFinClient.accountsURL(accessURL: access, since: nil)
-        XCTAssertEqual(url.absoluteString, "https://user:pass@bridge.simplefin.org/simplefin/accounts")
+        XCTAssertEqual(url.absoluteString, "https://user:pass@bridge.simplefin.org/simplefin/accounts?pending=1")
     }
 
     func testBuildsBasicAuthHeaderFromEmbeddedCredentials() throws {

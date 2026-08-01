@@ -58,4 +58,30 @@ final class RecurringStoreTests: XCTestCase {
         XCTAssertEqual(bills.count, 1, "Duplicate merchant should collapse to one row")
         XCTAssertTrue(bills[0].confirmed, "Keeps the confirmed bill")
     }
+
+    func testDedupeDoesNotDismissAnActiveConfirmedBill() {
+        ctx.insert(RecurringBill(merchantName: "netflix", expectedAmount: 15, cadence: .monthly,
+                                 lastSeen: Date(), confirmed: true, dismissed: false))
+        ctx.insert(RecurringBill(merchantName: "netflix", expectedAmount: 15, cadence: .monthly,
+                                 lastSeen: Date(), confirmed: false, dismissed: true))
+        try? ctx.save()
+
+        RecurringStore.dedupe(in: ctx)
+
+        XCTAssertEqual(bills.count, 1)
+        XCTAssertTrue(bills[0].confirmed)
+        XCTAssertFalse(bills[0].dismissed)
+    }
+
+    func testSetRecurringUsesCalendarMonthAtMonthEnd() {
+        let january31 = cal.date(from: DateComponents(year: 2026, month: 1, day: 31))!
+
+        let bill = RecurringStore.setRecurring(
+            merchant: "netflix", amount: 15, cadence: .monthly,
+            lastSeen: january31, category: nil, in: ctx, calendar: cal
+        )
+
+        XCTAssertEqual(cal.dateComponents([.year, .month, .day], from: bill.nextDue!),
+                       DateComponents(year: 2026, month: 2, day: 28))
+    }
 }

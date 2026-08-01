@@ -1,6 +1,49 @@
 import SwiftUI
 import SwiftData
 
+struct TriageActionGate {
+    private(set) var isProcessing = false
+
+    mutating func begin() -> Bool {
+        guard !isProcessing else { return false }
+        isProcessing = true
+        return true
+    }
+
+    mutating func finish() {
+        isProcessing = false
+    }
+}
+
+/// Invalidates a fling animation's pending completion when Undo intervenes:
+/// the completion captures `generation` at fling start and only advances if it
+/// is still current when the animation ends.
+struct TriageFlingSequence {
+    private(set) var generation = 0
+
+    mutating func invalidate() { generation += 1 }
+
+    func isCurrent(_ captured: Int) -> Bool { captured == generation }
+}
+
+@MainActor
+enum TriageUndoExpiry {
+    static func wait(
+        token: UUID,
+        duration: Duration,
+        currentToken: () -> UUID?,
+        clear: () -> Void
+    ) async {
+        do {
+            try await Task.sleep(for: duration)
+        } catch {
+            return
+        }
+        guard currentToken() == token else { return }
+        clear()
+    }
+}
+
 /// Full-screen "review your uncategorized transactions" swipe flow. One
 /// transaction at a time as a card: swipe right (or tap accept) files it under
 /// the top suggestion, swipe left (or Skip) leaves it, "Not mine" clears it from
@@ -26,8 +69,11 @@ struct TriageView: View {
     @State private var showPicker = false
     @State private var pastThreshold = false
     @State private var undo: UndoState?
+    @State private var actionGate = TriageActionGate()
+    @State private var flingSequence = TriageFlingSequence()
 
     private struct UndoState: Equatable {
+        let token: UUID
         let txnID: PersistentIdentifier
         let categoryName: String
         let atIndex: Int
@@ -64,9 +110,13 @@ struct TriageView: View {
         }
         .onAppear { if queue.isEmpty { queue = uncategorized } }
         .task(id: undo) {
-            guard undo != nil else { return }
-            try? await Task.sleep(for: .seconds(3))
-            withAnimation { undo = nil }
+            guard let token = undo?.token else { return }
+            await TriageUndoExpiry.wait(
+                token: token,
+                duration: .seconds(3),
+                currentToken: { undo?.token },
+                clear: { withAnimation { undo = nil } }
+            )
         }
         .sheet(isPresented: $showPicker) {
             if let txn = current {
@@ -382,6 +432,7 @@ struct TriageView: View {
     private func swipe(for txn: Transaction) -> some Gesture {
         DragGesture()
             .onChanged { value in
+                guard !actionGate.isProcessing else { return }
                 drag = value.translation
                 pastThreshold = abs(value.translation.width) > threshold
             }
@@ -407,48 +458,57 @@ struct TriageView: View {
     }
 
     private func flingAccept(_ category: Category, for txn: Transaction) {
+        guard actionGate.begin() else { return }
         CategorizationEngine.assign(category, to: txn, in: context)
-        withAnimation { undo = UndoState(txnID: txn.persistentModelID,
+        let generation = flingSequence.generation
+        withAnimation { undo = UndoState(token: UUID(), txnID: txn.persistentModelID,
                                          categoryName: category.name, atIndex: index) }
         withAnimation(.easeIn(duration: 0.22)) {
             drag = CGSize(width: 600, height: 0)
-        } completion: { advance() }
+        } completion: { advance(ifCurrent: generation) }
     }
 
     private func flingSkip() {
+        guard actionGate.begin() else { return }
+        let generation = flingSequence.generation
         withAnimation { undo = nil }
         withAnimation(.easeIn(duration: 0.22)) {
             drag = CGSize(width: -600, height: 0)
-        } completion: { advance() }
+        } completion: { advance(ifCurrent: generation) }
     }
 
     /// Files `txn` under `category`, records the undo target, and advances.
     private func accept(_ category: Category, for txn: Transaction) {
-        CategorizationEngine.assign(category, to: txn, in: context)
-        withAnimation { undo = UndoState(txnID: txn.persistentModelID,
-                                         categoryName: category.name, atIndex: index) }
-        advance()
+        flingAccept(category, for: txn)
     }
 
     private func skip() {
-        withAnimation { undo = nil }
-        advance()
+        flingSkip()
     }
 
     private func notMine() {
-        guard let txn = current else { return }
+        guard let txn = current, actionGate.begin() else { return }
         CategorizationEngine.assign(nil, to: txn, in: context)
+        let generation = flingSequence.generation
         withAnimation { undo = nil }
-        advance()
+        withAnimation(.easeIn(duration: 0.22)) {
+            drag = CGSize(width: -600, height: 0)
+        } completion: { advance(ifCurrent: generation) }
     }
 
-    private func advance() {
-        index += 1
+    /// Completion of a fling animation. Always releases the gate; only advances
+    /// if no undo invalidated this fling while it was animating.
+    private func advance(ifCurrent generation: Int) {
         drag = .zero
+        actionGate.finish()
+        guard flingSequence.isCurrent(generation) else { return }
+        index += 1
     }
 
     private func performUndo(_ state: UndoState) {
         guard let txn = queue.first(where: { $0.persistentModelID == state.txnID }) else { return }
+        // An in-flight fling's completion must not advance past the restored card.
+        flingSequence.invalidate()
         // Revert the transaction to uncategorized and step back to it. The learned
         // rule stays (a minor over-teach), but the charge itself is un-filed.
         txn.category = nil

@@ -17,7 +17,7 @@ enum RecurringStore {
         in context: ModelContext,
         calendar: Calendar = .current
     ) -> RecurringBill {
-        let nextDue = calendar.date(byAdding: .day, value: cadence.days, to: lastSeen)
+        let nextDue = RecurringSchedule.advance(lastSeen, by: cadence, calendar: calendar)
         let existing = (try? context.fetch(FetchDescriptor<RecurringBill>())) ?? []
 
         if let bill = existing.first(where: { $0.merchantName == merchant }) {
@@ -46,20 +46,30 @@ enum RecurringStore {
     /// and delete the rest. Clears pre-existing duplicates on sync/launch.
     @MainActor
     static func dedupe(in context: ModelContext) {
-        let all = (try? context.fetch(FetchDescriptor<RecurringBill>())) ?? []
+        try? stageDedupe(in: context)
+        try? context.save()
+    }
+
+    @MainActor
+    static func stageDedupe(in context: ModelContext) throws {
+        let all = try context.fetch(FetchDescriptor<RecurringBill>())
         let groups = Dictionary(grouping: all, by: \.merchantName)
         var changed = false
 
         for (_, bills) in groups where bills.count > 1 {
-            let keeper = bills.first(where: \.confirmed) ?? bills[0]
+            let keeper = bills.first(where: { $0.confirmed && !$0.dismissed })
+                ?? bills.first(where: \.confirmed)
+                ?? bills[0]
             keeper.confirmed = bills.contains(where: \.confirmed)
-            keeper.dismissed = bills.contains(where: \.dismissed)
+            keeper.dismissed = keeper.confirmed
+                ? !bills.contains(where: { $0.confirmed && !$0.dismissed })
+                : bills.contains(where: \.dismissed)
             keeper.nextDue = bills.compactMap(\.nextDue).min() ?? keeper.nextDue
             for bill in bills where bill !== keeper {
                 context.delete(bill)
             }
             changed = true
         }
-        if changed { try? context.save() }
+        _ = changed
     }
 }
