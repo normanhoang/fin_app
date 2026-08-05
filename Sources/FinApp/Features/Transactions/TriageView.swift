@@ -108,7 +108,15 @@ struct TriageView: View {
             }
             if let undo { undoToast(undo) }
         }
-        .onAppear { if queue.isEmpty { queue = uncategorized } }
+        .onAppear {
+            if queue.isEmpty {
+                // Excluded merchants are deliberately uncategorized — keep them
+                // out of the review queue instead of resurfacing them every sync.
+                queue = uncategorized.filter {
+                    !CategorizationEngine.isExcluded($0.matchText, rules: rules)
+                }
+            }
+        }
         .task(id: undo) {
             guard let token = undo?.token else { return }
             await TriageUndoExpiry.wait(

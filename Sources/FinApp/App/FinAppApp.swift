@@ -56,6 +56,7 @@ struct FinAppApp: App {
         // existing installs without waiting for a network sync.
         CategorySeed.seedIfNeeded(in: self.container.mainContext)
         CategorySeed.ensureMissing(in: self.container.mainContext)
+        CategorySeed.ensureExclusions(in: self.container.mainContext)
     }
 
     var body: some Scene {

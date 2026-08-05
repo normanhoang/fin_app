@@ -145,6 +145,105 @@ final class CategorizationEngineTests: XCTestCase {
         XCTAssertTrue(learned.matches("coffee shop #99".lowercased()))
     }
 
+    func testExclusionRuleForcesUncategorized() {
+        let transfers = category("Transfers")
+        let rules = [
+            rule("venmo", transfers),
+            CategoryRule(keyword: "transfer to venmo", priority: 0, category: nil),
+        ]
+        XCTAssertNil(
+            CategorizationEngine.bestCategory(forMatchText: "transfer to venmo", rules: rules),
+            "A matching exclusion rule must force the transaction uncategorized"
+        )
+        XCTAssertEqual(
+            CategorizationEngine.bestCategory(forMatchText: "venmo cashout", rules: rules),
+            transfers,
+            "Non-excluded merchants still match keyword rules"
+        )
+    }
+
+    func testUserRuleBeatsExclusion() {
+        let dining = category("Dining")
+        let userRule = CategoryRule(keyword: "transfer to venmo", priority: 0, createdByUser: true, category: dining)
+        let exclusion = CategoryRule(keyword: "transfer to venmo", priority: 0, category: nil)
+        XCTAssertEqual(
+            CategorizationEngine.bestCategory(forMatchText: "transfer to venmo", rules: [userRule, exclusion]),
+            dining,
+            "An explicit user rule must outrank a seeded exclusion"
+        )
+    }
+
+    func testExclusionKeepsExistingCategoryButBlocksNew() {
+        let transfers = category("Transfers")
+        let rules = [
+            rule("venmo", transfers),
+            CategoryRule(keyword: "transfer to venmo", priority: 0, category: nil),
+        ]
+        let old = Transaction(id: "1", posted: Date(), amount: -20, detail: "Transfer to Venmo",
+                              payee: "Transfer to Venmo", category: transfers)
+        let fresh = Transaction(id: "2", posted: Date(), amount: -35, detail: "Transfer to Venmo",
+                                payee: "Transfer to Venmo")
+        ctx.insert(old); ctx.insert(fresh)
+
+        CategorizationEngine.categorize(old, using: rules)
+        CategorizationEngine.categorize(fresh, using: rules)
+
+        XCTAssertEqual(old.category, transfers, "Exclusion must not strip a category history already has")
+        XCTAssertNil(fresh.category, "Exclusion keeps new transactions uncategorized")
+    }
+
+    func testAssignUnderExclusionLearnsRuleThatSpreads() {
+        let dining = category("Dining")
+        ctx.insert(CategoryRule(keyword: "transfer to venmo", priority: 0, category: nil))
+        let t1 = Transaction(id: "1", posted: Date(), amount: -20, detail: "Transfer to Venmo", payee: "Transfer to Venmo")
+        let t2 = Transaction(id: "2", posted: Date(), amount: -35, detail: "Transfer to Venmo", payee: "Transfer to Venmo")
+        ctx.insert(t1); ctx.insert(t2)
+
+        CategorizationEngine.assign(dining, to: t1, in: ctx)
+        CategorizationEngine.categorizeAll(in: ctx)
+
+        XCTAssertEqual(t1.category, dining)
+        XCTAssertTrue(t1.categorizedByUser)
+        XCTAssertEqual(t2.category, dining,
+                       "The learned user rule outranks the exclusion for the merchant's other charges")
+        XCTAssertFalse(t2.categorizedByUser)
+    }
+
+    func testSuggestionsSkipRuleMatchesForExcludedText() {
+        let transfers = category("Transfers")
+        let dining = category("Dining")
+        let rules = [
+            rule("venmo", transfers),
+            CategoryRule(keyword: "transfer to venmo", priority: 0, category: nil),
+        ]
+        let txns = [
+            Transaction(id: "1", posted: Date(), amount: -5, detail: "CAFE", category: dining),
+            Transaction(id: "2", posted: Date(), amount: -6, detail: "CAFE", category: dining),
+        ]
+
+        let picks = CategorizationEngine.suggestions(forMatchText: "transfer to venmo",
+                                                     rules: rules, transactions: txns)
+
+        XCTAssertTrue(picks.isEmpty,
+                      "Excluded merchants get no seed-rule picks and no most-used fallback")
+    }
+
+    func testApplyOfUserRuleReachesExcludedTransactions() {
+        let dining = category("Dining")
+        ctx.insert(CategoryRule(keyword: "transfer to venmo", priority: 0, category: nil))
+        let plain = Transaction(id: "1", posted: Date(), amount: -10, detail: "TRANSFER 4821", payee: "TRANSFER 4821")
+        let excluded = Transaction(id: "2", posted: Date(), amount: -20, detail: "Transfer to Venmo", payee: "Transfer to Venmo")
+        ctx.insert(plain); ctx.insert(excluded)
+        let learned = CategoryRule(keyword: "transfer", priority: 0, createdByUser: true, category: dining)
+        ctx.insert(learned)
+
+        CategorizationEngine.apply(learned, in: ctx)
+
+        XCTAssertEqual(plain.category, dining)
+        XCTAssertEqual(excluded.category, dining,
+                       "A learned user rule outranks the exclusion, so apply reaches excluded transactions")
+    }
+
     func testNormalizeMerchantStripsNumericTokens() {
         XCTAssertEqual(CategorizationEngine.normalizeMerchant("COFFEE SHOP #42"), "coffee shop")
         XCTAssertEqual(CategorizationEngine.normalizeMerchant("AMEX EPAYMENT 12345 ACH"), "amex epayment ach")

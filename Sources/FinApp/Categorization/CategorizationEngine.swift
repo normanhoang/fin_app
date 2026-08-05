@@ -4,13 +4,34 @@ import SwiftData
 /// Assigns categories to transactions from ordered keyword rules, and learns
 /// new rules from manual overrides. Matching logic is pure and unit-tested.
 enum CategorizationEngine {
-    /// Lowest `priority` value wins among matching rules.
+    /// Lowest `priority` value wins among matching rules. A matching exclusion
+    /// rule (nil category) suppresses seed rules — the transaction stays
+    /// uncategorized — but a matching user rule outranks the exclusion: an
+    /// explicit user choice always wins.
     static func bestCategory(forMatchText text: String, rules: [CategoryRule]) -> Category? {
-        rules
-            .filter { $0.category != nil && $0.matches(text) }
-            .sorted(by: rulePrecedes)
-            .first?
-            .category
+        let match = evaluate(text, rules: rules)
+        guard let best = match.best else { return nil }
+        return (best.createdByUser || !match.excluded) ? best.category : nil
+    }
+
+    static func isExcluded(_ text: String, rules: [CategoryRule]) -> Bool {
+        rules.contains { $0.category == nil && $0.matches(text) }
+    }
+
+    /// One pass over the rule table: the winning categorized rule plus whether
+    /// an exclusion rule matches.
+    private static func evaluate(_ text: String, rules: [CategoryRule])
+        -> (best: CategoryRule?, excluded: Bool) {
+        var excluded = false
+        var best: CategoryRule?
+        for rule in rules where rule.matches(text) {
+            if rule.category == nil {
+                excluded = true
+            } else if best == nil || rulePrecedes(rule, best!) {
+                best = rule
+            }
+        }
+        return (best, excluded)
     }
 
     private static func rulePrecedes(_ lhs: CategoryRule, _ rhs: CategoryRule) -> Bool {
@@ -20,10 +41,18 @@ enum CategorizationEngine {
         return lhs.id.uuidString < rhs.id.uuidString
     }
 
-    /// Auto-categorize unless the user has already set the category.
+    /// Auto-categorize unless the user has already set the category. An
+    /// exclusion (with no user rule) suppresses new categorization but never
+    /// strips a category the transaction already has, so shipping an exclusion
+    /// keyword leaves existing history intact.
     static func categorize(_ txn: Transaction, using rules: [CategoryRule]) {
         guard !txn.categorizedByUser else { return }
-        txn.category = bestCategory(forMatchText: txn.matchText, rules: rules)
+        let match = evaluate(txn.matchText, rules: rules)
+        if let best = match.best, best.createdByUser || !match.excluded {
+            txn.category = best.category
+        } else if !match.excluded {
+            txn.category = nil
+        }
     }
 
     /// Categorize every transaction not yet categorized by the user. Filters in
@@ -79,7 +108,8 @@ enum CategorizationEngine {
 
     /// Apply one rule to every transaction it matches (skipping user-set ones).
     /// Used after `learn` so a manual assignment reaches the merchant's other
-    /// charges without re-running every rule against the whole store.
+    /// charges without re-running every rule against the whole store. Learned
+    /// rules are user rules, which outrank exclusions, so no exclusion check.
     @MainActor
     static func apply(_ rule: CategoryRule, in context: ModelContext) {
         let txns = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
@@ -114,8 +144,12 @@ enum CategorizationEngine {
         var out: [(category: Category, confidence: Double)] = []
         var seen = Set<String>()
 
+        // Excluded merchants suggest only user rules (which outrank the
+        // exclusion) — offering a seed rule's category would undo the
+        // exclusion one accept at a time.
+        let excluded = isExcluded(text, rules: rules)
         let matching = rules
-            .filter { $0.category != nil && $0.matches(text) }
+            .filter { $0.category != nil && $0.matches(text) && (!excluded || $0.createdByUser) }
             .sorted(by: rulePrecedes)
         for rule in matching {
             guard let category = rule.category, !seen.contains(category.name) else { continue }
@@ -123,6 +157,10 @@ enum CategorizationEngine {
             out.append((category, rule.createdByUser ? 0.95 : 0.92))
             if out.count == limit { return out }
         }
+
+        // No most-used fallback for excluded merchants: filing a transfer
+        // under a guessed spending category would miscount it as spending.
+        if excluded { return out }
 
         // Fallback: the user's most-used spending categories.
         var counts: [String: (category: Category, count: Int)] = [:]

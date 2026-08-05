@@ -68,6 +68,29 @@ enum CategorySeed {
         if added { try? context.save() }
     }
 
+    /// Exclusion keywords: matching transactions are forced uncategorized.
+    static let exclusionKeywords = ["transfer to venmo"]
+
+    /// Idempotently insert exclusion rules (nil-category `CategoryRule`s).
+    /// Already-categorized history is safe without a freeze pass: an exclusion
+    /// suppresses new categorization but `CategorizationEngine.categorize`
+    /// never strips a category an excluded transaction already has.
+    @MainActor
+    static func ensureExclusions(in context: ModelContext, keywords: [String] = exclusionKeywords) {
+        // Bail on fetch failure rather than mistaking an error for an empty
+        // store — a false "missing" would insert duplicate rules. Next launch
+        // retries.
+        guard let rules = try? context.fetch(FetchDescriptor<CategoryRule>()) else { return }
+        let existing = Set(rules.filter { $0.category == nil }.map(\.keyword))
+        let missing = keywords.map { $0.lowercased() }.filter { !existing.contains($0) }
+        guard !missing.isEmpty else { return }
+
+        for keyword in missing {
+            context.insert(CategoryRule(keyword: keyword, priority: 0, createdByUser: false, category: nil))
+        }
+        try? context.save()
+    }
+
     @MainActor
     private static func insert(_ seed: Seed, in context: ModelContext) {
         let category = Category(name: seed.name, colorHex: seed.color, systemIcon: seed.icon, isIncome: seed.isIncome)
