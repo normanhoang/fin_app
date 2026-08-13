@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import FinApp
 
 final class AccountTypeDetectorTests: XCTestCase {
@@ -73,5 +74,12 @@ final class AccountTypeDetectorTests: XCTestCase {
     func testCaseInsensitive() {
         XCTAssertEqual(infer("SAVINGS"), .cash)
         XCTAssertEqual(infer("visa PLATINUM"), .creditCard)
+    }
+
+    @MainActor
+    func testAccountRowColorsForCashInvestmentsAndLoans() {
+        XCTAssertEqual(UIColor(AccountsView.roleColor(.cash)), .systemGreen)
+        XCTAssertEqual(UIColor(AccountsView.roleColor(.investment)), .systemBlue)
+        XCTAssertEqual(UIColor(AccountsView.roleColor(.loan)), .systemOrange)
     }
 }

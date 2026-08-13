@@ -315,13 +315,14 @@ struct AccountsView: View {
 
     // MARK: Rows
 
-    /// Tint for the row's icon circle: investments brand, cash sky blue,
-    /// debts red, property gold.
-    private func roleColor(_ type: AccountType) -> Color {
+    /// Tint for the row's icon circle: cash green, investments blue,
+    /// credit cards red, loans orange, property gold.
+    static func roleColor(_ type: AccountType) -> Color {
         switch type {
-        case .investment: .brand
-        case .cash: Color(hex: "#38BDF8")
-        case .creditCard, .loan: .negative
+        case .investment: .blue
+        case .cash: .green
+        case .creditCard: .negative
+        case .loan: .orange
         case .property: Color(hex: "#C4A46A")
         case .other: .textSecondary
         }
@@ -330,10 +331,10 @@ struct AccountsView: View {
     private func row(_ account: Account) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(roleColor(account.accountType).opacity(0.10))
+                Circle().fill(Self.roleColor(account.accountType).opacity(0.10))
                 Image(systemName: account.accountType.icon)
                     .font(.system(size: 15))
-                    .foregroundStyle(roleColor(account.accountType))
+                    .foregroundStyle(Self.roleColor(account.accountType))
             }
             .frame(width: 36, height: 36)
             VStack(alignment: .leading, spacing: 2) {
