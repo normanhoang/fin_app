@@ -297,6 +297,49 @@ final class AnalyticsTests: XCTestCase {
         XCTAssertTrue(Analytics.accountRangeDeltas(snaps, accounts: accounts, in: interval).isEmpty)
     }
 
+    func testAccountRangeDeltasVaryByInterval() {
+        let a = account("1300.00"); a.id = "a"
+        accountSnap("a", "1000.00", day: date(2026, 5, 1))
+        accountSnap("a", "1200.00", day: date(2026, 6, 15))
+        accountSnap("a", "1300.00", day: date(2026, 7, 20))
+        let snaps = (try! ctx.fetch(FetchDescriptor<AccountBalanceSnapshot>())).sorted { $0.day < $1.day }
+        let accounts = try! ctx.fetch(FetchDescriptor<Account>())
+
+        let wide = Analytics.accountRangeDeltas(
+            snaps, accounts: accounts,
+            in: DateInterval(start: date(2026, 6, 1), end: date(2026, 7, 20)))
+        let narrow = Analytics.accountRangeDeltas(
+            snaps, accounts: accounts,
+            in: DateInterval(start: date(2026, 7, 1), end: date(2026, 7, 20)))
+
+        XCTAssertEqual(wide.first?.delta, Decimal(string: "300.00"), "Baseline is the May 1 snapshot")
+        XCTAssertEqual(narrow.first?.delta, Decimal(string: "100.00"), "Baseline is the Jun 15 snapshot")
+        XCTAssertNotEqual(wide.first?.delta, narrow.first?.delta,
+                          "Switching the range must move the numbers")
+    }
+
+    /// A window reaching further back than the stored history falls back to the
+    /// earliest snapshot rather than returning nil, so every over-long window
+    /// reports the same full-history delta. Intentional — don't "fix" it.
+    func testAccountRangeDeltasCollapseWhenWindowExceedsHistory() {
+        let a = account("1300.00"); a.id = "a"
+        accountSnap("a", "1000.00", day: date(2026, 6, 15))
+        accountSnap("a", "1300.00", day: date(2026, 7, 20))
+        let snaps = (try! ctx.fetch(FetchDescriptor<AccountBalanceSnapshot>())).sorted { $0.day < $1.day }
+        let accounts = try! ctx.fetch(FetchDescriptor<Account>())
+
+        let oneYear = Analytics.accountRangeDeltas(
+            snaps, accounts: accounts,
+            in: DateInterval(start: date(2025, 7, 20), end: date(2026, 7, 20)))
+        let all = Analytics.accountRangeDeltas(
+            snaps, accounts: accounts,
+            in: DateInterval(start: date(2020, 1, 1), end: date(2026, 7, 20)))
+
+        XCTAssertEqual(oneYear.first?.delta, Decimal(string: "300.00"), "Full history, not nil")
+        XCTAssertEqual(all.first?.delta, oneYear.first?.delta,
+                       "Windows longer than the history collapse to the same delta")
+    }
+
     func testSafeToSpendRollsOverdueAnchorForward() {
         // Stored nextDue is stale (Jul 1); rolled forward from Jul 20 the next
         // monthly charge lands Aug 1 — outside the month, so nothing subtracts.
