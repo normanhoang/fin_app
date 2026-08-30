@@ -244,6 +244,15 @@ struct SettingsView: View {
         if let error = coordinator.errorMessage {
             tintedCard(error, icon: "xmark.octagon", tint: .negative)
         }
+        if !coordinator.providerErrors.isEmpty {
+            Link(destination: URL(string: "https://beta-bridge.simplefin.org/auth/login")!) {
+                Text("Fix this connection at SimpleFin Bridge \u{2192}")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.brand)
+            }
+            .padding(.horizontal, 4)
+            .accessibilityIdentifier("fixConnectionLink")
+        }
     }
 
     private func tintedCard(_ message: String, icon: String, tint: Color) -> some View {
