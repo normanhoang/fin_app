@@ -60,7 +60,10 @@ Tap "Preview with sample data" in Settings to explore the whole app with realist
 example data — no bank connection needed.
 
 FinApp requires a SimpleFin account to connect your bank. SimpleFin is a separate
-service; see https://simplefin.org.
+service; see https://simplefin.org. 
+
+Instructions on how to setup SimpleFin with the FinApp app can be found here:
+https://normanhoang.github.io/fin_app/simplefin-setup
 
 ## Keywords (max 100 chars, comma-separated, no spaces after commas)
 `budget,finance,money,net worth,spending,expense,tracker,bank,accounts,bills,subscriptions,private,simplefin`  (99)
