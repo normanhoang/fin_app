@@ -802,6 +802,9 @@ final class FinAppUITests: XCTestCase {
                       "Housing (has spend) should show under Auto")
         XCTAssertFalse(app.buttons["category-Bars"].exists,
                        "Auto should hide categories with no spend this month")
+        // The filter button tints green under Auto; colour isn't queryable, so
+        // assert the a11y value that rides along with it.
+        XCTAssertEqual(categoryFilterHeader(app).value as? String, "Auto")
 
         openCategoryFilter(app)
 
@@ -812,6 +815,8 @@ final class FinAppUITests: XCTestCase {
         app.navigationBars["Dashboard"].tap() // dismiss the popover
         XCTAssertTrue(app.buttons["category-Bars"].waitForExistence(timeout: 3),
                       "Manual state (all visible) should take over when Auto is off")
+        XCTAssertEqual(categoryFilterHeader(app).value as? String, "Custom",
+                       "Filter button should drop its Auto tint when Auto is off")
 
         openCategoryFilter(app)
         XCTAssertTrue(auto.waitForExistence(timeout: 5), "Filter popup did not reopen")
@@ -819,6 +824,7 @@ final class FinAppUITests: XCTestCase {
         app.navigationBars["Dashboard"].tap()
         XCTAssertFalse(app.buttons["category-Bars"].waitForExistence(timeout: 2),
                        "Re-enabling Auto should re-derive from spend")
+        XCTAssertEqual(categoryFilterHeader(app).value as? String, "Auto")
     }
 
     // 14e. Tapping a popup toggle disables Auto and seeds the manual flags from

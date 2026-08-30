@@ -510,10 +510,11 @@ struct DashboardView: View {
                     .foregroundStyle(Color.textTertiary)
                 Button { showCategoryFilter = true } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
-                        .foregroundStyle(Color.textSecondary)
+                        .foregroundStyle(autoCategories ? Color.brand : Color.textSecondary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Filter categories")
+                .accessibilityValue(autoCategories ? "Auto" : "Custom")
                 .accessibilityIdentifier("categoryFilterButton")
             }
             .popover(isPresented: $showCategoryFilter) {
