@@ -432,7 +432,7 @@ struct AccountDetailView: View {
                     // Manual accounts are user-maintained, so the balance is editable.
                     LabeledContent("Balance") {
                         TextField("0.00", text: $balanceText)
-                            .keyboardType(.numbersAndPunctuation)
+                            .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                             .accessibilityIdentifier("accountBalanceField")
                     }
@@ -448,13 +448,13 @@ struct AccountDetailView: View {
                     }
                 }
                 Picker("Type", selection: $account.accountType) {
-                    ForEach(AccountType.allCases) { type in
+                    ForEach(AccountType.selectable) { type in
                         Text(type.displayName).tag(type)
                     }
                 }
                 .tint(Color.textPrimary)
                 if account.isManual && account.accountType.isDebt {
-                    Text("Debts are stored as negative balances (e.g. -1500).")
+                    Text("Enter the amount you owe; it's stored as a debt.")
                         .font(.caption).foregroundStyle(Color.textSecondary)
                 }
             }
@@ -499,11 +499,11 @@ struct AccountDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             editedName = account.displayName
-            balanceText = NSDecimalNumber(decimal: account.balance).stringValue
+            balanceText = NSDecimalNumber(decimal: account.balance.magnitude).stringValue
         }
         .onChange(of: editedName) { applyRename() }
         .onChange(of: balanceText) { applyBalance() }
-        .onChange(of: account.typeRaw) { try? context.save() }
+        .onChange(of: account.accountType) { applyBalance() }
         .confirmationDialog(
             "Delete \(account.displayName)?",
             isPresented: $showDeleteConfirmation,
@@ -529,8 +529,9 @@ struct AccountDetailView: View {
 
     /// Persist an edited balance for a manual account (ignores unparseable input).
     private func applyBalance() {
-        guard account.isManual, let value = Decimal(string: balanceText, locale: .current) else { return }
-        account.balance = value
+        if account.isManual, let value = Decimal(string: balanceText, locale: .current) {
+            account.balance = account.accountType.signedBalance(from: value)
+        }
         try? context.save()
     }
 

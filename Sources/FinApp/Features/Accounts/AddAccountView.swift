@@ -12,19 +12,16 @@ struct AddAccountView: View {
     @State private var type: AccountType = .cash
     @State private var balanceText = ""
 
-    /// Grid order + short labels per the 5d mock (Cash · Property · Investment /
-    /// Credit · Loan · Other), distinct from the plural Accounts-section names.
+    /// Grid order + short labels: Cash · Property · Investment / Credit · Loan.
     private static let typeTiles: [(type: AccountType, label: String, icon: String)] = [
         (.cash, "Cash", "banknote"),
         (.property, "Property", "house"),
         (.investment, "Investment", "chart.line.uptrend.xyaxis"),
         (.creditCard, "Credit", "creditcard"),
         (.loan, "Loan", "mappin.and.ellipse"),
-        (.other, "Other", "plus.circle"),
     ]
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
-    private var balance: Decimal? { Decimal(string: balanceText, locale: .current) }
+    private var magnitude: Decimal? { Decimal(string: balanceText, locale: .current) }
 
     var body: some View {
         NavigationStack {
@@ -53,7 +50,7 @@ struct AddAccountView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || balance == nil)
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || magnitude == nil)
                 }
             }
         }
@@ -77,30 +74,45 @@ struct AddAccountView: View {
     }
 
     private var typeGrid: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(Self.typeTiles, id: \.type) { tile in
-                let selected = type == tile.type
-                Button {
-                    type = tile.type
-                } label: {
-                    VStack(spacing: 8) {
-                        Image(systemName: tile.icon)
-                            .font(.system(size: 20, weight: .regular))
-                        Text(tile.label)
-                            .font(.system(size: 15, weight: selected ? .semibold : .regular))
+        let rows = [Array(Self.typeTiles.prefix(3)), Array(Self.typeTiles.dropFirst(3))]
+        return GeometryReader { geo in
+            let spacing: CGFloat = 12
+            let tileWidth = (geo.size.width - spacing * 2) / 3
+            VStack(spacing: spacing) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: spacing) {
+                        ForEach(row, id: \.type) { tile in
+                            typeTile(tile)
+                                .frame(width: tileWidth, height: 80)
+                        }
                     }
-                    .foregroundStyle(selected ? Color.brand : Color.textPrimary)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 80)
-                    .background(selected ? Color.brand.opacity(0.10) : Color.surface,
-                               in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(selected ? Color.brand.opacity(0.6) : Color.hairline, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("accountType-\(tile.label)")
             }
         }
+        .frame(height: 172)
+    }
+
+    private func typeTile(_ tile: (type: AccountType, label: String, icon: String)) -> some View {
+        let selected = type == tile.type
+        return Button {
+            type = tile.type
+        } label: {
+            VStack(spacing: 8) {
+                Image(systemName: tile.icon)
+                    .font(.system(size: 20, weight: .regular))
+                Text(tile.label)
+                    .font(.system(size: 15, weight: selected ? .semibold : .regular))
+            }
+            .foregroundStyle(selected ? Color.brand : Color.textPrimary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(selected ? Color.brand.opacity(0.10) : Color.surface,
+                       in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(selected ? Color.brand.opacity(0.6) : Color.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("accountType-\(tile.label)")
     }
 
     private var balanceCard: some View {
@@ -111,7 +123,7 @@ struct AddAccountView: View {
             TextField("0.00", text: $balanceText)
                 .font(.system(size: 26, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.textPrimary)
-                .keyboardType(.numbersAndPunctuation)
+                .keyboardType(.decimalPad)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -125,7 +137,7 @@ struct AddAccountView: View {
             Image(systemName: "info.circle")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.textSecondary)
-            Text("Manual accounts aren't synced — update the balance yourself. Enter liability accounts (credit cards, loans) as negative numbers.")
+            Text("Manual accounts aren't synced — update the balance yourself. Credit cards and loans are stored as debts; enter the amount you owe.")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.textSecondary)
         }
@@ -137,15 +149,13 @@ struct AddAccountView: View {
     }
 
     private func save() {
-        guard let balance else { return }
-        // Store the balance as entered — liabilities are typed as negative numbers
-        // (see the info note), so the sign is the user's to set.
+        guard let magnitude else { return }
         let account = Account(
             id: "manual-\(UUID().uuidString)",
             org: "Manual",
             name: name.trimmingCharacters(in: .whitespaces),
             currency: "USD",
-            balance: balance,
+            balance: type.signedBalance(from: magnitude),
             balanceDate: Date(),
             typeRaw: type.rawValue,
             isManual: true

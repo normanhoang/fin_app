@@ -57,6 +57,7 @@ struct FinAppApp: App {
         CategorySeed.seedIfNeeded(in: self.container.mainContext)
         CategorySeed.ensureMissing(in: self.container.mainContext)
         CategorySeed.ensureExclusions(in: self.container.mainContext)
+        AccountType.migrateOther(in: self.container.mainContext)
     }
 
     var body: some Scene {

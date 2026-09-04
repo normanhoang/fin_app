@@ -55,6 +55,7 @@
 		AA0BFDC33D80BC0726B95FE1 /* KeyboardDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB70D4CE933C581B0369E8DE /* KeyboardDismiss.swift */; };
 		B161FB28B04B6190A5054538 /* TransactionFilterStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */; };
 		BA6A6310B8D87DDA79C70AB5 /* TriageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EEDD9516A98F9860A08C57 /* TriageView.swift */; };
+		BCCA5A19074DDAE079DF0E1A /* AccountTypeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6D38CD2FF8633665A297ED9 /* AccountTypeTests.swift */; };
 		BCCB90EF53F6A68F106DD4F6 /* DesignComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D9D282FA26B1CA7C500013 /* DesignComponents.swift */; };
 		BCEEE9C5BF5256E595BEC834 /* Transaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979D1A4CE8D86953E1BDB0E0 /* Transaction.swift */; };
 		BD65E5D5CF02AE7229D86B50 /* SimpleFinClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA1EA7DFE6B5F3DEF338F8ED /* SimpleFinClient.swift */; };
@@ -159,6 +160,7 @@
 		E4CE39E1069B5053BE5996A8 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		E6517CF137C1914A5F1D3A3C /* AppLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockTests.swift; sourceTree = "<group>"; };
 		E693700E847C857D1E593892 /* RecurringSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringSchedule.swift; sourceTree = "<group>"; };
+		E6D38CD2FF8633665A297ED9 /* AccountTypeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTypeTests.swift; sourceTree = "<group>"; };
 		E959B4F9273A78E7A0710B99 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		EDE8665D0ABC06FA8113E1A5 /* NetWorthSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthSnapshot.swift; sourceTree = "<group>"; };
 		EE541B07C89A694F7FB77690 /* RecurringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringView.swift; sourceTree = "<group>"; };
@@ -382,6 +384,7 @@
 			isa = PBXGroup;
 			children = (
 				319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */,
+				E6D38CD2FF8633665A297ED9 /* AccountTypeTests.swift */,
 				F103062B940571D6066896DB /* AnalyticsTests.swift */,
 				E6517CF137C1914A5F1D3A3C /* AppLockTests.swift */,
 				04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */,
@@ -605,6 +608,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				39F7EBE8E47BE369BADA07A5 /* AccountTypeDetectorTests.swift in Sources */,
+				BCCA5A19074DDAE079DF0E1A /* AccountTypeTests.swift in Sources */,
 				E93AB1B266462599FD6E313E /* AnalyticsTests.swift in Sources */,
 				EE47972BC14412C4CACDDD4E /* AppLockTests.swift in Sources */,
 				2C6ACAA2776EDC4B380970C6 /* CategorizationEngineTests.swift in Sources */,

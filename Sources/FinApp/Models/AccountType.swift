@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// Classifies an account into an asset/debt group for the Accounts screen.
 /// SimpleFin provides no type, so synced accounts default to `.cash` and the
@@ -18,6 +19,27 @@ enum AccountType: String, CaseIterable, Identifiable {
         case .creditCard, .loan: true
         default: false
         }
+    }
+
+    /// Types the user can pick. `.other` remains for existing stores until
+    /// `migrateOther` rewrites those rows to `.cash`.
+    static let selectable: [AccountType] = allCases.filter { $0 != .other }
+
+    /// Magnitude as typed in the UI; sign comes from `isDebt` (liabilities
+    /// stored negative). A pasted minus is ignored.
+    func signedBalance(from magnitude: Decimal) -> Decimal {
+        let amount = magnitude.magnitude
+        return isDebt ? -amount : amount
+    }
+
+    static func migrateOther(in context: ModelContext) {
+        guard let accounts = try? context.fetch(FetchDescriptor<Account>()) else { return }
+        var changed = false
+        for account in accounts where account.typeRaw == AccountType.other.rawValue {
+            account.accountType = .cash
+            changed = true
+        }
+        if changed { try? context.save() }
     }
 
     /// Top-level section on the Accounts screen.
