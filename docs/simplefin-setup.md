@@ -40,6 +40,27 @@ apps**. See current pricing at
 > cannot be used again — if you ever need to reconnect, generate a fresh token
 > on SimpleFin Bridge.
 
+## Muting SimpleFin emails (Gmail)
+
+SimpleFin Bridge emails you when it syncs or when a bank connection needs
+attention. If those pile up, a Gmail filter can route them out of the inbox
+without losing them.
+
+This has to be done in a desktop browser at
+[mail.google.com](https://mail.google.com) — the mobile app can't create filters.
+
+1. Open one of the SimpleFin messages.
+2. Click the **More** icon (three vertical dots) at the top right, next to
+   **Reply**, and choose **Filter messages like this**.
+3. The filter criteria screen is fine as-is — click **Create filter**.
+4. Tick **Skip the Inbox (Archive it)** and **Apply the label**, then pick (or
+   create) a *SimpleFin* label.
+5. Click **Create filter** again.
+
+From then on SimpleFin messages go straight to that label. The Gmail app only
+notifies for mail that lands in the inbox, so these stop buzzing your phone —
+and they're still there under the label whenever you want to check them.
+
 ## Troubleshooting
 
 **My token doesn't work.**
