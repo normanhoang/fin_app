@@ -77,6 +77,14 @@ https://normanhoang.github.io/fin_app/simplefin-setup
 ## Privacy Policy URL
 `https://normanhoang.github.io/fin_app/privacy`
 
+## What's New (version 1.10.0)
+`A couple of small fixes to manual accounts:
+
+• Enter balances with the number pad — no more typing a minus sign for debts,
+  the account type sets the sign for you.
+• The "Other" account type is gone; existing Other accounts move to Cash
+  automatically.`
+
 ## What's New (version 1.7.0)
 `A fresh look across the whole app, plus a few things you asked for:
 
