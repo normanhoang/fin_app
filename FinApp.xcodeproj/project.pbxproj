@@ -42,6 +42,7 @@
 		4D554D04D7D4E8A66DCEB543 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D171F3181843038DBE7044F6 /* PrivacyInfo.xcprivacy */; };
 		531BB4226E43E45C16C2FDAF /* RecurringDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B14848472272349DA38AAE1 /* RecurringDetector.swift */; };
 		53215D2270FEE9E28013DF19 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 365C671522FDEAC79598B554 /* Assets.xcassets */; };
+		5B7E6EC48358FD482F958C16 /* Amortization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455456E023D3991552A8A239 /* Amortization.swift */; };
 		5F8B9BAAF55498B3FD5F413E /* FinanceKitDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B772DC79FB912241AF4C516 /* FinanceKitDTO.swift */; };
 		602C0A360DECC64397B3AA09 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEEA896C1D6F87E3DD1DCC4 /* RootView.swift */; };
 		62BB21250781CCCB4300C8ED /* SyncServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064BF2355930485CECCB1254 /* SyncServiceTests.swift */; };
@@ -50,6 +51,7 @@
 		7EDBDF51B6DE6D779CC20FDA /* FinAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009DED65DEC305AE07BF2B1 /* FinAppUITests.swift */; };
 		7FB2B4B59ECCD1371837834C /* RecurringScheduleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5502E6B035A3EC87366C7343 /* RecurringScheduleTests.swift */; };
 		830604D207F45DDE30C64A52 /* RecurringStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 725B00DD1C0DB2802CC7B87F /* RecurringStoreTests.swift */; };
+		8351873B2598EA926916FC22 /* AmortizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A388E2B621B9D772F9E879D /* AmortizationTests.swift */; };
 		86F227DD41BD64EA5BB29E6C /* PrivacyShieldHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E485358E35846982EC0DB03 /* PrivacyShieldHost.swift */; };
 		8F265E086629CA5F3323F3A0 /* CategoryPickerPopup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 700D2977F598124C05780603 /* CategoryPickerPopup.swift */; };
 		92E54102B44376538D0F6B44 /* CredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA19FD56220E94FB9F9B8A06 /* CredentialStoreTests.swift */; };
@@ -129,6 +131,7 @@
 		3B772DC79FB912241AF4C516 /* FinanceKitDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitDTO.swift; sourceTree = "<group>"; };
 		3E67EDF458CCCD9D09B72E62 /* Budget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Budget.swift; sourceTree = "<group>"; };
 		402A245B5633BA51B2CF4853 /* AddAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddAccountView.swift; sourceTree = "<group>"; };
+		455456E023D3991552A8A239 /* Amortization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Amortization.swift; sourceTree = "<group>"; };
 		4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFilterStateTests.swift; sourceTree = "<group>"; };
 		5502E6B035A3EC87366C7343 /* RecurringScheduleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringScheduleTests.swift; sourceTree = "<group>"; };
 		56E5762A9CF9A5EF3F565EAB /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
@@ -140,6 +143,7 @@
 		679C5CE470E0A8FB16D007C2 /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		67D9D282FA26B1CA7C500013 /* DesignComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignComponents.swift; sourceTree = "<group>"; };
 		69FB5E2E6FCC4A8E31ACF7E0 /* TriageStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriageStateTests.swift; sourceTree = "<group>"; };
+		6A388E2B621B9D772F9E879D /* AmortizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmortizationTests.swift; sourceTree = "<group>"; };
 		6E485358E35846982EC0DB03 /* PrivacyShieldHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyShieldHost.swift; sourceTree = "<group>"; };
 		6EE2F05A0132E181B8820225 /* RecurringDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringDetectorTests.swift; sourceTree = "<group>"; };
 		700D2977F598124C05780603 /* CategoryPickerPopup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPickerPopup.swift; sourceTree = "<group>"; };
@@ -304,6 +308,14 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
+		686238253FA7E14A59471C30 /* Loans */ = {
+			isa = PBXGroup;
+			children = (
+				455456E023D3991552A8A239 /* Amortization.swift */,
+			);
+			path = Loans;
+			sourceTree = "<group>";
+		};
 		76EC18DF39841F15D24B7BBB /* Support */ = {
 			isa = PBXGroup;
 			children = (
@@ -422,6 +434,7 @@
 				5C7F62176553BE384EB410D3 /* AccountSourceTests.swift */,
 				319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */,
 				E6D38CD2FF8633665A297ED9 /* AccountTypeTests.swift */,
+				6A388E2B621B9D772F9E879D /* AmortizationTests.swift */,
 				F103062B940571D6066896DB /* AnalyticsTests.swift */,
 				E6517CF137C1914A5F1D3A3C /* AppLockTests.swift */,
 				04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */,
@@ -464,6 +477,7 @@
 				4E29D11A99D8BC30EAA73CF1 /* Categorization */,
 				CE7CBCAA4FE117E231471767 /* Features */,
 				5AC6BAD98C9991775283CA54 /* FinanceKit */,
+				686238253FA7E14A59471C30 /* Loans */,
 				97E98D5829573346B7BFE386 /* Models */,
 				7CCF800F6556987F76BBF4B9 /* Recurring */,
 				49E6DABA76FDE2B0871AFCAC /* SimpleFin */,
@@ -599,6 +613,7 @@
 				FDE219EA4D93D15D5B41BC69 /* AccountTypeDetector.swift in Sources */,
 				E07329D086BB921CAC49EA7D /* AccountsView.swift in Sources */,
 				376D0DB44392F0D19284F2A4 /* AddAccountView.swift in Sources */,
+				5B7E6EC48358FD482F958C16 /* Amortization.swift in Sources */,
 				05199C9D83578377BD7B4B2A /* Analytics.swift in Sources */,
 				DBB4E36C85A9060BAE592D7B /* AppLock.swift in Sources */,
 				BE167BDDEAF20F4B2A0DFFDC /* AppRouter.swift in Sources */,
@@ -658,6 +673,7 @@
 				00802AFA8CF1013EE35682BD /* AccountSourceTests.swift in Sources */,
 				39F7EBE8E47BE369BADA07A5 /* AccountTypeDetectorTests.swift in Sources */,
 				BCCA5A19074DDAE079DF0E1A /* AccountTypeTests.swift in Sources */,
+				8351873B2598EA926916FC22 /* AmortizationTests.swift in Sources */,
 				E93AB1B266462599FD6E313E /* AnalyticsTests.swift in Sources */,
 				EE47972BC14412C4CACDDD4E /* AppLockTests.swift in Sources */,
 				2C6ACAA2776EDC4B380970C6 /* CategorizationEngineTests.swift in Sources */,
