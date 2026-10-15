@@ -29,6 +29,8 @@ final class SyncCoordinator {
     var errorMessage: String?
     /// Non-fatal messages from SimpleFin's `errors` array (e.g. a bank needing re-auth).
     var providerErrors: [String] = []
+    /// Merged-into-FinanceKit accounts SimpleFin still returns (unlink prompt).
+    var supersededStillLinked: [String] = []
 
     /// Stored (not computed from the Keychain) so SwiftUI observes connect/disconnect
     /// and re-renders. Kept in sync with the stored access URL by `connect`/`disconnect`.
@@ -106,6 +108,7 @@ final class SyncCoordinator {
         }
         errorMessage = nil
         providerErrors = []
+        supersededStillLinked = []
         lastSyncAttempt = Date()
         let generation = connectionGeneration
         isSyncing = true
@@ -135,6 +138,7 @@ final class SyncCoordinator {
                 throw error
             }
             providerErrors = response.errors
+            supersededStillLinked = (try? SyncService.supersededNames(in: response.accounts, context: context)) ?? []
             lastSyncDate = Date()
             errorMessage = nil
         } catch is CancellationError {
@@ -158,6 +162,7 @@ final class SyncCoordinator {
         lastSyncAttempt = nil
         lastSyncDate = nil
         providerErrors = []
+        supersededStillLinked = []
         errorMessage = nil
     }
 
@@ -169,13 +174,19 @@ final class SyncCoordinator {
         try SyncService.sync(accounts: response.accounts,
                              pruneMissing: response.errors.isEmpty,
                              save: false, into: context)
+        try stageDerivedData(in: context)
+        try context.save()
+    }
+
+    /// Categorize, refresh recurring bills, and snapshot net worth and
+    /// per-account balances (no save). Shared with FinanceKit import.
+    static func stageDerivedData(in context: ModelContext) throws {
         let txns = try context.fetch(FetchDescriptor<Transaction>())
         try CategorizationEngine.stageCategorizeAll(txns, in: context)
         try RecurringDetector.stageRefresh(txns, in: context)
         let accounts = try context.fetch(FetchDescriptor<Account>())
         try NetWorthSnapshotService.stage(value: Analytics.netWorth(accounts), in: context)
         try AccountBalanceSnapshotService.stage(accounts, in: context)
-        try context.save()
     }
 
     private func nextSyncStartDate() -> Date {

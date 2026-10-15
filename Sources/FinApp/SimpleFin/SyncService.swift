@@ -21,7 +21,7 @@ enum SyncService {
         var accountsByID = Dictionary(existingAccounts.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var txnsByID = Dictionary(existingTxns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var legacyAccounts = Dictionary(
-            grouping: existingAccounts.filter { !$0.isManual && $0.providerID == nil },
+            grouping: existingAccounts.filter { $0.source == .simplefin && !$0.isManual && $0.providerID == nil },
             by: \.id
         )
         var legacyTxns = Dictionary(grouping: existingTxns.filter { $0.providerID == nil }, by: \.id)
@@ -29,7 +29,7 @@ enum SyncService {
         // string changes (e.g. a bridge starts sending sfin-url) rekeys in place
         // instead of duplicating and pruning the original.
         let byProviderID = Dictionary(
-            grouping: existingAccounts.filter { !$0.isManual && $0.providerID != nil },
+            grouping: existingAccounts.filter { $0.source == .simplefin && !$0.isManual && $0.providerID != nil },
             by: { $0.providerID! }
         )
         let dtoIDCounts = Dictionary(grouping: dtos, by: \.id).mapValues(\.count)
@@ -37,8 +37,13 @@ enum SyncService {
             accountStorageID(providerScope: $0.providerScope, providerID: $0.id)
         })
 
+        // Accounts merged into FinanceKit: SimpleFin keeps returning them until the
+        // user unlinks them in Bridge. Skip so the merged row isn't duplicated.
+        let supersededIDs = Set(existingAccounts.compactMap(\.supersededProviderID))
+
         for dto in dtos {
             let accountID = accountStorageID(providerScope: dto.providerScope, providerID: dto.id)
+            if supersededIDs.contains(accountID) { continue }
             // When several orgs report the same raw id, corroborate the legacy
             // match with the org name instead of first-come-first-served.
             let legacyCandidates = legacyAccounts[dto.id] ?? []
@@ -104,13 +109,15 @@ enum SyncService {
         // A synced account no longer in the response was removed from the SimpleFin
         // connection — delete it (transactions cascade) so its stale balance stops
         // counting toward net worth. Callers pass pruneMissing only when the response
-        // reported no provider errors, so a bank outage never wipes data. Manual
-        // accounts are never in the response and are never pruned.
+        // reported no provider errors, so a bank outage never wipes data. Only
+        // SimpleFin-sourced accounts are pruned: manual and FinanceKit accounts
+        // never appear in the response.
         if pruneMissing {
             let dtoIDs = Set(dtos.map {
                 accountStorageID(providerScope: $0.providerScope, providerID: $0.id)
             })
-            for account in existingAccounts where !account.isManual && !dtoIDs.contains(account.id) {
+            for account in existingAccounts where account.source == .simplefin && !account.isManual
+                && !dtoIDs.contains(account.id) {
                 context.delete(account)
             }
         }
@@ -123,6 +130,17 @@ enum SyncService {
 
     static func transactionStorageID(accountID: String, providerID: String) -> String {
         "simplefin-transaction:\(accountID.utf8.count):\(accountID)\(providerID)"
+    }
+
+    /// Display names of merged-into-FinanceKit accounts that SimpleFin still
+    /// returns — i.e. the user hasn't unlinked them in Bridge yet.
+    @MainActor
+    static func supersededNames(in dtos: [AccountDTO], context: ModelContext) throws -> [String] {
+        let incoming = Set(dtos.map { accountStorageID(providerScope: $0.providerScope, providerID: $0.id) })
+        return try context.fetch(FetchDescriptor<Account>())
+            .filter { $0.supersededProviderID.map(incoming.contains) ?? false }
+            .map(\.displayName)
+            .sorted()
     }
 
     @MainActor

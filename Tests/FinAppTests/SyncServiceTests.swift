@@ -331,4 +331,47 @@ final class SyncServiceTests: XCTestCase {
         XCTAssertEqual(accts.count, 1)
         XCTAssertEqual(accts.first?.balance, Decimal(string: "250.00"))
     }
+
+    private func financeKitAccount(id: String = "financekit-X", superseding: String? = nil) -> Account {
+        let a = Account(id: id, org: "Apple", name: "Apple Card", currency: "USD",
+                        balance: -50, balanceDate: Date(), typeRaw: AccountType.creditCard.rawValue)
+        a.source = .financeKit
+        a.supersededProviderID = superseding
+        return a
+    }
+
+    func testPruneLeavesFinanceKitAccountsAlone() throws {
+        let ctx = makeContext()
+        ctx.insert(financeKitAccount())
+        try ctx.save()
+
+        try SyncService.sync(accounts: [account(id: "a1", txns: [])], pruneMissing: true, into: ctx)
+
+        let ids = try ctx.fetch(FetchDescriptor<Account>()).map(\.id)
+        XCTAssertTrue(ids.contains("financekit-X"))
+    }
+
+    func testSupersededAccountIsSkippedAndReported() throws {
+        let ctx = makeContext()
+        let dto = account(id: "card", txns: [tx(id: "t1", amount: "-5.00")])
+        let oldID = SyncService.accountStorageID(providerScope: dto.providerScope, providerID: dto.id)
+        let fk = financeKitAccount(superseding: oldID)
+        fk.customName = "My Card"
+        ctx.insert(fk)
+        try ctx.save()
+
+        try SyncService.sync(accounts: [dto], pruneMissing: true, into: ctx)
+
+        let accounts = try ctx.fetch(FetchDescriptor<Account>())
+        XCTAssertEqual(accounts.map(\.id), ["financekit-X"], "no SimpleFin row resurrected")
+        XCTAssertTrue(try ctx.fetch(FetchDescriptor<Transaction>()).isEmpty)
+        XCTAssertEqual(try SyncService.supersededNames(in: [dto], context: ctx), ["My Card"])
+    }
+
+    func testSupersededNamesEmptyWhenNotReturned() throws {
+        let ctx = makeContext()
+        ctx.insert(financeKitAccount(superseding: "simplefin-account:gone"))
+        try ctx.save()
+        XCTAssertEqual(try SyncService.supersededNames(in: [account(id: "a1", txns: [])], context: ctx), [])
+    }
 }

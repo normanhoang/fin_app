@@ -231,4 +231,31 @@ final class SyncCoordinatorTests: XCTestCase {
         XCTAssertNil(coordinator.lastSyncDate)
         XCTAssertNotNil(coordinator.errorMessage)
     }
+
+    func testSyncReportsSupersededStillLinked() async throws {
+        let container = AppSchema.makeInMemoryContainer()
+        let ctx = container.mainContext
+        let accessURL = URL(string: "https://user:pass@bridge.example/simplefin")!
+        let dto = AccountDTO(id: "card", providerScope: "apple.example", org: "Apple", name: "Apple Card",
+                             currency: "USD", balance: -5, availableBalance: nil,
+                             balanceDate: Date(), transactions: [])
+        let fk = Account(id: "financekit-X", org: "Apple", name: "Apple Card", currency: "USD",
+                         balance: -5, balanceDate: Date())
+        fk.source = .financeKit
+        fk.supersededProviderID = SyncService.accountStorageID(providerScope: "apple.example", providerID: "card")
+        ctx.insert(fk)
+        try ctx.save()
+        let coordinator = SyncCoordinator(
+            context: ctx,
+            loadAccessURL: { accessURL }, saveAccessURL: { _ in }, deleteAccessURL: {},
+            claim: { _ in accessURL },
+            fetch: { _, _ in SimpleFinResponse(errors: [], accounts: [dto]) }
+        )
+
+        await coordinator.sync()
+
+        XCTAssertEqual(coordinator.supersededStillLinked, ["Apple Card"])
+        coordinator.disconnect()
+        XCTAssertEqual(coordinator.supersededStillLinked, [])
+    }
 }
