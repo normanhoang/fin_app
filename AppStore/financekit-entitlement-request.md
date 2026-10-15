@@ -72,7 +72,7 @@ Apple adds FinanceKit as a managed capability on the team. Then:
 3. `xcodegen generate`, then build to a physical iPhone with
    `-allowProvisioningUpdates` so automatic signing picks up the new capability.
    FinanceKit does not work in the Simulator.
-4. Run the device checklist in the design spec.
+4. Run the device checklist in the design spec. Device checklist: see `docs/superpowers/specs/2026-10-15-financekit-design.md` → Testing → Device checklist. If card balances show positive, flip the liability case in `FinanceKitMapping.signed`.
 5. Update `AppStore/privacy-policy.md` (and `docs/privacy.md`) to mention Apple Wallet
    data alongside SimpleFin — still on-device only, not collected. The App Store
    privacy label stays "Data Not Collected", since nothing leaves the device.

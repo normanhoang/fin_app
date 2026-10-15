@@ -87,6 +87,16 @@ never collide, so sync leaves them untouched. After persisting, the coordinator 
 `CategorizationEngine.categorizeAll`, `RecurringDetector.refresh`, and records a
 `NetWorthSnapshot`.
 
+**FinanceKit** (`FinanceKit/`, behind the off-by-default `FINANCEKIT` compilation flag —
+see `project.yml`): imports Apple Card/Cash/Savings on-device. `FinanceKitCoordinator`
+(`@Observable`) → `FinanceKitSource` (live: `LiveFinanceKitSource`, `#if FINANCEKIT`,
+iOS 17.4+; Simulator always unavailable) → `FinanceKitImporter` (pure SwiftData upsert,
+ids `financekit-<UUID>`). `Account.source` (simplefin/manual/financeKit) scopes each sync
+path — **SimpleFin prune only deletes `.simplefin` rows.** `FinanceKitMerge` folds the
+SimpleFin copy of an Apple account into the FinanceKit row and records its old id in
+`supersededProviderID`; SimpleFin sync skips that id and surfaces
+`supersededStillLinked` (Accounts-tab unlink banner).
+
 **Analytics** (`Analytics/Analytics.swift`): pure static functions over `[Account]`/`[Transaction]`
 (`netWorth`, `monthlyIncome/Spending`, `spendingByCategory`, `monthlyTrend`) — no UI coupling,
 unit-tested. Net-worth history comes from `NetWorthSnapshot` (one row/day, recorded on sync;
