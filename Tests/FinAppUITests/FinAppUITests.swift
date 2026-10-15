@@ -715,6 +715,43 @@ final class FinAppUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts[name].waitForExistence(timeout: 3), "Account not deleted")
     }
 
+    // 11b. A manual loan with auto-calculate on is created with a schedule.
+    func testAddLoanWithAutoCalculatedBalance() {
+        let app = launch(tab: 0)
+        XCTAssertTrue(app.buttons["addAccountButton"].waitForExistence(timeout: 8))
+        app.buttons["addAccountButton"].tap()
+
+        let name = "Test Mortgage"
+        let nameField = app.textFields["accountNameField"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "Add Account form missing")
+        nameField.tap(); nameField.typeText(name)
+        app.buttons["accountType-Loan"].tap()
+        let balanceField = app.textFields["0.00"]
+        balanceField.tap(); balanceField.typeText("250000")
+
+        let toggle = app.switches["loanAutoToggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 3), "Auto-calculate toggle missing for Loan")
+        // Tap the switch itself (right edge), not the label.
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+
+        let rate = app.textFields["loanRateField"]
+        XCTAssertTrue(rate.waitForExistence(timeout: 3), "Schedule fields did not appear")
+        rate.tap(); rate.typeText("6")
+        let payment = app.textFields["loanPaymentField"]
+        payment.tap(); payment.typeText("2500")
+        let escrow = app.textFields["loanEscrowField"]
+        escrow.tap(); escrow.typeText("400")
+        XCTAssertTrue(app.staticTexts["loanPreview"].waitForExistence(timeout: 3), "Preview missing")
+
+        app.buttons["Save"].tap()
+
+        let row = app.staticTexts[name]
+        swipeUpUntilHittable(app, row)
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "Loan account not added")
+        let autoTag = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "· auto")).firstMatch
+        XCTAssertTrue(autoTag.exists, "Row should be tagged auto")
+    }
+
     // 13. After switching tabs, the large navigation title keeps its proper leading
     //     inset (regression: it used to render flush-left until a manual scroll).
     func testLargeTitleInsetAfterTabSwitch() {

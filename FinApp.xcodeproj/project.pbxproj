@@ -46,6 +46,7 @@
 		5B7E6EC48358FD482F958C16 /* Amortization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455456E023D3991552A8A239 /* Amortization.swift */; };
 		5F8B9BAAF55498B3FD5F413E /* FinanceKitDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B772DC79FB912241AF4C516 /* FinanceKitDTO.swift */; };
 		602C0A360DECC64397B3AA09 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEEA896C1D6F87E3DD1DCC4 /* RootView.swift */; };
+		61FC77D7CA9918F3B72461AD /* LoanScheduleFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C8FA0DFEF6BDA10D6577F41 /* LoanScheduleFields.swift */; };
 		62BB21250781CCCB4300C8ED /* SyncServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064BF2355930485CECCB1254 /* SyncServiceTests.swift */; };
 		6CD8F446268997A168E9DF3F /* LoanDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B548F490DB1746E3F04FBAC /* LoanDraft.swift */; };
 		7331E29CF8B62B45F9C1C21A /* Budget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E67EDF458CCCD9D09B72E62 /* Budget.swift */; };
@@ -138,6 +139,7 @@
 		402A245B5633BA51B2CF4853 /* AddAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddAccountView.swift; sourceTree = "<group>"; };
 		455456E023D3991552A8A239 /* Amortization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Amortization.swift; sourceTree = "<group>"; };
 		4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFilterStateTests.swift; sourceTree = "<group>"; };
+		4C8FA0DFEF6BDA10D6577F41 /* LoanScheduleFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanScheduleFields.swift; sourceTree = "<group>"; };
 		5502E6B035A3EC87366C7343 /* RecurringScheduleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringScheduleTests.swift; sourceTree = "<group>"; };
 		56E5762A9CF9A5EF3F565EAB /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
 		5B548F490DB1746E3F04FBAC /* LoanDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanDraft.swift; sourceTree = "<group>"; };
@@ -235,6 +237,7 @@
 			children = (
 				DCCB76803E218E918FE6943F /* AccountsView.swift */,
 				402A245B5633BA51B2CF4853 /* AddAccountView.swift */,
+				4C8FA0DFEF6BDA10D6577F41 /* LoanScheduleFields.swift */,
 			);
 			path = Accounts;
 			sourceTree = "<group>";
@@ -654,6 +657,7 @@
 				AA0BFDC33D80BC0726B95FE1 /* KeyboardDismiss.swift in Sources */,
 				6CD8F446268997A168E9DF3F /* LoanDraft.swift in Sources */,
 				EC7B50649A7DB47321E951AB /* LoanSchedule.swift in Sources */,
+				61FC77D7CA9918F3B72461AD /* LoanScheduleFields.swift in Sources */,
 				062959BF94E004CE4854BFEF /* LoanUpdater.swift in Sources */,
 				2A73F855C162217F8ACB1A60 /* LockScreen.swift in Sources */,
 				A470D9461A5774971F5B45B2 /* NavBarRelayout.swift in Sources */,

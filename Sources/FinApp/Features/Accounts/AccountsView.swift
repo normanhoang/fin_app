@@ -381,7 +381,7 @@ struct AccountsView: View {
     private func metaLine(_ account: Account) -> String {
         let type = account.accountType.displayName
         switch account.source {
-        case .manual: return "\(type) · manual"
+        case .manual: return account.loanSchedule != nil ? "\(type) · auto" : "\(type) · manual"
         case .financeKit: return "\(type) · Apple Wallet"
         case .simplefin: return type
         }

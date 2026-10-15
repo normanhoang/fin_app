@@ -11,6 +11,11 @@ struct AddAccountView: View {
     @State private var name = ""
     @State private var type: AccountType = .cash
     @State private var balanceText = ""
+    @State private var autoCalculate = false
+    @State private var draft = LoanDraft()
+
+    /// Loan with auto-calculate on: balance comes from the schedule.
+    private var usesSchedule: Bool { type == .loan && autoCalculate }
 
     /// Grid order + short labels: Cash · Property · Investment / Credit · Loan.
     private static let typeTiles: [(type: AccountType, label: String, icon: String)] = [
@@ -33,8 +38,11 @@ struct AddAccountView: View {
                         typeGrid
                     }
                     VStack(alignment: .leading, spacing: 10) {
-                        SectionLabel("Balance")
+                        SectionLabel(usesSchedule ? "Current balance" : "Balance")
                         balanceCard
+                    }
+                    if type == .loan {
+                        scheduleCard
                     }
                     infoCard
                 }
@@ -44,13 +52,15 @@ struct AddAccountView: View {
             .screenBackground()
             .navigationTitle("Add Account")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: balanceText) { _, new in draft.balanceText = new }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || magnitude == nil)
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || magnitude == nil
+                                  || (usesSchedule && !draft.isValid))
                 }
             }
         }
@@ -132,12 +142,29 @@ struct AddAccountView: View {
             .strokeBorder(Color.hairline, lineWidth: 1))
     }
 
+    private var scheduleCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Auto-calculate balance", isOn: $autoCalculate)
+                .accessibilityIdentifier("loanAutoToggle")
+            if autoCalculate {
+                LoanScheduleFields(draft: $draft)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(Color.hairline, lineWidth: 1))
+    }
+
     private var infoCard: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "info.circle")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.textSecondary)
-            Text("Manual accounts aren't synced — update the balance yourself. Credit cards and loans are stored as debts; enter the amount you owe.")
+            Text(usesSchedule
+                 ? "The balance updates on each payment date from your rate and payment. Escrow doesn't reduce the balance."
+                 : "Manual accounts aren't synced — update the balance yourself. Credit cards and loans are stored as debts; enter the amount you owe.")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.textSecondary)
         }
@@ -161,7 +188,11 @@ struct AddAccountView: View {
             isManual: true
         )
         context.insert(account)
+        if usesSchedule, case .success(let inputs) = draft.validate() {
+            account.loanSchedule = LoanSchedule(inputs: inputs)
+        }
         try? context.save()
+        if account.loanSchedule != nil { LoanUpdater.refresh(in: context) }
         dismiss()
     }
 }
