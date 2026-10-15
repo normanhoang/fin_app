@@ -66,6 +66,7 @@ struct FinAppApp: App {
         CategorySeed.ensureExclusions(in: self.container.mainContext)
         AccountType.migrateOther(in: self.container.mainContext)
         AccountSource.migrateManual(in: self.container.mainContext)
+        LoanUpdater.refresh(in: self.container.mainContext)
     }
 
     var body: some Scene {
@@ -106,6 +107,7 @@ struct FinAppApp: App {
                 // successful sync, instead of hitting SimpleFin on every open.
                 if coordinator.isConnected { Task { await coordinator.syncIfStale() } }
                 Task { await financeKit.importIfStale() }
+                LoanUpdater.refresh(in: container.mainContext)
             }
         }
     }
