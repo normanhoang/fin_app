@@ -7,11 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00802AFA8CF1013EE35682BD /* AccountSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C7F62176553BE384EB410D3 /* AccountSourceTests.swift */; };
 		02FE8C4C4ADA367D86AC3CA9 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8A2DE9CA577A96FD7D5D0DD /* Theme.swift */; };
 		0314E0C64C1CDE194C3419CD /* AccountBalanceSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2A342873AFD09D898737E94 /* AccountBalanceSnapshot.swift */; };
 		0333C47C18CF02F9FDB942A8 /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = C058242F1AAA7B2CD74A73BB /* SampleData.swift */; };
 		05199C9D83578377BD7B4B2A /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E0C0CFBEFA86055F447425 /* Analytics.swift */; };
 		077A0D49AE7FE6439EEB417A /* TriageStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69FB5E2E6FCC4A8E31ACF7E0 /* TriageStateTests.swift */; };
+		099CA3C1C47B3A22580D0AE8 /* AccountSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26949CEEC52D26F3B5A22468 /* AccountSource.swift */; };
 		0B97456C80A794C0BCDD5C6C /* SimpleFinDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 027C6051FE9F3E15969CBF30 /* SimpleFinDecodingTests.swift */; };
 		142B4FFC748615B7D490F428 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3B3BE3CB74FC76489E3FDA1 /* SettingsView.swift */; };
 		189461D3E71CC18F492D2A8B /* NetWorthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE8665D0ABC06FA8113E1A5 /* NetWorthSnapshot.swift */; };
@@ -106,6 +108,7 @@
 		0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySeedTests.swift; sourceTree = "<group>"; };
 		1FA2A0E0D769B3FBF63B2BCF /* CategorizationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorizationEngine.swift; sourceTree = "<group>"; };
 		260C10DC85D4E6BD9F2BBB2C /* BudgetsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetsView.swift; sourceTree = "<group>"; };
+		26949CEEC52D26F3B5A22468 /* AccountSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSource.swift; sourceTree = "<group>"; };
 		2AA44FA28D29CCE70D2B95DD /* AccountBalanceSnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountBalanceSnapshotService.swift; sourceTree = "<group>"; };
 		319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTypeDetectorTests.swift; sourceTree = "<group>"; };
 		31D3BBB0FAE7CB66E82483CA /* AccountType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountType.swift; sourceTree = "<group>"; };
@@ -116,6 +119,7 @@
 		4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFilterStateTests.swift; sourceTree = "<group>"; };
 		5502E6B035A3EC87366C7343 /* RecurringScheduleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringScheduleTests.swift; sourceTree = "<group>"; };
 		56E5762A9CF9A5EF3F565EAB /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
+		5C7F62176553BE384EB410D3 /* AccountSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSourceTests.swift; sourceTree = "<group>"; };
 		5D88D40C9AF27A9C91DFA4FA /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		60054F73B320018C24367A1B /* NetWorthSnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthSnapshotService.swift; sourceTree = "<group>"; };
 		604E0AABADAADE1208B1CDFF /* AccountTypeDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTypeDetector.swift; sourceTree = "<group>"; };
@@ -310,6 +314,7 @@
 			children = (
 				D1C80B6A84416A366E695142 /* Account.swift */,
 				D2A342873AFD09D898737E94 /* AccountBalanceSnapshot.swift */,
+				26949CEEC52D26F3B5A22468 /* AccountSource.swift */,
 				31D3BBB0FAE7CB66E82483CA /* AccountType.swift */,
 				8793F4094877DD0C0710EE5F /* AppSchema.swift */,
 				3E67EDF458CCCD9D09B72E62 /* Budget.swift */,
@@ -383,6 +388,7 @@
 		EB16F9255958BE7D8AA5731E /* FinAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				5C7F62176553BE384EB410D3 /* AccountSourceTests.swift */,
 				319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */,
 				E6D38CD2FF8633665A297ED9 /* AccountTypeTests.swift */,
 				F103062B940571D6066896DB /* AnalyticsTests.swift */,
@@ -553,6 +559,7 @@
 				A6563AF342837A74756942C2 /* Account.swift in Sources */,
 				0314E0C64C1CDE194C3419CD /* AccountBalanceSnapshot.swift in Sources */,
 				BFE2D3C383F28128F6C8E447 /* AccountBalanceSnapshotService.swift in Sources */,
+				099CA3C1C47B3A22580D0AE8 /* AccountSource.swift in Sources */,
 				9C6DB0B1771AA72FDF3D81E1 /* AccountType.swift in Sources */,
 				FDE219EA4D93D15D5B41BC69 /* AccountTypeDetector.swift in Sources */,
 				E07329D086BB921CAC49EA7D /* AccountsView.swift in Sources */,
@@ -607,6 +614,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				00802AFA8CF1013EE35682BD /* AccountSourceTests.swift in Sources */,
 				39F7EBE8E47BE369BADA07A5 /* AccountTypeDetectorTests.swift in Sources */,
 				BCCA5A19074DDAE079DF0E1A /* AccountTypeTests.swift in Sources */,
 				E93AB1B266462599FD6E313E /* AnalyticsTests.swift in Sources */,

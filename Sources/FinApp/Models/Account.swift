@@ -30,6 +30,12 @@ final class Account {
     /// User-arranged position within its type group ("Custom" sort). Defaulted
     /// for lightweight migration.
     var customSortIndex: Int = 0
+    /// Data source (see `AccountSource`). Defaulted for lightweight migration;
+    /// manual rows from older stores are fixed up by `AccountSource.migrateManual`.
+    var sourceRaw: String = AccountSource.simplefin.rawValue
+    /// For a SimpleFin account merged into FinanceKit: its old SimpleFin storage
+    /// id, so SimpleFin sync recognizes and skips it. Defaulted for migration.
+    var supersededProviderID: String? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \Transaction.account)
     var transactions: [Transaction]
@@ -37,6 +43,11 @@ final class Account {
     var accountType: AccountType {
         get { AccountType(rawValue: typeRaw) ?? .cash }
         set { typeRaw = newValue.rawValue }
+    }
+
+    var source: AccountSource {
+        get { AccountSource(rawValue: sourceRaw) ?? .simplefin }
+        set { sourceRaw = newValue.rawValue }
     }
 
     /// Name shown in the UI: the user's override if set, else the bank name.
@@ -63,6 +74,7 @@ final class Account {
         self.balanceDate = balanceDate
         self.typeRaw = typeRaw
         self.isManual = isManual
+        self.sourceRaw = (isManual ? AccountSource.manual : .simplefin).rawValue
         self.transactions = transactions
     }
 }
