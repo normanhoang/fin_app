@@ -36,6 +36,10 @@ final class Account {
     /// For a SimpleFin account merged into FinanceKit: its old SimpleFin storage
     /// id, so SimpleFin sync recognizes and skips it. Defaulted for migration.
     var supersededProviderID: String? = nil
+    /// Payment schedule for a manual loan whose balance the app computes
+    /// (`LoanUpdater`). nil for every other account. Defaulted for migration.
+    @Relationship(deleteRule: .cascade, inverse: \LoanSchedule.account)
+    var loanSchedule: LoanSchedule? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \Transaction.account)
     var transactions: [Transaction]

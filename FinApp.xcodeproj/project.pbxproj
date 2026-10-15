@@ -46,6 +46,7 @@
 		5F8B9BAAF55498B3FD5F413E /* FinanceKitDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B772DC79FB912241AF4C516 /* FinanceKitDTO.swift */; };
 		602C0A360DECC64397B3AA09 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEEA896C1D6F87E3DD1DCC4 /* RootView.swift */; };
 		62BB21250781CCCB4300C8ED /* SyncServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064BF2355930485CECCB1254 /* SyncServiceTests.swift */; };
+		6CD8F446268997A168E9DF3F /* LoanDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B548F490DB1746E3F04FBAC /* LoanDraft.swift */; };
 		7331E29CF8B62B45F9C1C21A /* Budget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E67EDF458CCCD9D09B72E62 /* Budget.swift */; };
 		7C00FD449D768A2BFD380181 /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E5762A9CF9A5EF3F565EAB /* SyncCoordinator.swift */; };
 		7EDBDF51B6DE6D779CC20FDA /* FinAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009DED65DEC305AE07BF2B1 /* FinAppUITests.swift */; };
@@ -72,6 +73,7 @@
 		BD65E5D5CF02AE7229D86B50 /* SimpleFinClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA1EA7DFE6B5F3DEF338F8ED /* SimpleFinClient.swift */; };
 		BE167BDDEAF20F4B2A0DFFDC /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4CE39E1069B5053BE5996A8 /* AppRouter.swift */; };
 		BFE2D3C383F28128F6C8E447 /* AccountBalanceSnapshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA44FA28D29CCE70D2B95DD /* AccountBalanceSnapshotService.swift */; };
+		C0524CFB0B460C393E230C81 /* LoanDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F740C548C14D75BB27533A /* LoanDraftTests.swift */; };
 		C1B282377FB42D75D41228B1 /* CategorizationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA2A0E0D769B3FBF63B2BCF /* CategorizationEngine.swift */; };
 		C7AEF56E2F147D6AACD85239 /* FinanceKitClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BD8C403D91FC94E489400F /* FinanceKitClient.swift */; };
 		C8539872CC9290420E7AF5D7 /* TransactionFilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9E60995D4AEE6C0438B237 /* TransactionFilterSheet.swift */; };
@@ -85,6 +87,7 @@
 		E07329D086BB921CAC49EA7D /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCCB76803E218E918FE6943F /* AccountsView.swift */; };
 		E93AB1B266462599FD6E313E /* AnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F103062B940571D6066896DB /* AnalyticsTests.swift */; };
 		EBF50466C5AA4CC793B4595D /* RecurringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE541B07C89A694F7FB77690 /* RecurringView.swift */; };
+		EC7B50649A7DB47321E951AB /* LoanSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFCB4ED40D97779DC40E65F5 /* LoanSchedule.swift */; };
 		EE47972BC14412C4CACDDD4E /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6517CF137C1914A5F1D3A3C /* AppLockTests.swift */; };
 		F55755054B013D055029E417 /* RecurringBill.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B02795D854EE1341B5F06F /* RecurringBill.swift */; };
 		FB56819BB1DF7F13FD0AC55A /* FinanceKitCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB16FA0F657C164F9ECCEBD /* FinanceKitCoordinatorTests.swift */; };
@@ -135,6 +138,7 @@
 		4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFilterStateTests.swift; sourceTree = "<group>"; };
 		5502E6B035A3EC87366C7343 /* RecurringScheduleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringScheduleTests.swift; sourceTree = "<group>"; };
 		56E5762A9CF9A5EF3F565EAB /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
+		5B548F490DB1746E3F04FBAC /* LoanDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanDraft.swift; sourceTree = "<group>"; };
 		5C7F62176553BE384EB410D3 /* AccountSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSourceTests.swift; sourceTree = "<group>"; };
 		5D88D40C9AF27A9C91DFA4FA /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		60054F73B320018C24367A1B /* NetWorthSnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthSnapshotService.swift; sourceTree = "<group>"; };
@@ -142,6 +146,7 @@
 		606FC94FD2F4B2285B430C29 /* NetWorthDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthDetailView.swift; sourceTree = "<group>"; };
 		679C5CE470E0A8FB16D007C2 /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		67D9D282FA26B1CA7C500013 /* DesignComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignComponents.swift; sourceTree = "<group>"; };
+		69F740C548C14D75BB27533A /* LoanDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanDraftTests.swift; sourceTree = "<group>"; };
 		69FB5E2E6FCC4A8E31ACF7E0 /* TriageStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriageStateTests.swift; sourceTree = "<group>"; };
 		6A388E2B621B9D772F9E879D /* AmortizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmortizationTests.swift; sourceTree = "<group>"; };
 		6E485358E35846982EC0DB03 /* PrivacyShieldHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyShieldHost.swift; sourceTree = "<group>"; };
@@ -174,6 +179,7 @@
 		C4BD8C403D91FC94E489400F /* FinanceKitClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitClient.swift; sourceTree = "<group>"; };
 		CC94D5BAEBE5DC0628F94355 /* TransactionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionRow.swift; sourceTree = "<group>"; };
 		CF81821B7F79704744CFCA64 /* SimpleFinClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleFinClientTests.swift; sourceTree = "<group>"; };
+		CFCB4ED40D97779DC40E65F5 /* LoanSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanSchedule.swift; sourceTree = "<group>"; };
 		D171F3181843038DBE7044F6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		D1B02795D854EE1341B5F06F /* RecurringBill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringBill.swift; sourceTree = "<group>"; };
 		D1C80B6A84416A366E695142 /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
@@ -312,6 +318,7 @@
 			isa = PBXGroup;
 			children = (
 				455456E023D3991552A8A239 /* Amortization.swift */,
+				5B548F490DB1746E3F04FBAC /* LoanDraft.swift */,
 			);
 			path = Loans;
 			sourceTree = "<group>";
@@ -363,6 +370,7 @@
 				3E67EDF458CCCD9D09B72E62 /* Budget.swift */,
 				FEDF8413499DFC8E1F525137 /* Category.swift */,
 				768E0A9F851B31523F3F4359 /* CategoryRule.swift */,
+				CFCB4ED40D97779DC40E65F5 /* LoanSchedule.swift */,
 				EDE8665D0ABC06FA8113E1A5 /* NetWorthSnapshot.swift */,
 				D1B02795D854EE1341B5F06F /* RecurringBill.swift */,
 				979D1A4CE8D86953E1BDB0E0 /* Transaction.swift */,
@@ -443,6 +451,7 @@
 				FEB16FA0F657C164F9ECCEBD /* FinanceKitCoordinatorTests.swift */,
 				B065D7DB87B085AA8F6AAF62 /* FinanceKitImporterTests.swift */,
 				C1DD9B93FA5097B7C32FA114 /* FinanceKitMergeTests.swift */,
+				69F740C548C14D75BB27533A /* LoanDraftTests.swift */,
 				6EE2F05A0132E181B8820225 /* RecurringDetectorTests.swift */,
 				5502E6B035A3EC87366C7343 /* RecurringScheduleTests.swift */,
 				725B00DD1C0DB2802CC7B87F /* RecurringStoreTests.swift */,
@@ -637,6 +646,8 @@
 				A4280CC4BCE401D10A74696E /* FinanceKitMergeSheet.swift in Sources */,
 				CEBA1E054B6939F4FCDC2C0A /* Formatting.swift in Sources */,
 				AA0BFDC33D80BC0726B95FE1 /* KeyboardDismiss.swift in Sources */,
+				6CD8F446268997A168E9DF3F /* LoanDraft.swift in Sources */,
+				EC7B50649A7DB47321E951AB /* LoanSchedule.swift in Sources */,
 				2A73F855C162217F8ACB1A60 /* LockScreen.swift in Sources */,
 				A470D9461A5774971F5B45B2 /* NavBarRelayout.swift in Sources */,
 				4891B02FA00245357663C0C3 /* NetWorthDetailView.swift in Sources */,
@@ -682,6 +693,7 @@
 				FB56819BB1DF7F13FD0AC55A /* FinanceKitCoordinatorTests.swift in Sources */,
 				12CA8F4F4DD75A3ABF594036 /* FinanceKitImporterTests.swift in Sources */,
 				4A57AB5802B89BC2C7BB4F88 /* FinanceKitMergeTests.swift in Sources */,
+				C0524CFB0B460C393E230C81 /* LoanDraftTests.swift in Sources */,
 				25C869028D421169D1EFBB66 /* RecurringDetectorTests.swift in Sources */,
 				7FB2B4B59ECCD1371837834C /* RecurringScheduleTests.swift in Sources */,
 				830604D207F45DDE30C64A52 /* RecurringStoreTests.swift in Sources */,
