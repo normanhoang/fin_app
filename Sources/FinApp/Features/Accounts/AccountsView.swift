@@ -87,6 +87,7 @@ struct AccountsView: View {
                     }
                 } else {
                     List {
+                        if !coordinator.supersededStillLinked.isEmpty { unlinkBannerSection }
                         netWorthSection
                         // One Section per type so the inset card rounds at each type's
                         // top and bottom. The Assets/Liabilities eyebrows get their own
@@ -175,6 +176,25 @@ struct AccountsView: View {
     }
 
     // MARK: Net-worth summary
+
+    /// Shown while SimpleFin still returns an account that was merged into
+    /// FinanceKit. Not dismissable — it clears once the user unlinks in Bridge.
+    private var unlinkBannerSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(ListFormatter.localizedString(byJoining: coordinator.supersededStillLinked)) now syncs from Apple Wallet. Remove it from SimpleFin Bridge to stop duplicate syncing.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textPrimary)
+                Link("Open Bridge \u{2192}",
+                     destination: URL(string: "https://beta-bridge.simplefin.org/auth/login")!)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.brand)
+            }
+            .padding(.vertical, 4)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("unlinkBridgeBanner")
+        }
+    }
 
     private var netWorthSection: some View {
         Section {
@@ -356,11 +376,15 @@ struct AccountsView: View {
         .padding(.vertical, 4)
     }
 
-    /// Account type, plus a "manual" tag for local accounts. Per-account sync time
-    /// is dropped from the row; the overall "synced" stamp lives in the footer.
+    /// Account type, plus a source tag for non-SimpleFin accounts. Per-account
+    /// sync time is dropped from the row; the overall "synced" stamp lives in the footer.
     private func metaLine(_ account: Account) -> String {
         let type = account.accountType.displayName
-        return account.isManual ? "\(type) · manual" : type
+        switch account.source {
+        case .manual: return "\(type) · manual"
+        case .financeKit: return "\(type) · Apple Wallet"
+        case .simplefin: return type
+        }
     }
 
     /// Persist a Custom-mode drag: rewrite the group's order indexes.

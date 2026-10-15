@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(SyncCoordinator.self) private var coordinator
+    @Environment(FinanceKitCoordinator.self) private var financeKit
     @Environment(AppLock.self) private var lock
     @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var context
@@ -23,13 +24,17 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     connectionCard
                     noticeCards
+                    if financeKit.isAvailable {
+                        SectionLabel("Apple Wallet").padding(.horizontal, 4)
+                        appleWalletCard
+                    }
                     SectionLabel("Appearance").padding(.horizontal, 4)
                     appearanceCard
                     SectionLabel("Security").padding(.horizontal, 4)
                     securityCard
                     SectionLabel("Data").padding(.horizontal, 4)
                     dataCard
-                    Text("Your financial data is stored only on this device — there is no server we operate. Account data is fetched through SimpleFin Bridge, which connects to your banks on your behalf, so that fetch does pass through SimpleFin's service.")
+                    Text("Your financial data is stored only on this device — there is no server we operate. Account data is fetched through SimpleFin Bridge, which connects to your banks on your behalf, so that fetch does pass through SimpleFin's service.\(financeKit.isAvailable ? " Apple Wallet accounts are read directly on this iPhone and never leave it." : "")")
                         .font(.system(size: 12))
                         .foregroundStyle(Color.textTertiary)
                         .padding(.horizontal, 4)
@@ -39,6 +44,7 @@ struct SettingsView: View {
                 .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
+            .task { await financeKit.refreshAuthorization() }
             .screenBackground()
             .id(topReset)
             .background(Color.appBackground.ignoresSafeArea())
@@ -120,7 +126,10 @@ struct SettingsView: View {
         }
         HStack(spacing: 10) {
             Button {
-                Task { await coordinator.sync() }
+                Task {
+                    await coordinator.sync()
+                    await financeKit.importNow()
+                }
             } label: {
                 HStack(spacing: 6) {
                     if coordinator.isSyncing {
@@ -253,6 +262,65 @@ struct SettingsView: View {
             .padding(.horizontal, 4)
             .accessibilityIdentifier("fixConnectionLink")
         }
+    }
+
+    // MARK: Apple Wallet (FinanceKit)
+
+    @ViewBuilder
+    private var appleWalletCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            switch financeKit.authorization {
+            case .notDetermined:
+                Text("Import Apple Card, Apple Cash, and Savings directly from this iPhone — no bank login or reconnecting.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textSecondary)
+                Button {
+                    Task { await financeKit.connect() }
+                } label: {
+                    Text("Connect Apple Wallet")
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(Color.appBackground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("connectAppleWalletButton")
+            case .authorized:
+                Text(appleWalletMeta)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textPrimary)
+                Text("Manage shared accounts in Settings → Privacy & Security → Wallet.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textTertiary)
+            case .denied:
+                Text("Apple Wallet access is off. Turn it on in Settings → Privacy & Security → Wallet. Imported accounts keep their last data.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textSecondary)
+            }
+            if let result = financeKit.lastMergeResult {
+                tintedCard("Merged \(result.merged) transactions, removed \(result.removed) duplicates.",
+                           icon: "checkmark.circle", tint: .brand)
+            }
+            if let error = financeKit.errorMessage {
+                tintedCard(error, icon: "xmark.octagon", tint: .negative)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("appleWalletCard")
+    }
+
+    private var appleWalletMeta: String {
+        let count = accounts.filter { $0.source == .financeKit }.count
+        var parts = ["\(count) \(count == 1 ? "account" : "accounts")"]
+        if let last = financeKit.lastImportDate {
+            parts.append("imported \(last.formatted(date: .abbreviated, time: .shortened))")
+        }
+        return parts.joined(separator: " · ")
     }
 
     private func tintedCard(_ message: String, icon: String, tint: Color) -> some View {

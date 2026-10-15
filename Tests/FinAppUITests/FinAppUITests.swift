@@ -951,4 +951,17 @@ final class FinAppUITests: XCTestCase {
             .waitForExistence(timeout: 5), "Recurring detail did not open")
         snap(app, "recurring-detail")
     }
+
+    func testAppleWalletSectionHiddenWhenUnavailable() {
+        let app = launch(tab: 4)
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.otherElements["appleWalletCard"].exists)
+        XCTAssertFalse(app.staticTexts["Apple Wallet"].exists)
+    }
+
+    func testUnlinkBannerHiddenWithoutSupersededAccounts() {
+        let app = launch(tab: 0)
+        XCTAssertTrue(app.navigationBars["Accounts"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.otherElements["unlinkBridgeBanner"].exists)
+    }
 }

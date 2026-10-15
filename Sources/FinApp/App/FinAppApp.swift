@@ -5,6 +5,7 @@ import SwiftData
 struct FinAppApp: App {
     let container: ModelContainer
     @State private var coordinator: SyncCoordinator
+    @State private var financeKit: FinanceKitCoordinator
     @State private var lock: AppLock
     @State private var showSplash = true
     /// True while the scene isn't frontmost. iOS snapshots the app for the
@@ -34,6 +35,9 @@ struct FinAppApp: App {
         let container = isUITest ? AppSchema.makeInMemoryContainer() : AppSchema.makeContainer()
         self.container = container
         _coordinator = State(initialValue: SyncCoordinator(context: container.mainContext))
+        _financeKit = State(initialValue: FinanceKitCoordinator(
+            source: isUITest ? UnavailableFinanceKitSource() : FinanceKitSources.make(),
+            context: container.mainContext))
 
         if isUITest || ProcessInfo.processInfo.environment["FINAPP_SAMPLE"] == "1" {
             SampleData.inject(into: container.mainContext)
@@ -50,6 +54,9 @@ struct FinAppApp: App {
         let container = AppSchema.makeContainer()
         self.container = container
         _coordinator = State(initialValue: SyncCoordinator(context: container.mainContext))
+        _financeKit = State(initialValue: FinanceKitCoordinator(
+            source: FinanceKitSources.make(),
+            context: container.mainContext))
         #endif
 
         // Seed default categories at launch so newly-shipped defaults reach
@@ -66,6 +73,7 @@ struct FinAppApp: App {
             ZStack {
                 RootView()
                     .environment(coordinator)
+                    .environment(financeKit)
                     .environment(lock)
                 if showSplash {
                     SplashView()
@@ -93,10 +101,11 @@ struct FinAppApp: App {
             isInactive = phase != .active
             if phase == .background {
                 lock.lock()
-            } else if phase == .active, coordinator.isConnected {
+            } else if phase == .active {
                 // Only resync on foreground if it's been over an hour since the last
                 // successful sync, instead of hitting SimpleFin on every open.
-                Task { await coordinator.syncIfStale() }
+                if coordinator.isConnected { Task { await coordinator.syncIfStale() } }
+                Task { await financeKit.importIfStale() }
             }
         }
     }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(SyncCoordinator.self) private var coordinator
+    @Environment(FinanceKitCoordinator.self) private var financeKit
     @State private var router = AppRouter(selectedTab: Self.initialTab)
 
     static let tabCount = 5
@@ -150,6 +151,13 @@ struct RootView: View {
         )) {
             TriageView()
         }
+        .sheet(item: Binding(
+            get: { financeKit.pendingMerge },
+            set: { if $0 == nil { financeKit.declineMerge() } }
+        )) { proposal in
+            FinanceKitMergeSheet(proposal: proposal)
+                .environment(financeKit)
+        }
         .environment(router)
         .background(KeyboardDismisser())
         // Dismiss the keyboard when changing pages (tab tap or swipe).
@@ -158,6 +166,7 @@ struct RootView: View {
             // Auto-sync on open (throttled; skipped if not connected). Recurring
             // dedupe runs after every sync inside RecurringDetector.refresh.
             if coordinator.isConnected { await coordinator.syncIfStale() }
+            await financeKit.importIfStale()
         }
     }
 
@@ -271,4 +280,5 @@ private extension View {
     RootView()
         .modelContainer(container)
         .environment(SyncCoordinator(context: container.mainContext))
+        .environment(FinanceKitCoordinator(source: UnavailableFinanceKitSource(), context: container.mainContext))
 }
