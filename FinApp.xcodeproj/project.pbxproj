@@ -70,6 +70,7 @@
 		BE167BDDEAF20F4B2A0DFFDC /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4CE39E1069B5053BE5996A8 /* AppRouter.swift */; };
 		BFE2D3C383F28128F6C8E447 /* AccountBalanceSnapshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA44FA28D29CCE70D2B95DD /* AccountBalanceSnapshotService.swift */; };
 		C1B282377FB42D75D41228B1 /* CategorizationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA2A0E0D769B3FBF63B2BCF /* CategorizationEngine.swift */; };
+		C7AEF56E2F147D6AACD85239 /* FinanceKitClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BD8C403D91FC94E489400F /* FinanceKitClient.swift */; };
 		C8539872CC9290420E7AF5D7 /* TransactionFilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9E60995D4AEE6C0438B237 /* TransactionFilterSheet.swift */; };
 		CB70F4D8DA06EF5DC0BED403 /* SchemaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5AC54257EA7A1991C56AC50 /* SchemaTests.swift */; };
 		CCA43441E3E6F49DC60BC3A0 /* TransactionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC94D5BAEBE5DC0628F94355 /* TransactionRow.swift */; };
@@ -164,6 +165,7 @@
 		BEEEA896C1D6F87E3DD1DCC4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		C058242F1AAA7B2CD74A73BB /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
 		C1DD9B93FA5097B7C32FA114 /* FinanceKitMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitMergeTests.swift; sourceTree = "<group>"; };
+		C4BD8C403D91FC94E489400F /* FinanceKitClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitClient.swift; sourceTree = "<group>"; };
 		CC94D5BAEBE5DC0628F94355 /* TransactionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionRow.swift; sourceTree = "<group>"; };
 		CF81821B7F79704744CFCA64 /* SimpleFinClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleFinClientTests.swift; sourceTree = "<group>"; };
 		D171F3181843038DBE7044F6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -281,6 +283,7 @@
 		5AC6BAD98C9991775283CA54 /* FinanceKit */ = {
 			isa = PBXGroup;
 			children = (
+				C4BD8C403D91FC94E489400F /* FinanceKitClient.swift */,
 				7B5186FC1B60EDE33A11C4CF /* FinanceKitCoordinator.swift */,
 				3B772DC79FB912241AF4C516 /* FinanceKitDTO.swift */,
 				02FD57A94B9D56BECE387F99 /* FinanceKitImporter.swift */,
@@ -608,6 +611,7 @@
 				363AE5A71223E2463A2D784F /* DashboardView.swift in Sources */,
 				BCCB90EF53F6A68F106DD4F6 /* DesignComponents.swift in Sources */,
 				2C62D8485E862D95B240C057 /* FinAppApp.swift in Sources */,
+				C7AEF56E2F147D6AACD85239 /* FinanceKitClient.swift in Sources */,
 				B1EE97419A48EFC82572DBFC /* FinanceKitCoordinator.swift in Sources */,
 				5F8B9BAAF55498B3FD5F413E /* FinanceKitDTO.swift in Sources */,
 				330439DC27B453B640DC654D /* FinanceKitImporter.swift in Sources */,
@@ -708,6 +712,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock FinApp to view your financial data.";
+				INFOPLIST_KEY_NSFinancialDataUsageDescription = "FinApp reads your Apple Card, Apple Cash, and Savings activity to show it alongside your other accounts. It stays on this iPhone.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -928,6 +933,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock FinApp to view your financial data.";
+				INFOPLIST_KEY_NSFinancialDataUsageDescription = "FinApp reads your Apple Card, Apple Cash, and Savings activity to show it alongside your other accounts. It stays on this iPhone.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (

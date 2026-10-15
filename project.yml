@@ -23,6 +23,11 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.normanhoang.finapp
         CODE_SIGN_ENTITLEMENTS: FinApp.entitlements
+        # FinanceKit (Apple Card/Cash/Savings). Enable ONLY after Apple grants the
+        # managed entitlement (AppStore/financekit-entitlement-request.md):
+        # change the line above to FinApp-FinanceKit.entitlements and uncomment:
+        # SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) FINANCEKIT"
+        INFOPLIST_KEY_NSFinancialDataUsageDescription: "FinApp reads your Apple Card, Apple Cash, and Savings activity to show it alongside your other accounts. It stays on this iPhone."
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: YES
