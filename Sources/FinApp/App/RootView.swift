@@ -153,7 +153,7 @@ struct RootView: View {
         }
         .sheet(item: Binding(
             get: { financeKit.pendingMerge },
-            set: { if $0 == nil { financeKit.declineMerge() } }
+            set: { if $0 == nil { financeKit.dismissMergeProposal() } }
         )) { proposal in
             FinanceKitMergeSheet(proposal: proposal)
                 .environment(financeKit)

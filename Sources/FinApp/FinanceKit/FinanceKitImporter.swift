@@ -12,7 +12,9 @@ enum FinanceKitImporter {
 
     /// Stages (no save) a complete FinanceKit fetch. Callers pass only a fetch
     /// that succeeded, so FinanceKit accounts absent from it were revoked or
-    /// removed and are deleted (transactions cascade).
+    /// removed and are deleted (transactions cascade). Pruning is skipped for an
+    /// empty fetch, and merged accounts (`supersededProviderID != nil`) are never
+    /// pruned: they carry the user's pre-FinanceKit history.
     @MainActor
     static func stage(_ dtos: [FKAccount], into context: ModelContext) throws {
         let existing = try context.fetch(FetchDescriptor<Account>())
@@ -37,8 +39,10 @@ enum FinanceKitImporter {
             }
         }
 
+        guard !dtos.isEmpty else { return }
         let incoming = Set(dtos.map { accountStorageID($0.id) })
-        for account in existing where account.source == .financeKit && !incoming.contains(account.id) {
+        for account in existing
+        where account.source == .financeKit && account.supersededProviderID == nil && !incoming.contains(account.id) {
             context.delete(account)
         }
     }

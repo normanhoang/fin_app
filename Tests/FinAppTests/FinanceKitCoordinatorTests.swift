@@ -147,6 +147,46 @@ final class FinanceKitCoordinatorTests: XCTestCase {
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).count, 2)
     }
 
+    func testSwipeDismissedMergeReturnsOnNextImport() async throws {
+        _ = try seedSimplefinOverlap()
+        source.result = .success([card(["-1", "-2", "-3"])])
+        let c = make()
+        await c.importNow()
+        XCTAssertNotNil(c.pendingMerge)
+
+        c.dismissMergeProposal()
+        XCTAssertNil(c.pendingMerge)
+
+        clock = clock.addingTimeInterval(60)
+        await c.importNow()
+        XCTAssertNotNil(c.pendingMerge)
+    }
+
+    func testReimportAfterMergeKeepsUserEdits() async throws {
+        _ = try seedSimplefinOverlap()
+        source.result = .success([card(["-1", "-2", "-3"])])
+        let c = make()
+        await c.importNow()
+        c.confirmMerge()
+        let accounts = try ctx.fetch(FetchDescriptor<Account>())
+        let merged = try XCTUnwrap(accounts.first)
+        let txnCount = try ctx.fetch(FetchDescriptor<Transaction>()).count
+        merged.customName = "My Card"
+        try XCTUnwrap(try ctx.fetch(FetchDescriptor<Transaction>()).first).note = "keep me"
+        try ctx.save()
+
+        clock = clock.addingTimeInterval(60)
+        await c.importNow()
+
+        let after = try ctx.fetch(FetchDescriptor<Account>())
+        XCTAssertEqual(after.count, 1)
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<Transaction>()).count, txnCount)
+        XCTAssertEqual(after.first?.customName, "My Card")
+        XCTAssertTrue(try ctx.fetch(FetchDescriptor<Transaction>()).contains { $0.note == "keep me" })
+        XCTAssertNil(c.pendingMerge)
+        XCTAssertEqual(after.first?.source, .financeKit)
+    }
+
     func testConnectDeniedDoesNotImport() async {
         source.requestResult = .denied
         source.status = .notDetermined

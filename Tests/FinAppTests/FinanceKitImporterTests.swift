@@ -104,9 +104,34 @@ final class FinanceKitImporterTests: XCTestCase {
                              balance: 1, balanceDate: day, isManual: true)
         ctx.insert(simplefin); ctx.insert(manual)
 
-        try FinanceKitImporter.stage([], into: ctx)
+        let other = FKAccount(id: UUID(), institutionName: "Apple", displayName: "Apple Cash", currency: "USD",
+                              isLiability: false, balance: 5, availableBalance: nil, balanceDate: day,
+                              transactions: [])
+        try FinanceKitImporter.stage([other], into: ctx)
 
-        XCTAssertEqual(Set(try accounts().map(\.id)), ["simplefin-account:x", "manual-1"])
+        XCTAssertEqual(Set(try accounts().map(\.id)),
+                       ["simplefin-account:x", "manual-1", FinanceKitImporter.accountStorageID(other.id)])
         XCTAssertTrue(try txns().isEmpty, "cascade deleted")
+    }
+
+    func testEmptyFetchDoesNotPrune() throws {
+        try FinanceKitImporter.stage([card([txn(1, "-10.00")])], into: ctx)
+        try FinanceKitImporter.stage([], into: ctx)
+        XCTAssertEqual(try accounts().count, 1)
+        XCTAssertEqual(try txns().count, 1)
+    }
+
+    func testMergedAccountIsNeverPruned() throws {
+        let other = FKAccount(id: UUID(), institutionName: "Apple", displayName: "Apple Cash", currency: "USD",
+                              isLiability: false, balance: 5, availableBalance: nil, balanceDate: day,
+                              transactions: [])
+        try FinanceKitImporter.stage([card([txn(1, "-10.00")]), other], into: ctx)
+        let a = try XCTUnwrap(accounts().first { $0.id == FinanceKitImporter.accountStorageID(cardID) })
+        a.supersededProviderID = "simplefin-account:old"
+
+        try FinanceKitImporter.stage([other], into: ctx)
+
+        XCTAssertEqual(try accounts().count, 2)
+        XCTAssertEqual(try txns().count, 1)
     }
 }

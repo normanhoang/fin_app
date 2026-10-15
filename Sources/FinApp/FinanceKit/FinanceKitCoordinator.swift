@@ -135,6 +135,9 @@ final class FinanceKitCoordinator {
         }
     }
 
+    /// Clears the prompt without remembering a decline, so it returns on the next import.
+    func dismissMergeProposal() { pendingMerge = nil }
+
     func declineMerge() {
         guard let proposal = pendingMerge else { return }
         declined.insert(proposal.financeKitAccountID)
