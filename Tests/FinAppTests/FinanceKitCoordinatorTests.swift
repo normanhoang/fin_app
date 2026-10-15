@@ -147,6 +147,22 @@ final class FinanceKitCoordinatorTests: XCTestCase {
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).count, 2)
     }
 
+    func testConnectDeniedDoesNotImport() async {
+        source.requestResult = .denied
+        source.status = .notDetermined
+        let c = make()
+        await c.connect()
+        XCTAssertEqual(source.fetchCount, 0)
+        XCTAssertEqual(c.authorization, .denied)
+    }
+
+    func testImportNowSkippedWhenDenied() async {
+        source.status = .denied
+        let c = make()
+        await c.importNow()
+        XCTAssertEqual(source.fetchCount, 0)
+    }
+
     func testUnavailableSourceReportsUnavailable() {
         source.available = false
         XCTAssertFalse(make().isAvailable)

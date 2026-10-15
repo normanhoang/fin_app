@@ -53,8 +53,7 @@ final class FinanceKitCoordinator {
     var lastMergeResult: FinanceKitMerge.Result?
 
     var lastImportDate: Date? {
-        get { UserDefaults.standard.object(forKey: Self.lastImportKey) as? Date }
-        set { UserDefaults.standard.set(newValue, forKey: Self.lastImportKey) }
+        didSet { UserDefaults.standard.set(lastImportDate, forKey: Self.lastImportKey) }
     }
 
     private var declined: Set<String> {
@@ -67,6 +66,7 @@ final class FinanceKitCoordinator {
         self.context = context
         self.now = now
         self.isAvailable = source.isAvailable()
+        self.lastImportDate = UserDefaults.standard.object(forKey: Self.lastImportKey) as? Date
     }
 
     func refreshAuthorization() async {
@@ -96,6 +96,8 @@ final class FinanceKitCoordinator {
 
     func importNow() async {
         guard isAvailable, !isImporting else { return }
+        if authorization != .authorized { await refreshAuthorization() }
+        guard authorization == .authorized else { return }
         isImporting = true
         defer { isImporting = false }
         lastAttempt = now()
