@@ -750,6 +750,15 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 5), "Loan account not added")
         let autoTag = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "· auto")).firstMatch
         XCTAssertTrue(autoTag.exists, "Row should be tagged auto")
+
+        // Detail shows the schedule section with its controls.
+        row.tap()
+        XCTAssertTrue(app.navigationBars[name].waitForExistence(timeout: 5))
+        let edit = app.buttons["loanEditButton"]
+        swipeUpUntilHittable(app, edit)
+        XCTAssertTrue(edit.exists, "Edit schedule button missing")
+        XCTAssertTrue(app.textFields["loanExtraField"].exists, "Extra principal field missing")
+        XCTAssertTrue(app.buttons["loanRemoveButton"].exists, "Remove schedule button missing")
     }
 
     // 13. After switching tabs, the large navigation title keeps its proper leading

@@ -97,6 +97,14 @@ SimpleFin copy of an Apple account into the FinanceKit row and records its old i
 `supersededProviderID`; SimpleFin sync skips that id and surfaces
 `supersededStillLinked` (Accounts-tab unlink banner).
 
+**Loans** (`Loans/`): a manual Loan account may carry a `LoanSchedule` (cascade-owned
+by `Account`) so its balance computes itself. `Amortization` (pure) projects forward
+from the schedule's anchor balance/date (interest rounded to cents per payment; a
+payment on the anchor day is not applied). `LoanUpdater.refresh` writes the result
+(stored negative) at launch/foreground and after edits — idempotent, never moves the
+anchor; extra principal and manual balance edits re-anchor. Only P&I
+(`totalPayment − escrow`) reduces the balance.
+
 **Analytics** (`Analytics/Analytics.swift`): pure static functions over `[Account]`/`[Transaction]`
 (`netWorth`, `monthlyIncome/Spending`, `spendingByCategory`, `monthlyTrend`) — no UI coupling,
 unit-tested. Net-worth history comes from `NetWorthSnapshot` (one row/day, recorded on sync;

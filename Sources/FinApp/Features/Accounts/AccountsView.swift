@@ -483,6 +483,9 @@ struct AccountDetailView: View {
                 }
             }
             .listRowBackground(Color.surface)
+            if account.isManual, account.accountType == .loan, let schedule = account.loanSchedule {
+                LoanScheduleSection(account: account, schedule: schedule)
+            }
             Section {
                 Button(role: .destructive) {
                     showDeleteConfirmation = true
@@ -528,6 +531,11 @@ struct AccountDetailView: View {
         .onChange(of: editedName) { applyRename() }
         .onChange(of: balanceText) { applyBalance() }
         .onChange(of: account.accountType) { applyBalance() }
+        .onChange(of: account.balance) { _, new in
+            if Decimal(string: balanceText, locale: .current)?.magnitude != new.magnitude {
+                balanceText = NSDecimalNumber(decimal: new.magnitude).stringValue
+            }
+        }
         .confirmationDialog(
             "Delete \(account.displayName)?",
             isPresented: $showDeleteConfirmation,
@@ -552,8 +560,16 @@ struct AccountDetailView: View {
     }
 
     /// Persist an edited balance for a manual account (ignores unparseable input).
+    /// A scheduled loan re-anchors its projection instead — only when the typed
+    /// amount differs, since seeding the field on appear also fires onChange.
     private func applyBalance() {
         if account.isManual, let value = Decimal(string: balanceText, locale: .current) {
+            if account.accountType == .loan, account.loanSchedule != nil {
+                if value.magnitude != account.balance.magnitude {
+                    LoanUpdater.reanchor(account, to: value.magnitude, in: context)
+                }
+                return
+            }
             account.balance = account.accountType.signedBalance(from: value)
         }
         try? context.save()

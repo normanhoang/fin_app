@@ -58,6 +58,7 @@
 		86F227DD41BD64EA5BB29E6C /* PrivacyShieldHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E485358E35846982EC0DB03 /* PrivacyShieldHost.swift */; };
 		8F265E086629CA5F3323F3A0 /* CategoryPickerPopup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 700D2977F598124C05780603 /* CategoryPickerPopup.swift */; };
 		92E54102B44376538D0F6B44 /* CredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA19FD56220E94FB9F9B8A06 /* CredentialStoreTests.swift */; };
+		9566225ACF8974153173E195 /* LoanScheduleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C6112E9641ED6FD8C651C9E /* LoanScheduleSection.swift */; };
 		9C6DB0B1771AA72FDF3D81E1 /* AccountType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D3BBB0FAE7CB66E82483CA /* AccountType.swift */; };
 		A01BB313BFE78140EB15FE9A /* FinanceKitMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E78312FF6E42A900032A56 /* FinanceKitMerge.swift */; };
 		A4280CC4BCE401D10A74696E /* FinanceKitMergeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28CBFC5D9E3137106402F081 /* FinanceKitMergeSheet.swift */; };
@@ -130,6 +131,7 @@
 		26949CEEC52D26F3B5A22468 /* AccountSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSource.swift; sourceTree = "<group>"; };
 		28CBFC5D9E3137106402F081 /* FinanceKitMergeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitMergeSheet.swift; sourceTree = "<group>"; };
 		2AA44FA28D29CCE70D2B95DD /* AccountBalanceSnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountBalanceSnapshotService.swift; sourceTree = "<group>"; };
+		2C6112E9641ED6FD8C651C9E /* LoanScheduleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanScheduleSection.swift; sourceTree = "<group>"; };
 		319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTypeDetectorTests.swift; sourceTree = "<group>"; };
 		31D3BBB0FAE7CB66E82483CA /* AccountType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountType.swift; sourceTree = "<group>"; };
 		365C671522FDEAC79598B554 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -238,6 +240,7 @@
 				DCCB76803E218E918FE6943F /* AccountsView.swift */,
 				402A245B5633BA51B2CF4853 /* AddAccountView.swift */,
 				4C8FA0DFEF6BDA10D6577F41 /* LoanScheduleFields.swift */,
+				2C6112E9641ED6FD8C651C9E /* LoanScheduleSection.swift */,
 			);
 			path = Accounts;
 			sourceTree = "<group>";
@@ -658,6 +661,7 @@
 				6CD8F446268997A168E9DF3F /* LoanDraft.swift in Sources */,
 				EC7B50649A7DB47321E951AB /* LoanSchedule.swift in Sources */,
 				61FC77D7CA9918F3B72461AD /* LoanScheduleFields.swift in Sources */,
+				9566225ACF8974153173E195 /* LoanScheduleSection.swift in Sources */,
 				062959BF94E004CE4854BFEF /* LoanUpdater.swift in Sources */,
 				2A73F855C162217F8ACB1A60 /* LockScreen.swift in Sources */,
 				A470D9461A5774971F5B45B2 /* NavBarRelayout.swift in Sources */,
