@@ -80,6 +80,15 @@ final class LoanDraftTests: XCTestCase {
         XCTAssertEqual(prefill.asOf, now)
     }
 
+    func testTextAndParseRoundTripInCommaLocale() {
+        // Formatting and parsing must share a locale, or "6.25" reads as 6 in de_DE.
+        let de = Locale(identifier: "de_DE")
+        XCTAssertEqual(LoanDraft.text(Decimal(string: "6.25")!, locale: de), "6,25")
+        XCTAssertEqual(LoanDraft.parse("6,25", locale: de), Decimal(string: "6.25"))
+        let payment = Decimal(string: "1798.65")!
+        XCTAssertEqual(LoanDraft.parse(LoanDraft.text(payment, locale: de), locale: de), payment)
+    }
+
     func testPreviewMentionsPIAndPayoff() throws {
         let preview = try validDraft().validate(now: now).get().preview(now: now)
         XCTAssertTrue(preview.hasPrefix("P&I "), preview)

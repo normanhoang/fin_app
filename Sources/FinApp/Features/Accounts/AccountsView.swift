@@ -526,14 +526,14 @@ struct AccountDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             editedName = account.displayName
-            balanceText = NSDecimalNumber(decimal: account.balance.magnitude).stringValue
+            balanceText = LoanDraft.text(account.balance.magnitude)
         }
         .onChange(of: editedName) { applyRename() }
         .onChange(of: balanceText) { applyBalance() }
         .onChange(of: account.accountType) { applyBalance() }
         .onChange(of: account.balance) { _, new in
             if Decimal(string: balanceText, locale: .current)?.magnitude != new.magnitude {
-                balanceText = NSDecimalNumber(decimal: new.magnitude).stringValue
+                balanceText = LoanDraft.text(new.magnitude)
             }
         }
         .confirmationDialog(

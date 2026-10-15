@@ -754,10 +754,18 @@ final class FinAppUITests: XCTestCase {
         // Detail shows the schedule section with its controls.
         row.tap()
         XCTAssertTrue(app.navigationBars[name].waitForExistence(timeout: 5))
-        let edit = app.buttons["loanEditButton"]
-        swipeUpUntilHittable(app, edit)
-        XCTAssertTrue(edit.exists, "Edit schedule button missing")
-        XCTAssertTrue(app.textFields["loanExtraField"].exists, "Extra principal field missing")
+        // Scroll only until the extra-principal row is first visible (near the
+        // bottom), as a user would, then type: the pager ignores the keyboard safe
+        // area, so the detail view must lift the row (field + Apply) above it.
+        let extraField = app.textFields["loanExtraField"]
+        swipeUpUntilHittable(app, extraField)
+        extraField.tap(); extraField.typeText("100")
+        let keyboard = app.keyboards.element
+        if keyboard.waitForExistence(timeout: 2) {
+            XCTAssertLessThanOrEqual(app.buttons["loanApplyExtraButton"].frame.maxY, keyboard.frame.minY,
+                                     "Apply button hidden behind keyboard")
+        }
+        XCTAssertTrue(app.buttons["loanEditButton"].exists, "Edit schedule button missing")
         XCTAssertTrue(app.buttons["loanRemoveButton"].exists, "Remove schedule button missing")
     }
 

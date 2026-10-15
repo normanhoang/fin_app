@@ -52,17 +52,21 @@ struct LoanDraft: Equatable {
         totalText = Self.text(schedule.totalPayment)
         escrowText = Self.text(schedule.escrow)
         paymentDay = schedule.paymentDay
-        principalText = schedule.originalPrincipal.map(Self.text) ?? ""
+        principalText = schedule.originalPrincipal.map { Self.text($0) } ?? ""
         termYearsText = schedule.termMonths.map { String($0 / 12) } ?? ""
         hasStartDate = schedule.startDate != nil
         startDate = schedule.startDate ?? now
     }
 
-    static func text(_ value: Decimal) -> String { NSDecimalNumber(decimal: value).stringValue }
+    /// Field text for a number, using `locale`'s decimal separator so `parse`
+    /// reads it back exactly (a "." in a comma locale would parse as an integer).
+    static func text(_ value: Decimal, locale: Locale = .current) -> String {
+        NSDecimalNumber(decimal: value).description(withLocale: locale)
+    }
 
-    private static func number(_ text: String) -> Decimal? {
+    static func parse(_ text: String, locale: Locale = .current) -> Decimal? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
-        return trimmed.isEmpty ? nil : Decimal(string: trimmed, locale: .current)
+        return trimmed.isEmpty ? nil : Decimal(string: trimmed, locale: locale)
     }
 
     var isValid: Bool {
@@ -70,17 +74,17 @@ struct LoanDraft: Equatable {
     }
 
     func validate(now: Date = Date()) -> Result<Inputs, Problem> {
-        guard let balance = Self.number(balanceText), balance > 0,
-              let rate = Self.number(rateText), rate >= 0,
-              let total = Self.number(totalText), total > 0 else { return .failure(.incomplete) }
-        let escrow = Self.number(escrowText) ?? 0
+        guard let balance = Self.parse(balanceText), balance > 0,
+              let rate = Self.parse(rateText), rate >= 0,
+              let total = Self.parse(totalText), total > 0 else { return .failure(.incomplete) }
+        let escrow = Self.parse(escrowText) ?? 0
         guard escrow >= 0 else { return .failure(.incomplete) }
         guard escrow < total else { return .failure(.escrowTooLarge) }
         guard asOf <= now else { return .failure(.futureDate) }
         guard Amortization.paymentCoversInterest(balance: balance, annualRate: rate, pi: total - escrow) else {
             return .failure(.paymentBelowInterest)
         }
-        let principal = Self.number(principalText).flatMap { $0 > 0 ? $0 : nil }
+        let principal = Self.parse(principalText).flatMap { $0 > 0 ? $0 : nil }
         let years = Int(termYearsText.trimmingCharacters(in: .whitespaces)).flatMap { $0 > 0 ? $0 : nil }
         return .success(Inputs(
             balance: balance, asOf: asOf, annualRate: rate, totalPayment: total, escrow: escrow,
