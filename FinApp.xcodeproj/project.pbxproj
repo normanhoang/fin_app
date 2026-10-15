@@ -61,6 +61,7 @@
 		A85895AA42FEE3133FBCF20B /* CategorySeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */; };
 		AA0BFDC33D80BC0726B95FE1 /* KeyboardDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB70D4CE933C581B0369E8DE /* KeyboardDismiss.swift */; };
 		B161FB28B04B6190A5054538 /* TransactionFilterStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A89BE9D2F1956E19553F1B6 /* TransactionFilterStateTests.swift */; };
+		B1EE97419A48EFC82572DBFC /* FinanceKitCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5186FC1B60EDE33A11C4CF /* FinanceKitCoordinator.swift */; };
 		BA6A6310B8D87DDA79C70AB5 /* TriageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EEDD9516A98F9860A08C57 /* TriageView.swift */; };
 		BCCA5A19074DDAE079DF0E1A /* AccountTypeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6D38CD2FF8633665A297ED9 /* AccountTypeTests.swift */; };
 		BCCB90EF53F6A68F106DD4F6 /* DesignComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D9D282FA26B1CA7C500013 /* DesignComponents.swift */; };
@@ -82,6 +83,7 @@
 		EBF50466C5AA4CC793B4595D /* RecurringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE541B07C89A694F7FB77690 /* RecurringView.swift */; };
 		EE47972BC14412C4CACDDD4E /* AppLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6517CF137C1914A5F1D3A3C /* AppLockTests.swift */; };
 		F55755054B013D055029E417 /* RecurringBill.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B02795D854EE1341B5F06F /* RecurringBill.swift */; };
+		FB56819BB1DF7F13FD0AC55A /* FinanceKitCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB16FA0F657C164F9ECCEBD /* FinanceKitCoordinatorTests.swift */; };
 		FDE219EA4D93D15D5B41BC69 /* AccountTypeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604E0AABADAADE1208B1CDFF /* AccountTypeDetector.swift */; };
 		FEB7622646B2A61DC95A0D32 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDF8413499DFC8E1F525137 /* Category.swift */; };
 		FFA44D52AC81C504BCD5F43B /* BudgetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260C10DC85D4E6BD9F2BBB2C /* BudgetsView.swift */; };
@@ -144,6 +146,7 @@
 		768E0A9F851B31523F3F4359 /* CategoryRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryRule.swift; sourceTree = "<group>"; };
 		7A9E60995D4AEE6C0438B237 /* TransactionFilterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFilterSheet.swift; sourceTree = "<group>"; };
 		7B14848472272349DA38AAE1 /* RecurringDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringDetector.swift; sourceTree = "<group>"; };
+		7B5186FC1B60EDE33A11C4CF /* FinanceKitCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitCoordinator.swift; sourceTree = "<group>"; };
 		804A8BB060B86F185BD38825 /* FinAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinAppApp.swift; sourceTree = "<group>"; };
 		8793F4094877DD0C0710EE5F /* AppSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSchema.swift; sourceTree = "<group>"; };
 		8EFC15F8654A2F89151683CC /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
@@ -185,6 +188,7 @@
 		F3B3BE3CB74FC76489E3FDA1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F8A2DE9CA577A96FD7D5D0DD /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		FCC485F0F95DE68212D4907D /* TransactionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionsView.swift; sourceTree = "<group>"; };
+		FEB16FA0F657C164F9ECCEBD /* FinanceKitCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitCoordinatorTests.swift; sourceTree = "<group>"; };
 		FEDF8413499DFC8E1F525137 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -277,6 +281,7 @@
 		5AC6BAD98C9991775283CA54 /* FinanceKit */ = {
 			isa = PBXGroup;
 			children = (
+				7B5186FC1B60EDE33A11C4CF /* FinanceKitCoordinator.swift */,
 				3B772DC79FB912241AF4C516 /* FinanceKitDTO.swift */,
 				02FD57A94B9D56BECE387F99 /* FinanceKitImporter.swift */,
 				09E78312FF6E42A900032A56 /* FinanceKitMerge.swift */,
@@ -416,6 +421,7 @@
 				04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */,
 				0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */,
 				BA19FD56220E94FB9F9B8A06 /* CredentialStoreTests.swift */,
+				FEB16FA0F657C164F9ECCEBD /* FinanceKitCoordinatorTests.swift */,
 				B065D7DB87B085AA8F6AAF62 /* FinanceKitImporterTests.swift */,
 				C1DD9B93FA5097B7C32FA114 /* FinanceKitMergeTests.swift */,
 				6EE2F05A0132E181B8820225 /* RecurringDetectorTests.swift */,
@@ -602,6 +608,7 @@
 				363AE5A71223E2463A2D784F /* DashboardView.swift in Sources */,
 				BCCB90EF53F6A68F106DD4F6 /* DesignComponents.swift in Sources */,
 				2C62D8485E862D95B240C057 /* FinAppApp.swift in Sources */,
+				B1EE97419A48EFC82572DBFC /* FinanceKitCoordinator.swift in Sources */,
 				5F8B9BAAF55498B3FD5F413E /* FinanceKitDTO.swift in Sources */,
 				330439DC27B453B640DC654D /* FinanceKitImporter.swift in Sources */,
 				A01BB313BFE78140EB15FE9A /* FinanceKitMerge.swift in Sources */,
@@ -648,6 +655,7 @@
 				2C6ACAA2776EDC4B380970C6 /* CategorizationEngineTests.swift in Sources */,
 				A85895AA42FEE3133FBCF20B /* CategorySeedTests.swift in Sources */,
 				92E54102B44376538D0F6B44 /* CredentialStoreTests.swift in Sources */,
+				FB56819BB1DF7F13FD0AC55A /* FinanceKitCoordinatorTests.swift in Sources */,
 				12CA8F4F4DD75A3ABF594036 /* FinanceKitImporterTests.swift in Sources */,
 				4A57AB5802B89BC2C7BB4F88 /* FinanceKitMergeTests.swift in Sources */,
 				25C869028D421169D1EFBB66 /* RecurringDetectorTests.swift in Sources */,
