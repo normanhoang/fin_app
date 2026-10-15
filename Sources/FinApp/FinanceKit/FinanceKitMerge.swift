@@ -54,8 +54,10 @@ enum FinanceKitMerge {
         return matches.count == 1 ? matches.first : nil
     }
 
-    /// Two saves: unique ids can't be handed from a deleted row to a live one
-    /// within one save, so deletions/moves land first, then the rekey.
+    /// Three saves: duplicates are deleted and FinanceKit-only rows moved first (and
+    /// saved, so the cascade from `fk` can't take the moved rows), then `fk` is
+    /// deleted, then the rekey. Unique ids can't be handed from a deleted row to a
+    /// live one within one save.
     @MainActor
     static func merge(_ fk: Account, into old: Account, in context: ModelContext) throws -> Result {
         let fkID = fk.id
@@ -75,20 +77,23 @@ enum FinanceKitMerge {
             context.delete(n)
         }
         let matchedNew = Set(pairs.map { $0.new.persistentModelID })
+        let oldTxns = old.transactions   // snapshot before FK-only rows are moved onto `old`
         for n in fk.transactions where !matchedNew.contains(n.persistentModelID) {
             n.account = old
         }
         var removed = 0
         // Unmatched SimpleFin rows inside FinanceKit's range are duplicates FinanceKit
-        // reports differently — drop them unless the user edited them. FK rows just
-        // moved onto `old` may already appear here; their id prefix excludes them.
-        for o in old.transactions
-            where !matchedOld.contains(o.persistentModelID) && !o.id.hasPrefix("financekit-") {
+        // reports differently — drop them unless the user edited them. Iterates the
+        // pre-move snapshot, so moved FinanceKit rows are never considered.
+        for o in oldTxns where !matchedOld.contains(o.persistentModelID) {
             guard let earliestFK, o.posted >= earliestFK,
                   !o.categorizedByUser, o.note == nil else { continue }
             context.delete(o)
             removed += 1
         }
+        // Persist the moves/deletes before deleting `fk`: its transactions relationship
+        // cascades, so moved rows must be detached from it in the store first.
+        try context.save()
         let snapshots = try context.fetch(FetchDescriptor<AccountBalanceSnapshot>())
         for s in snapshots where s.accountId == fkID { context.delete(s) }
         let fields = (providerID: fk.providerID, org: fk.org, name: fk.name, currency: fk.currency,
