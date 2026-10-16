@@ -51,6 +51,11 @@ struct LoanScheduleSection: View {
             }
             Button("Edit schedule") { editing = true }
                 .accessibilityIdentifier("loanEditButton")
+                // On this row, not the Section: a Section's .sheet is copied onto
+                // every row, and the competing presenters dismiss the first open.
+                .sheet(isPresented: $editing) {
+                    EditLoanScheduleView(schedule: schedule)
+                }
             Button("Remove schedule", role: .destructive) { remove() }
                 .accessibilityIdentifier("loanRemoveButton")
         }
@@ -59,9 +64,6 @@ struct LoanScheduleSection: View {
                             isPresented: $showExtraConfirmation, titleVisibility: .visible) {
             Button("Apply Extra Payment") { applyExtra() }
             Button("Cancel", role: .cancel) {}
-        }
-        .sheet(isPresented: $editing) {
-            EditLoanScheduleView(schedule: schedule)
         }
     }
 

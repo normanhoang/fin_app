@@ -769,6 +769,60 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(app.buttons["loanRemoveButton"].exists, "Remove schedule button missing")
     }
 
+    // 11c. The first tap on Edit schedule keeps the sheet open (regression: it
+    //      dismissed itself immediately on a freshly created loan).
+    func testEditScheduleSheetStaysOpenOnFirstTap() {
+        let app = launch(tab: 0)
+        XCTAssertTrue(app.buttons["addAccountButton"].waitForExistence(timeout: 8))
+        app.buttons["addAccountButton"].tap()
+
+        let name = "Edit Mortgage"
+        let nameField = app.textFields["accountNameField"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5), "Add Account form missing")
+        nameField.tap(); nameField.typeText(name)
+        app.buttons["accountType-Loan"].tap()
+        let balanceField = app.textFields["0.00"]
+        balanceField.tap(); balanceField.typeText("250000")
+        let toggle = app.switches["loanAutoToggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 3))
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        let rate = app.textFields["loanRateField"]
+        XCTAssertTrue(rate.waitForExistence(timeout: 3))
+        rate.tap(); rate.typeText("6")
+        let payment = app.textFields["loanPaymentField"]
+        payment.tap(); payment.typeText("2500")
+        let escrow = app.textFields["loanEscrowField"]
+        escrow.tap(); escrow.typeText("400")
+        app.buttons["Save"].tap()
+
+        let row = app.staticTexts[name]
+        swipeUpUntilHittable(app, row)
+        row.tap()
+        XCTAssertTrue(app.navigationBars[name].waitForExistence(timeout: 5))
+        let edit = app.buttons["loanEditButton"]
+        swipeUpUntilHittable(app, edit)
+        edit.tap()
+
+        let sheetBar = app.navigationBars["Edit Schedule"]
+        XCTAssertTrue(sheetBar.waitForExistence(timeout: 3), "Edit sheet never appeared")
+        // Give a self-dismissal time to happen.
+        sleep(2)
+        if !sheetBar.exists { print(app.debugDescription) }
+        XCTAssertTrue(sheetBar.exists, "Edit sheet dismissed itself after the first tap")
+
+        // The extra-principal confirmation likewise opens once and stays.
+        sheetBar.buttons["Cancel"].tap()
+        XCTAssertTrue(app.navigationBars[name].waitForExistence(timeout: 3))
+        let extraField = app.textFields["loanExtraField"]
+        swipeUpUntilHittable(app, extraField)
+        extraField.tap(); extraField.typeText("100")
+        app.buttons["loanApplyExtraButton"].tap()
+        let confirm = app.buttons["Apply Extra Payment"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3), "Extra-principal confirmation never appeared")
+        sleep(2)
+        XCTAssertTrue(confirm.exists, "Extra-principal confirmation dismissed itself")
+    }
+
     // 13. After switching tabs, the large navigation title keeps its proper leading
     //     inset (regression: it used to render flush-left until a manual scroll).
     func testLargeTitleInsetAfterTabSwitch() {
