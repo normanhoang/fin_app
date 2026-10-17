@@ -91,6 +91,14 @@ final class FinanceKitImporterTests: XCTestCase {
         XCTAssertTrue(try txns().isEmpty)
     }
 
+    /// A hold Apple drops without marking it rejected must not linger as spending.
+    func testPendingAbsentFromFetchIsDeleted() throws {
+        try FinanceKitImporter.stage([card([txn(1, "-10.00", status: .pending), txn(2, "-5.00")])], into: ctx)
+        try FinanceKitImporter.stage([card([txn(3, "-7.00", status: .pending)])], into: ctx)
+        XCTAssertEqual(Set(try txns().map(\.detail)), ["DESC 2", "DESC 3"],
+                       "stale hold removed; booked rows outside the window are kept")
+    }
+
     func testUserEditsSurviveReimport() throws {
         try FinanceKitImporter.stage([card([txn(1, "-10.00")])], into: ctx)
         let a = try XCTUnwrap(accounts().first)

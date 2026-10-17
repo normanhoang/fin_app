@@ -114,7 +114,11 @@ final class FinanceKitCoordinator {
         lastAttempt = now()
         errorMessage = nil
         do {
-            let accounts = try await source.fetch(since: fetchStart())
+            var accounts = try await source.fetch(since: fetchStart())
+            // An account shared since the last import gets the first-import lookback.
+            if lastImportDate != nil, try hasUnseenAccount(accounts) {
+                accounts = try await source.fetch(since: fetchStart(initial: true))
+            }
             do {
                 try FinanceKitImporter.stage(accounts, into: context)
                 try SyncCoordinator.stageDerivedData(in: context)
@@ -170,9 +174,14 @@ final class FinanceKitCoordinator {
         }
     }
 
-    private func fetchStart() -> Date {
+    private func hasUnseenAccount(_ accounts: [FKAccount]) throws -> Bool {
+        let stored = Set(try context.fetch(FetchDescriptor<Account>()).map(\.id))
+        return accounts.contains { !stored.contains(FinanceKitImporter.accountStorageID($0.id)) }
+    }
+
+    private func fetchStart(initial: Bool = false) -> Date {
         let days: Int
-        if let last = lastImportDate {
+        if !initial, let last = lastImportDate {
             let elapsed = Calendar.current.dateComponents([.day], from: last, to: now()).day ?? 0
             days = elapsed + SyncCoordinator.resyncOverlapDays
         } else {

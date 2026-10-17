@@ -19,15 +19,15 @@ enum FinanceKitImporter {
     static func stage(_ dtos: [FKAccount], into context: ModelContext) throws {
         let existing = try context.fetch(FetchDescriptor<Account>())
         let accountsByID = Dictionary(existing.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        let txnsByID = Dictionary(
-            try context.fetch(FetchDescriptor<Transaction>()).map { ($0.id, $0) },
-            uniquingKeysWith: { a, _ in a }
-        )
+        let existingTxns = try context.fetch(FetchDescriptor<Transaction>())
+        let txnsByID = Dictionary(existingTxns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
         for dto in dtos {
             let account = upsertAccount(dto, existing: accountsByID[accountStorageID(dto.id)], in: context)
+            var fetched = Set<String>()
             for txDTO in dto.transactions {
                 let id = transactionStorageID(accountID: dto.id, transactionID: txDTO.id)
+                fetched.insert(id)
                 switch txDTO.status {
                 case .memo:
                     continue
@@ -36,6 +36,12 @@ enum FinanceKitImporter {
                 case .booked, .pending:
                     upsertTransaction(txDTO, storageID: id, existing: txnsByID[id], account: account, in: context)
                 }
+            }
+            // Holds are always recent, so a stored pending row absent from the fetch
+            // was dropped by Apple without a .rejected status — delete it so it stops
+            // inflating spending. Booked rows are never pruned (the window is partial).
+            for txn in existingTxns where txn.pending && txn.account === account && !fetched.contains(txn.id) {
+                context.delete(txn)
             }
         }
 

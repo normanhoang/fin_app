@@ -37,6 +37,14 @@ final class LoanDraftTests: XCTestCase {
         XCTAssertFalse(d.isValid)
     }
 
+    /// A paid-off schedule prefills a 0 balance; editing it must still be savable.
+    func testZeroBalanceIsValid() throws {
+        var d = validDraft(); d.balanceText = "0"
+        XCTAssertEqual(try d.validate(now: now).get().balance, 0)
+        d.balanceText = "-1"
+        XCTAssertEqual(d.validate(now: now), .failure(.incomplete))
+    }
+
     func testEscrowMustBeBelowTotal() {
         var d = validDraft(); d.escrowText = "150"
         XCTAssertEqual(d.validate(now: now), .failure(.escrowTooLarge))

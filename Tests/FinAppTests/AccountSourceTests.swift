@@ -50,6 +50,21 @@ final class AccountSourceTests: XCTestCase {
         XCTAssertEqual(manual.listMeta, "\(AccountType.cash.displayName) · manual")
     }
 
+    /// "auto" only while the schedule actually drives the balance (type is Loan).
+    func testListMetaAutoOnlyForScheduledLoan() throws {
+        let container = AppSchema.makeInMemoryContainer()
+        let loan = Account(id: "manual-2", org: "Me", name: "Mortgage", currency: "USD", balance: -5,
+                           balanceDate: Date(), typeRaw: AccountType.loan.rawValue, isManual: true)
+        container.mainContext.insert(loan)
+        var draft = LoanDraft()
+        draft.balanceText = "1000"; draft.rateText = "6"; draft.totalText = "100"
+        loan.loanSchedule = LoanSchedule(inputs: try draft.validate().get())
+        XCTAssertEqual(loan.listMeta, "\(AccountType.loan.displayName) · auto")
+
+        loan.accountType = .creditCard
+        XCTAssertEqual(loan.listMeta, "\(AccountType.creditCard.displayName) · manual")
+    }
+
     /// The account-detail delete note names the service that re-adds the account.
     func testDeleteNoteMatchesSource() {
         XCTAssertNil(AccountSource.manual.deleteNote)

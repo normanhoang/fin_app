@@ -581,6 +581,6 @@ extension Account {
     var listMeta: String {
         let type = accountType.displayName
         guard source == .manual else { return type }
-        return loanSchedule != nil ? "\(type) · auto" : "\(type) · manual"
+        return loanSchedule != nil && accountType == .loan ? "\(type) · auto" : "\(type) · manual"
     }
 }

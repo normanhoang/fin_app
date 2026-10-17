@@ -74,7 +74,8 @@ struct LoanDraft: Equatable {
     }
 
     func validate(now: Date = Date()) -> Result<Inputs, Problem> {
-        guard let balance = Self.parse(balanceText), balance > 0,
+        // 0 allowed: a paid-off schedule prefills 0 and must stay editable.
+        guard let balance = Self.parse(balanceText), balance >= 0,
               let rate = Self.parse(rateText), rate >= 0,
               let total = Self.parse(totalText), total > 0 else { return .failure(.incomplete) }
         let escrow = Self.parse(escrowText) ?? 0

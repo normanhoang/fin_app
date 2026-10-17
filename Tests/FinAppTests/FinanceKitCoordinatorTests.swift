@@ -61,6 +61,29 @@ final class FinanceKitCoordinatorTests: XCTestCase {
         XCTAssertEqual(source.lastSince, Calendar.current.date(byAdding: .day, value: -15, to: clock))
     }
 
+    /// An account shared after the first import (e.g. Savings added later) gets
+    /// the full first-import lookback, not the short incremental window.
+    func testNewlySharedAccountRefetchesWithInitialLookback() async {
+        source.result = .success([card(["-1.00"])])
+        let c = make()
+        await c.importNow()
+
+        clock = clock.addingTimeInterval(10 * 86_400)
+        let cash = FKAccount(id: UUID(), institutionName: "Apple", displayName: "Apple Cash", currency: "USD",
+                             isLiability: false, balance: 5, availableBalance: nil, balanceDate: clock,
+                             transactions: [])
+        source.result = .success([card(["-1.00"]), cash])
+        await c.importNow()
+        XCTAssertEqual(source.lastSince, Calendar.current.date(byAdding: .day, value: -120, to: clock))
+        XCTAssertEqual(source.fetchCount, 3)
+
+        clock = clock.addingTimeInterval(86_400)
+        await c.importNow()
+        XCTAssertEqual(source.lastSince, Calendar.current.date(byAdding: .day, value: -6, to: clock),
+                       "known accounts use the incremental window")
+        XCTAssertEqual(source.fetchCount, 4)
+    }
+
     func testImportIfStaleDebounces() async {
         let c = make()
         await c.importIfStale()
