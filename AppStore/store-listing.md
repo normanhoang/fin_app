@@ -117,3 +117,13 @@ functionality without a connection: open the Settings tab and tap "Preview with
 sample data" — this loads realistic example accounts, transactions, categories,
 and recurring bills so every screen is populated. "Clear all local data" in
 Settings removes it again.
+
+Apple Wallet (FinanceKit): the "Connect Apple Wallet" card in Settings imports
+Apple Card, Apple Cash, and Apple Savings through Apple's FinanceKit. It needs a
+physical iPhone (iOS 17.4 or later) with at least one of those accounts set up in
+Wallet; the card does not appear in the Simulator, and the sample data above does
+not include Wallet accounts. Tapping "Connect Apple Wallet" shows the system
+permission sheet; the data is read and stored only on the device.
+
+Loans: Accounts tab → + → Loan → turn on "Auto-calculate balance" to enter a rate,
+monthly payment, and escrow; the balance then updates on each payment date.
