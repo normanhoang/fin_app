@@ -25,7 +25,6 @@ struct SettingsView: View {
                     connectionCard
                     noticeCards
                     if financeKit.isAvailable {
-                        SectionLabel("Apple Wallet").padding(.horizontal, 4)
                         appleWalletCard
                     }
                     SectionLabel("Appearance").padding(.horizontal, 4)
@@ -88,42 +87,52 @@ struct SettingsView: View {
                 connectContent
             }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.surface)
-                .overlay(
-                    LinearGradient(colors: [.brand.opacity(0.10), .clear],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .modifier(ConnectionCardChrome())
+    }
+
+    /// Icon circle + title + status line shared by the SimpleFin and Apple Wallet cards.
+    private func connectionHeader(icon: String, tint: Color = .brand, title: String, meta: String) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(tint.opacity(0.12))
+                Image(systemName: icon)
+                    .font(.system(size: 15))
+                    .foregroundStyle(tint)
+            }
+            .frame(width: 36, height: 36)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 15.5, weight: .semibold))
+                    .foregroundStyle(Color.textPrimary)
+                Text(meta)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 1)
-        )
+    }
+
+    /// Full-width brand button used by the connection cards.
+    private func primaryButton(_ title: String, icon: String? = nil, busy: Bool = false) -> some View {
+        HStack(spacing: 6) {
+            if busy {
+                ProgressView().controlSize(.small).tint(Color.appBackground)
+            } else if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            Text(title)
+        }
+        .font(.system(size: 13.5, weight: .semibold))
+        .foregroundStyle(Color.appBackground)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(Color.brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     @ViewBuilder
     private var connectedContent: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(Color.brand.opacity(0.12))
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color.brand)
-            }
-            .frame(width: 36, height: 36)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Connected to SimpleFin")
-                    .font(.system(size: 15.5, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
-                Text(connectionMeta)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.textSecondary)
-            }
-        }
+        connectionHeader(icon: "checkmark.seal.fill", title: "Connected to SimpleFin", meta: connectionMeta)
         HStack(spacing: 10) {
             Button {
                 Task {
@@ -131,20 +140,8 @@ struct SettingsView: View {
                     await financeKit.importNow()
                 }
             } label: {
-                HStack(spacing: 6) {
-                    if coordinator.isSyncing {
-                        ProgressView().controlSize(.small).tint(Color.appBackground)
-                    } else {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    Text(coordinator.isSyncing ? "Syncing…" : "Sync now")
-                }
-                .font(.system(size: 13.5, weight: .semibold))
-                .foregroundStyle(Color.appBackground)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                primaryButton(coordinator.isSyncing ? "Syncing…" : "Sync now",
+                              icon: "arrow.triangle.2.circlepath", busy: coordinator.isSyncing)
             }
             .buttonStyle(.plain)
             .disabled(coordinator.isSyncing)
@@ -180,23 +177,8 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var connectContent: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(Color.brand.opacity(0.12))
-                Image(systemName: "link")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color.brand)
-            }
-            .frame(width: 36, height: 36)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Connect to SimpleFin")
-                    .font(.system(size: 15.5, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
-                Text("A setup token establishes a read-only connection.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.textSecondary)
-            }
-        }
+        connectionHeader(icon: "link", title: "Connect to SimpleFin",
+                         meta: "A setup token establishes a read-only connection.")
         TextField("", text: $setupToken,
                   prompt: Text("Paste SimpleFin setup token").foregroundStyle(Color.textTertiary),
                   axis: .vertical)
@@ -268,35 +250,36 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var appleWalletCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             switch financeKit.authorization {
             case .notDetermined:
-                Text("Import Apple Card, Apple Cash, and Savings directly from this iPhone — no bank login or reconnecting.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.textSecondary)
+                connectionHeader(icon: "wallet.pass", title: "Connect Apple Wallet",
+                                 meta: "Apple Card, Cash, and Savings — read on this iPhone, no bank login.")
                 Button {
                     Task { await financeKit.connect() }
                 } label: {
-                    Text("Connect Apple Wallet")
-                        .font(.system(size: 13.5, weight: .semibold))
-                        .foregroundStyle(Color.appBackground)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    primaryButton("Connect Apple Wallet")
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("connectAppleWalletButton")
             case .authorized:
-                Text(appleWalletMeta)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.textPrimary)
+                connectionHeader(icon: "checkmark.seal.fill", title: "Connected to Apple Wallet",
+                                 meta: appleWalletMeta)
+                Button {
+                    Task { await financeKit.importNow() }
+                } label: {
+                    primaryButton(financeKit.isImporting ? "Importing…" : "Import now",
+                                  icon: "arrow.triangle.2.circlepath", busy: financeKit.isImporting)
+                }
+                .buttonStyle(.plain)
+                .disabled(financeKit.isImporting)
+                .accessibilityIdentifier("importAppleWalletButton")
                 Text("Manage shared accounts in Settings → Privacy & Security → Wallet.")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.textTertiary)
             case .denied:
-                Text("Apple Wallet access is off. Turn it on in Settings → Privacy & Security → Wallet. Imported accounts keep their last data.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.textSecondary)
+                connectionHeader(icon: "wallet.pass", tint: .textSecondary, title: "Apple Wallet access is off",
+                                 meta: "Turn it on in Settings → Privacy & Security → Wallet. Imported accounts keep their last data.")
             }
             if let result = financeKit.lastMergeResult {
                 tintedCard("Merged \(result.merged) transactions, removed \(result.removed) duplicates.",
@@ -306,10 +289,7 @@ struct SettingsView: View {
                 tintedCard(error, icon: "xmark.octagon", tint: .negative)
             }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.hairline, lineWidth: 1))
+        .modifier(ConnectionCardChrome())
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("appleWalletCard")
     }
@@ -318,7 +298,11 @@ struct SettingsView: View {
         let count = accounts.filter { $0.source == .financeKit }.count
         var parts = ["\(count) \(count == 1 ? "account" : "accounts")"]
         if let last = financeKit.lastImportDate {
-            parts.append("imported \(last.formatted(date: .abbreviated, time: .shortened))")
+            if Calendar.current.isDateInToday(last) {
+                parts.append("last imported today, \(last.formatted(date: .omitted, time: .shortened))")
+            } else {
+                parts.append("last imported \(last.formatted(date: .abbreviated, time: .shortened))")
+            }
         }
         return parts.joined(separator: " · ")
     }
@@ -507,5 +491,27 @@ struct CSVDocument: FileDocument {
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
+}
+
+/// Surface + brand-tinted gradient + hairline: the SimpleFin and Apple Wallet cards.
+private struct ConnectionCardChrome: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.surface)
+                    .overlay(
+                        LinearGradient(colors: [.brand.opacity(0.10), .clear],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(Color.hairline, lineWidth: 1)
+            )
     }
 }

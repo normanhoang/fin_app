@@ -32,4 +32,30 @@ final class AccountSourceTests: XCTestCase {
         a.sourceRaw = "bogus"
         XCTAssertEqual(a.source, .simplefin)
     }
+
+    /// Accounts-list row subtitle: only manual accounts get a source tag.
+    func testListMetaTagsOnlyManualAccounts() {
+        let wallet = Account(id: "financekit-1", org: "Apple", name: "Apple Cash", currency: "USD",
+                             balance: 5, balanceDate: Date(), typeRaw: AccountType.cash.rawValue)
+        wallet.source = .financeKit
+        XCTAssertEqual(wallet.listMeta, AccountType.cash.displayName)
+
+        let synced = Account(id: "s", org: "Chase", name: "Checking", currency: "USD",
+                             balance: 5, balanceDate: Date(), typeRaw: AccountType.cash.rawValue)
+        XCTAssertEqual(synced.listMeta, AccountType.cash.displayName)
+
+        let manual = Account(id: "manual-1", org: "Me", name: "House", currency: "USD", balance: 5,
+                             balanceDate: Date(), typeRaw: AccountType.cash.rawValue, isManual: true)
+        manual.source = .manual
+        XCTAssertEqual(manual.listMeta, "\(AccountType.cash.displayName) · manual")
+    }
+
+    /// The account-detail delete note names the service that re-adds the account.
+    func testDeleteNoteMatchesSource() {
+        XCTAssertNil(AccountSource.manual.deleteNote)
+        XCTAssertTrue(AccountSource.simplefin.deleteNote?.contains("SimpleFin") == true)
+        let wallet = AccountSource.financeKit.deleteNote
+        XCTAssertTrue(wallet?.contains("Apple Wallet") == true)
+        XCTAssertFalse(wallet?.contains("SimpleFin") == true, "Wallet accounts must not mention SimpleFin")
+    }
 }

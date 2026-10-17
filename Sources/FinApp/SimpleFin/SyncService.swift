@@ -136,8 +136,17 @@ enum SyncService {
     /// returns — i.e. the user hasn't unlinked them in Bridge yet.
     @MainActor
     static func supersededNames(in dtos: [AccountDTO], context: ModelContext) throws -> [String] {
-        let incoming = Set(dtos.map { accountStorageID(providerScope: $0.providerScope, providerID: $0.id) })
-        return try context.fetch(FetchDescriptor<Account>())
+        try supersededNames(incomingIDs: incomingIDs(dtos), context: context)
+    }
+
+    /// Storage ids of the accounts in a SimpleFin response.
+    static func incomingIDs(_ dtos: [AccountDTO]) -> Set<String> {
+        Set(dtos.map { accountStorageID(providerScope: $0.providerScope, providerID: $0.id) })
+    }
+
+    @MainActor
+    static func supersededNames(incomingIDs incoming: Set<String>, context: ModelContext) throws -> [String] {
+        try context.fetch(FetchDescriptor<Account>())
             .filter { $0.supersededProviderID.map(incoming.contains) ?? false }
             .map(\.displayName)
             .sorted()

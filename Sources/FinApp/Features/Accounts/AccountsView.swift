@@ -362,7 +362,7 @@ struct AccountsView: View {
                     .font(.system(size: 15.5, weight: .medium))
                     .foregroundStyle(Color.textPrimary)
                     .lineLimit(1)
-                Text(metaLine(account))
+                Text(account.listMeta)
                     .font(.system(size: 12))
                     .foregroundStyle(Color.textSecondary)
                     .lineLimit(2)
@@ -376,16 +376,6 @@ struct AccountsView: View {
         .padding(.vertical, 4)
     }
 
-    /// Account type, plus a source tag for non-SimpleFin accounts. Per-account
-    /// sync time is dropped from the row; the overall "synced" stamp lives in the footer.
-    private func metaLine(_ account: Account) -> String {
-        let type = account.accountType.displayName
-        switch account.source {
-        case .manual: return account.loanSchedule != nil ? "\(type) · auto" : "\(type) · manual"
-        case .financeKit: return "\(type) · Apple Wallet"
-        case .simplefin: return type
-        }
-    }
 
     /// Persist a Custom-mode drag: rewrite the group's order indexes.
     private func move(in group: TypeGroup, from source: IndexSet, to destination: Int) {
@@ -494,8 +484,8 @@ struct AccountDetailView: View {
                 }
                 .accessibilityIdentifier("deleteAccountButton")
             } footer: {
-                if !account.isManual {
-                    Text("A deleted account comes back on the next sync if it's still in your SimpleFin connection.")
+                if let note = account.source.deleteNote {
+                    Text(note)
                 }
             }
             .listRowBackground(Color.surface)
@@ -581,5 +571,16 @@ struct AccountDetailView: View {
         let trimmed = editedName.trimmingCharacters(in: .whitespaces)
         account.customName = (trimmed.isEmpty || trimmed == account.name) ? nil : trimmed
         try? context.save()
+    }
+}
+
+extension Account {
+    /// Accounts-list row subtitle: the type, plus a tag for user-maintained
+    /// accounts (synced ones, SimpleFin or Apple Wallet, carry no tag). Per-account
+    /// sync time is dropped from the row; the overall "synced" stamp lives in the footer.
+    var listMeta: String {
+        let type = accountType.displayName
+        guard source == .manual else { return type }
+        return loanSchedule != nil ? "\(type) · auto" : "\(type) · manual"
     }
 }

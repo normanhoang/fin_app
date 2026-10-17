@@ -35,9 +35,17 @@ struct FinAppApp: App {
         let container = isUITest ? AppSchema.makeInMemoryContainer() : AppSchema.makeContainer()
         self.container = container
         _coordinator = State(initialValue: SyncCoordinator(context: container.mainContext))
-        _financeKit = State(initialValue: FinanceKitCoordinator(
-            source: isUITest ? UnavailableFinanceKitSource() : FinanceKitSources.make(),
-            context: container.mainContext))
+        let financeKit = FinanceKitCoordinator(
+            source: ProcessInfo.processInfo.environment["FINAPP_FK_DEMO"] == "1" ? DemoFinanceKitSource()
+                : isUITest ? UnavailableFinanceKitSource() : FinanceKitSources.make(),
+            context: container.mainContext)
+        if ProcessInfo.processInfo.environment["FINAPP_MERGE_DEMO"] == "1" {
+            // Show the merge sheet with stand-in accounts (design review / UI test).
+            financeKit.pendingMerge = MergeProposal(
+                financeKitAccountID: "financekit-demo", simplefinAccountID: "simplefin-demo",
+                financeKitName: "Apple Card", simplefinName: "Apple Card")
+        }
+        _financeKit = State(initialValue: financeKit)
 
         if isUITest || ProcessInfo.processInfo.environment["FINAPP_SAMPLE"] == "1" {
             SampleData.inject(into: container.mainContext)

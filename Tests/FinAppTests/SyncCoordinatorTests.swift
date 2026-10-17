@@ -6,10 +6,12 @@ import SwiftData
 final class SyncCoordinatorTests: XCTestCase {
     override func setUp() {
         UserDefaults.standard.removeObject(forKey: "lastSyncDate")
+        UserDefaults.standard.removeObject(forKey: "simplefinLastIncomingIDs")
     }
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: "lastSyncDate")
+        UserDefaults.standard.removeObject(forKey: "simplefinLastIncomingIDs")
     }
 
     func testDisconnectInvalidatesAnInFlightResponse() async throws {
@@ -257,5 +259,44 @@ final class SyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.supersededStillLinked, ["Apple Card"])
         coordinator.disconnect()
         XCTAssertEqual(coordinator.supersededStillLinked, [])
+    }
+
+    /// "Sync now" runs SimpleFin first, then the Wallet import offers the merge —
+    /// so the merge lands after the sync computed the banner. It must still show,
+    /// and survive a relaunch until the next sync.
+    func testMergeAfterSyncShowsBannerAndSurvivesRelaunch() async throws {
+        let container = AppSchema.makeInMemoryContainer()
+        let ctx = container.mainContext
+        let accessURL = URL(string: "https://user:pass@bridge.example/simplefin")!
+        let dto = AccountDTO(id: "card", providerScope: "apple.example", org: "Apple", name: "Apple Card",
+                             currency: "USD", balance: -5, availableBalance: nil,
+                             balanceDate: Date(), transactions: [])
+        func makeCoordinator() -> SyncCoordinator {
+            SyncCoordinator(
+                context: ctx,
+                loadAccessURL: { accessURL }, saveAccessURL: { _ in }, deleteAccessURL: {},
+                claim: { _ in accessURL },
+                fetch: { _, _ in SimpleFinResponse(errors: [], accounts: [dto]) }
+            )
+        }
+        let coordinator = makeCoordinator()
+        await coordinator.sync()
+        XCTAssertEqual(coordinator.supersededStillLinked, [], "not merged yet")
+
+        // Merge (as FinanceKitMerge leaves it): the row now records its SimpleFin id.
+        let row = try XCTUnwrap(ctx.fetch(FetchDescriptor<Account>()).first)
+        row.supersededProviderID = row.id
+        row.id = "financekit-X"
+        row.source = .financeKit
+        try ctx.save()
+
+        coordinator.refreshSuperseded()
+        XCTAssertEqual(coordinator.supersededStillLinked, ["Apple Card"], "banner right after merge")
+
+        let relaunched = makeCoordinator()
+        XCTAssertEqual(relaunched.supersededStillLinked, ["Apple Card"], "banner after relaunch, before any sync")
+
+        relaunched.disconnect()
+        XCTAssertEqual(makeCoordinator().supersededStillLinked, [], "disconnect forgets SimpleFin's accounts")
     }
 }

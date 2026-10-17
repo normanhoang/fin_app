@@ -823,6 +823,39 @@ final class FinAppUITests: XCTestCase {
         XCTAssertTrue(confirm.exists, "Extra-principal confirmation dismissed itself")
     }
 
+    // 11d. The FinanceKit merge sheet shows both choices (light + dark snapshots).
+    func testMergeSheetShowsChoices() {
+        for mode in ["light", "dark"] {
+            let app = XCUIApplication()
+            app.launchEnvironment["FINAPP_UITEST"] = "1"
+            app.launchEnvironment["FINAPP_MERGE_DEMO"] = "1"
+            app.launchArguments += ["-appearanceMode", mode]
+            app.launch()
+            let merge = app.buttons["mergeConfirmButton"]
+            XCTAssertTrue(merge.waitForExistence(timeout: 8), "Merge sheet missing")
+            XCTAssertTrue(app.buttons["mergeDeclineButton"].isHittable, "Keep separate not reachable")
+            snap(app, "merge-sheet-\(mode)")
+            app.terminate()
+        }
+    }
+
+    // 11e. The connected Apple Wallet card mirrors the SimpleFin card (snapshots).
+    func testAppleWalletCardConnected() {
+        for mode in ["light", "dark"] {
+            let app = XCUIApplication()
+            app.launchEnvironment["FINAPP_UITEST"] = "1"
+            app.launchEnvironment["FINAPP_FK_DEMO"] = "1"
+            app.launchEnvironment["FINAPP_TAB"] = "4"
+            app.launchArguments += ["-appearanceMode", mode]
+            app.launch()
+            XCTAssertTrue(app.staticTexts["Connected to Apple Wallet"].waitForExistence(timeout: 8),
+                          "Connected Apple Wallet card missing")
+            XCTAssertTrue(app.buttons["importAppleWalletButton"].exists, "Import now missing")
+            snap(app, "wallet-card-\(mode)")
+            app.terminate()
+        }
+    }
+
     // 13. After switching tabs, the large navigation title keeps its proper leading
     //     inset (regression: it used to render flush-left until a manual scroll).
     func testLargeTitleInsetAfterTabSwitch() {

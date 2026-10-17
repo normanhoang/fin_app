@@ -157,6 +157,7 @@ struct RootView: View {
         )) { proposal in
             FinanceKitMergeSheet(proposal: proposal)
                 .environment(financeKit)
+                .environment(coordinator)
         }
         .environment(router)
         .background(KeyboardDismisser())

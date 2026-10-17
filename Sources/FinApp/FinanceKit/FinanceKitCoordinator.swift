@@ -23,6 +23,17 @@ struct UnavailableFinanceKitSource: FinanceKitSource {
     func fetch(since: Date) async throws -> [FKAccount] { [] }
 }
 
+#if DEBUG
+/// `FINAPP_FK_DEMO=1`: an authorized source with no data, so the Simulator can
+/// show the connected Apple Wallet card (design review / UI tests).
+struct DemoFinanceKitSource: FinanceKitSource {
+    func isAvailable() -> Bool { true }
+    func authorizationStatus() async throws -> FKAuthorization { .authorized }
+    func requestAuthorization() async throws -> FKAuthorization { .authorized }
+    func fetch(since: Date) async throws -> [FKAccount] { [] }
+}
+#endif
+
 struct MergeProposal: Equatable, Identifiable {
     let financeKitAccountID: String
     let simplefinAccountID: String

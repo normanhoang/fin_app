@@ -21,6 +21,9 @@ final class SyncCoordinator {
     private let fetchAccounts: (URL, Date?) async throws -> SimpleFinResponse
     private let persistResponse: (SimpleFinResponse, ModelContext) throws -> Void
     private let lastSyncKey = "lastSyncDate"
+    /// Account ids SimpleFin returned on the last successful sync, so the unlink
+    /// banner can be recomputed after a later merge or a relaunch.
+    private let lastIncomingIDsKey = "simplefinLastIncomingIDs"
     private var connectionGeneration = 0
     private var pendingSyncGeneration: Int?
 
@@ -45,6 +48,7 @@ final class SyncCoordinator {
         self.fetchAccounts = { try await client.fetchAccounts(accessURL: $0, since: $1) }
         self.persistResponse = { try SyncCoordinator.persist($0, in: $1) }
         self.isConnected = store.loadAccessURL() != nil
+        refreshSuperseded()
     }
 
     init(
@@ -66,6 +70,7 @@ final class SyncCoordinator {
         self.fetchAccounts = fetch
         self.persistResponse = persist
         self.isConnected = loadAccessURL() != nil
+        refreshSuperseded()
     }
 
     var lastSyncDate: Date? {
@@ -108,7 +113,6 @@ final class SyncCoordinator {
         }
         errorMessage = nil
         providerErrors = []
-        supersededStillLinked = []
         lastSyncAttempt = Date()
         let generation = connectionGeneration
         isSyncing = true
@@ -138,7 +142,9 @@ final class SyncCoordinator {
                 throw error
             }
             providerErrors = response.errors
-            supersededStillLinked = (try? SyncService.supersededNames(in: response.accounts, context: context)) ?? []
+            UserDefaults.standard.set(Array(SyncService.incomingIDs(response.accounts)),
+                                      forKey: lastIncomingIDsKey)
+            refreshSuperseded()
             lastSyncDate = Date()
             errorMessage = nil
         } catch is CancellationError {
@@ -162,8 +168,21 @@ final class SyncCoordinator {
         lastSyncAttempt = nil
         lastSyncDate = nil
         providerErrors = []
+        UserDefaults.standard.removeObject(forKey: lastIncomingIDsKey)
         supersededStillLinked = []
         errorMessage = nil
+    }
+
+    /// Recompute the unlink banner: merged-into-FinanceKit accounts that SimpleFin
+    /// returned on its last sync. Call after a merge — "Sync now" runs SimpleFin
+    /// before the Wallet import that offers the merge.
+    func refreshSuperseded() {
+        guard isConnected,
+              let ids = UserDefaults.standard.stringArray(forKey: lastIncomingIDsKey) else {
+            supersededStillLinked = []
+            return
+        }
+        supersededStillLinked = (try? SyncService.supersededNames(incomingIDs: Set(ids), context: context)) ?? []
     }
 
     /// Snapshot current net worth (dashboard graph) and per-account balances
