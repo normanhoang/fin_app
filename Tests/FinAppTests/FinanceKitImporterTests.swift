@@ -35,6 +35,19 @@ final class FinanceKitImporterTests: XCTestCase {
         XCTAssertEqual(FinanceKitMapping.signed(-12, isDebit: true), -12, "magnitude is used")
     }
 
+    /// Device-observed: balances use the accounting indicator — Apple Cash holding
+    /// money comes back `.debit`, an Apple Card amount owed comes back `.credit`.
+    func testBalanceMappingFollowsAccountingIndicator() {
+        XCTAssertEqual(FinanceKitMapping.balance(50, isDebit: true, isLiability: false), 50,
+                       "Apple Cash balance (debit) is money held → positive")
+        XCTAssertEqual(FinanceKitMapping.balance(50, isDebit: false, isLiability: false), 50,
+                       "asset balances can't be overdrawn → positive either way")
+        XCTAssertEqual(FinanceKitMapping.balance(300, isDebit: false, isLiability: true), -300,
+                       "Apple Card amount owed (credit) → negative")
+        XCTAssertEqual(FinanceKitMapping.balance(20, isDebit: true, isLiability: true), 20,
+                       "overpaid card (debit) → positive")
+    }
+
     func testFirstImportInsertsAccountAndTransactions() throws {
         try FinanceKitImporter.stage([card([txn(1, "-10.00"), txn(2, "25.00")])], into: ctx)
 

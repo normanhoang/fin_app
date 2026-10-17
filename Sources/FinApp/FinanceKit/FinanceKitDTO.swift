@@ -25,10 +25,18 @@ struct FKAccount: Equatable, Sendable {
 }
 
 enum FinanceKitMapping {
-    /// Debit = money out of the user's pocket (purchase, or balance owed on a
-    /// card) → negative; credit → positive. Single place to flip if device
-    /// testing shows FinanceKit reports card balances the other way.
+    /// Transactions: debit = money out (purchase) → negative; credit → positive.
     static func signed(_ amount: Decimal, isDebit: Bool) -> Decimal {
         isDebit ? -amount.magnitude : amount.magnitude
+    }
+
+    /// Balances use the accounting indicator instead (seen on device: Apple Cash
+    /// holding money is `.debit`, an Apple Card amount owed is `.credit`). Asset
+    /// balances (Cash/Savings) can't be overdrawn, so they're always positive —
+    /// robust to Apple's inconsistent asset indicator. A liability owed (credit)
+    /// is negative; overpaid (debit) is positive.
+    static func balance(_ amount: Decimal, isDebit: Bool, isLiability: Bool) -> Decimal {
+        guard isLiability else { return amount.magnitude }
+        return isDebit ? amount.magnitude : -amount.magnitude
     }
 }

@@ -44,7 +44,7 @@ struct LiveFinanceKitSource: FinanceKitSource {
             case .asset: isLiability = false
             @unknown default: isLiability = false
             }
-            let (booked, available) = latest[account.id].map(amounts) ?? (nil, nil)
+            let (booked, available) = latest[account.id].map { amounts($0, isLiability: isLiability) } ?? (nil, nil)
             return FKAccount(
                 id: account.id, institutionName: account.institutionName,
                 displayName: account.displayName, currency: account.currencyCode,
@@ -81,17 +81,17 @@ struct LiveFinanceKitSource: FinanceKitSource {
         )
     }
 
-    private func signed(_ b: Balance) -> Decimal {
-        FinanceKitMapping.signed(b.amount.amount, isDebit: b.creditDebitIndicator == .debit)
-    }
-
     /// (booked, available), each signed.
-    private func amounts(_ balance: AccountBalance) -> (Decimal?, Decimal?) {
+    private func amounts(_ balance: AccountBalance, isLiability: Bool) -> (Decimal?, Decimal?) {
+        func signed(_ b: Balance) -> Decimal {
+            FinanceKitMapping.balance(b.amount.amount, isDebit: b.creditDebitIndicator == .debit,
+                                      isLiability: isLiability)
+        }
         switch balance.currentBalance {
-        case .booked(let b): (signed(b), nil)
-        case .available(let a): (nil, signed(a))
-        case .availableAndBooked(let a, let b): (signed(b), signed(a))
-        @unknown default: (nil, nil)
+        case .booked(let b): return (signed(b), nil)
+        case .available(let a): return (nil, signed(a))
+        case .availableAndBooked(let a, let b): return (signed(b), signed(a))
+        @unknown default: return (nil, nil)
         }
     }
 
