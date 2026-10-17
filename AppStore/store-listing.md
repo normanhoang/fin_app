@@ -77,6 +77,17 @@ https://normanhoang.github.io/fin_app/simplefin-setup
 ## Privacy Policy URL
 `https://normanhoang.github.io/fin_app/privacy`
 
+## What's New (version 1.11.0)
+`Apple Wallet and self-updating loans:
+
+• Apple Card, Apple Cash, and Savings now import straight from Apple Wallet on
+  your iPhone — no bank login, no reconnecting. Connect it in Settings.
+• Already tracking Apple Card through SimpleFin? FinApp offers to merge the two,
+  keeping your history, renames, and categories.
+• Loans can keep their own balance current: add your rate, monthly payment, and
+  escrow, and the balance steps down on each payment date. Log extra principal
+  payments whenever you make them.`
+
 ## What's New (version 1.10.0)
 `A couple of small fixes to manual accounts:
 
