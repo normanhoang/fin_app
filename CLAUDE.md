@@ -87,8 +87,8 @@ never collide, so sync leaves them untouched. After persisting, the coordinator 
 `CategorizationEngine.categorizeAll`, `RecurringDetector.refresh`, and records a
 `NetWorthSnapshot`.
 
-**FinanceKit** (`FinanceKit/`, behind the off-by-default `FINANCEKIT` compilation flag —
-see `project.yml`): imports Apple Card/Cash/Savings on-device. `FinanceKitCoordinator`
+**FinanceKit** (`FinanceKit/`, behind the `FINANCEKIT` compilation flag — on since Apple
+granted the managed entitlement; see `project.yml`): imports Apple Card/Cash/Savings on-device. `FinanceKitCoordinator`
 (`@Observable`) → `FinanceKitSource` (live: `LiveFinanceKitSource`, `#if FINANCEKIT`,
 iOS 17.4+; Simulator always unavailable) → `FinanceKitImporter` (pure SwiftData upsert,
 ids `financekit-<UUID>`). `Account.source` (simplefin/manual/financeKit) scopes each sync

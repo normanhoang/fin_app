@@ -1,6 +1,6 @@
 # FinApp Privacy Policy
 
-_Last updated: June 28, 2026_
+_Last updated: October 17, 2026_
 
 FinApp is a personal-finance app for iPhone. This policy explains what data the
 app handles and how. The short version: **your financial data stays on your
@@ -15,6 +15,12 @@ choose to connect to. That data â€” account names, balances, and transactions â€
 is stored **only on your device** in an encrypted local database. We never
 receive it.
 
+If you connect **Apple Wallet**, FinApp reads your Apple Card, Apple Cash, and
+Apple Savings accounts, balances, and transactions through Apple's FinanceKit,
+only for the accounts you choose in the system permission sheet. This data is
+read on your device, stored only on your device in the same encrypted database,
+and never leaves it.
+
 The app also stores data you create yourself (categories, budgets, recurring-bill
 choices) locally on the device.
 
@@ -28,7 +34,8 @@ third-party SDKs. There is no developer-operated server that your data is sent t
 Your data is not shared with us or any third party for our purposes. The only
 network connection the app makes is to **SimpleFin Bridge**, and only to fetch
 the account data you asked it to retrieve. SimpleFin's handling of that request
-is governed by SimpleFin's own privacy policy.
+is governed by SimpleFin's own privacy policy. Apple Wallet data is read on the
+device and involves no network connection by FinApp.
 
 ## Security
 
@@ -41,6 +48,8 @@ is governed by SimpleFin's own privacy policy.
 ## Your control over your data
 
 - **Disconnect** removes the SimpleFin connection from your device.
+- You can turn off FinApp's access to Apple Wallet data at any time in iOS
+  Settings; FinApp then stops importing it.
 - **Clear all local data** (in Settings) deletes every account, transaction,
   budget, and history record stored on the device.
 - Deleting the app removes all of its local data.
