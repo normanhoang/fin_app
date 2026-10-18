@@ -14,10 +14,12 @@
 		05199C9D83578377BD7B4B2A /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E0C0CFBEFA86055F447425 /* Analytics.swift */; };
 		062959BF94E004CE4854BFEF /* LoanUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC36D35D57901FDF88181179 /* LoanUpdater.swift */; };
 		077A0D49AE7FE6439EEB417A /* TriageStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69FB5E2E6FCC4A8E31ACF7E0 /* TriageStateTests.swift */; };
+		078DBAE09483E66A9E701582 /* DuplicateDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0802EE3EA3B1BAFFC4C1911C /* DuplicateDetector.swift */; };
 		099CA3C1C47B3A22580D0AE8 /* AccountSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26949CEEC52D26F3B5A22468 /* AccountSource.swift */; };
 		0B97456C80A794C0BCDD5C6C /* SimpleFinDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 027C6051FE9F3E15969CBF30 /* SimpleFinDecodingTests.swift */; };
 		12CA8F4F4DD75A3ABF594036 /* FinanceKitImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B065D7DB87B085AA8F6AAF62 /* FinanceKitImporterTests.swift */; };
 		142B4FFC748615B7D490F428 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3B3BE3CB74FC76489E3FDA1 /* SettingsView.swift */; };
+		154659183C15DD58D6BD9DA0 /* DuplicateDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8B5449A2562C8F930A4431A /* DuplicateDetectorTests.swift */; };
 		189461D3E71CC18F492D2A8B /* NetWorthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE8665D0ABC06FA8113E1A5 /* NetWorthSnapshot.swift */; };
 		192FAF1E096BC70B02B9594D /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D88D40C9AF27A9C91DFA4FA /* SplashView.swift */; };
 		1EDEBA33B067C110AE4601EA /* AppSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8793F4094877DD0C0710EE5F /* AppSchema.swift */; };
@@ -122,6 +124,7 @@
 		02FD57A94B9D56BECE387F99 /* FinanceKitImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitImporter.swift; sourceTree = "<group>"; };
 		04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorizationEngineTests.swift; sourceTree = "<group>"; };
 		064BF2355930485CECCB1254 /* SyncServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncServiceTests.swift; sourceTree = "<group>"; };
+		0802EE3EA3B1BAFFC4C1911C /* DuplicateDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateDetector.swift; sourceTree = "<group>"; };
 		09E78312FF6E42A900032A56 /* FinanceKitMerge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitMerge.swift; sourceTree = "<group>"; };
 		0A02E4F5FB7209934460770A /* CategorySeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySeed.swift; sourceTree = "<group>"; };
 		0AF50253EE05EB506D6F973D /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
@@ -193,6 +196,7 @@
 		D5AC54257EA7A1991C56AC50 /* SchemaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaTests.swift; sourceTree = "<group>"; };
 		D70FCA77654A6C585BFAB402 /* LoanUpdaterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanUpdaterTests.swift; sourceTree = "<group>"; };
 		D899EDC21943564A15DE70DA /* SyncCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinatorTests.swift; sourceTree = "<group>"; };
+		D8B5449A2562C8F930A4431A /* DuplicateDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateDetectorTests.swift; sourceTree = "<group>"; };
 		DA1EA7DFE6B5F3DEF338F8ED /* SimpleFinClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleFinClient.swift; sourceTree = "<group>"; };
 		DCCB76803E218E918FE6943F /* AccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
 		E4CE39E1069B5053BE5996A8 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
@@ -251,6 +255,14 @@
 				BD3887B0E6FB5C2952021520 /* LockScreen.swift */,
 			);
 			path = Lock;
+			sourceTree = "<group>";
+		};
+		2E7BC1919F779FCA80636BD7 /* Accounts */ = {
+			isa = PBXGroup;
+			children = (
+				0802EE3EA3B1BAFFC4C1911C /* DuplicateDetector.swift */,
+			);
+			path = Accounts;
 			sourceTree = "<group>";
 		};
 		340733922F689D140C89163E /* App */ = {
@@ -459,6 +471,7 @@
 				04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */,
 				0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */,
 				BA19FD56220E94FB9F9B8A06 /* CredentialStoreTests.swift */,
+				D8B5449A2562C8F930A4431A /* DuplicateDetectorTests.swift */,
 				FEB16FA0F657C164F9ECCEBD /* FinanceKitCoordinatorTests.swift */,
 				B065D7DB87B085AA8F6AAF62 /* FinanceKitImporterTests.swift */,
 				C1DD9B93FA5097B7C32FA114 /* FinanceKitMergeTests.swift */,
@@ -493,6 +506,7 @@
 			children = (
 				365C671522FDEAC79598B554 /* Assets.xcassets */,
 				D171F3181843038DBE7044F6 /* PrivacyInfo.xcprivacy */,
+				2E7BC1919F779FCA80636BD7 /* Accounts */,
 				7EE3B86CEB3E5354EBD35923 /* Analytics */,
 				340733922F689D140C89163E /* App */,
 				4E29D11A99D8BC30EAA73CF1 /* Categorization */,
@@ -649,6 +663,7 @@
 				D383F2C993554376E55683F5 /* CredentialStore.swift in Sources */,
 				363AE5A71223E2463A2D784F /* DashboardView.swift in Sources */,
 				BCCB90EF53F6A68F106DD4F6 /* DesignComponents.swift in Sources */,
+				078DBAE09483E66A9E701582 /* DuplicateDetector.swift in Sources */,
 				2C62D8485E862D95B240C057 /* FinAppApp.swift in Sources */,
 				C7AEF56E2F147D6AACD85239 /* FinanceKitClient.swift in Sources */,
 				B1EE97419A48EFC82572DBFC /* FinanceKitCoordinator.swift in Sources */,
@@ -705,6 +720,7 @@
 				2C6ACAA2776EDC4B380970C6 /* CategorizationEngineTests.swift in Sources */,
 				A85895AA42FEE3133FBCF20B /* CategorySeedTests.swift in Sources */,
 				92E54102B44376538D0F6B44 /* CredentialStoreTests.swift in Sources */,
+				154659183C15DD58D6BD9DA0 /* DuplicateDetectorTests.swift in Sources */,
 				FB56819BB1DF7F13FD0AC55A /* FinanceKitCoordinatorTests.swift in Sources */,
 				12CA8F4F4DD75A3ABF594036 /* FinanceKitImporterTests.swift in Sources */,
 				4A57AB5802B89BC2C7BB4F88 /* FinanceKitMergeTests.swift in Sources */,
