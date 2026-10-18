@@ -106,6 +106,12 @@ final class DuplicateDetectorTests: XCTestCase {
                        [DuplicateSuggestion(flaggedID: "manual-old", matchID: "manual-auto")])
     }
 
+    func testAutoLoanAndStudentLoanDoNotMatch() {
+        let a = acct("manual-a", "Auto Loan", .loan, -18000, manual: true)
+        let b = acct("manual-b", "Student Loan", .loan, -42000, manual: true)
+        XCTAssertFalse(DuplicateDetector.isLikelyDuplicate(a, b))
+    }
+
     func testPairKeyIsOrderIndependent() {
         XCTAssertEqual(DuplicateDetector.pairKey("b", "a"), "a|b")
         XCTAssertEqual(DuplicateDetector.pairKey("a", "b"), "a|b")

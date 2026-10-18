@@ -42,12 +42,14 @@ final class AccountMergeTests: XCTestCase {
             .sorted { $0.day < $1.day }
     }
 
-    /// old 10-12…14 = 100, kept 10-14…16 = 100; net worth 1000/day, 1100 on the overlap day.
+    /// old 10-12…14 = 100, kept 10-14…16 = 100, other account 900/day; net worth
+    /// (the sum of each day's rows, as the app records it) 1000/day, 1100 on the overlap day.
     private func seedOverlap(_ ctx: ModelContext) -> (old: Account, kept: Account) {
         let old = account(ctx, "manual-old")
         let kept = account(ctx, "manual-kept")
         snap(ctx, "manual-old", 12...14, 100)
         snap(ctx, "manual-kept", 14...16, 100)
+        snap(ctx, "other", 12...16, 900)
         netWorth(ctx, [12: 1000, 13: 1000, 14: 1100, 15: 1000, 16: 1000])
         try? ctx.save()
         return (old, kept)
@@ -97,6 +99,7 @@ final class AccountMergeTests: XCTestCase {
         let kept = account(ctx, "manual-kept", .loan, -411950)
         snap(ctx, "manual-old", 14...14, -412300)
         snap(ctx, "manual-kept", 14...14, -411950)
+        snap(ctx, "other", 14...14, 944250)
         netWorth(ctx, [14: 120000])
         try ctx.save()
 
@@ -132,6 +135,26 @@ final class AccountMergeTests: XCTestCase {
         XCTAssertEqual(result, AccountMerge.Result(overlapDays: 0, movedRows: 0))
         XCTAssertEqual(try netWorthByDay(ctx), [14: 1000])
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Account>()).map(\.id), ["manual-kept"])
+    }
+
+    /// An account deleted mid-day leaves its row behind, but later restaging of that
+    /// day's total already excludes it — subtracting again would spike the chart.
+    func testOverlapDaySkippedWhenTotalAlreadyExcludesOld() throws {
+        let container = AppSchema.makeInMemoryContainer()
+        let ctx = container.mainContext
+        let old = account(ctx, "manual-old", .loan, -412300)
+        let kept = account(ctx, "manual-kept", .loan, -411950)
+        snap(ctx, "manual-old", 14...14, -412300)
+        snap(ctx, "manual-kept", 14...14, -411950)
+        snap(ctx, "other", 14...14, 944250)
+        netWorth(ctx, [14: 532300])  // kept + other only
+        try ctx.save()
+
+        let result = try AccountMerge.delete(old, mergingInto: kept, in: ctx, calendar: cal)
+
+        XCTAssertEqual(result, AccountMerge.Result(overlapDays: 0, movedRows: 0, skippedDays: 1))
+        XCTAssertEqual(try netWorthByDay(ctx), [14: 532300])
+        XCTAssertTrue(try rows(ctx, "manual-old").isEmpty)
     }
 
     func testOverlapWithoutNetWorthRowCreatesNone() throws {

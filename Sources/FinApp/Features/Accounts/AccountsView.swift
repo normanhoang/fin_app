@@ -24,6 +24,9 @@ struct AccountsView: View {
     @State private var showingAdd = false
     /// Duplicate pair opened from the banner's Review button.
     @State private var reviewing: DuplicateSuggestion?
+    /// Delete confirmed in that sheet, run once it's fully dismissed so it never
+    /// re-renders against a deleted account.
+    @State private var pendingDuplicateDelete: (flaggedID: String, targetID: String?)?
     @State private var path = NavigationPath()
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
@@ -168,14 +171,14 @@ struct AccountsView: View {
                 }
             }
             .sheet(isPresented: $showingAdd) { AddAccountView() }
-            .sheet(item: $reviewing) { suggestion in
+            .sheet(item: $reviewing, onDismiss: performPendingDuplicateDelete) { suggestion in
                 if let flagged = accounts.first(where: { $0.id == suggestion.flaggedID }) {
                     DuplicateDeleteSheet(
                         account: flagged,
                         candidates: DuplicateDetector.candidates(for: flagged, among: accounts),
                         suggestedID: suggestion.matchID
                     ) { target in
-                        try? AccountMerge.delete(flagged, mergingInto: target, in: context)
+                        pendingDuplicateDelete = (flagged.id, target?.id)
                     }
                 }
             }
@@ -217,6 +220,14 @@ struct AccountsView: View {
             accounts: accounts,
             firstSnapshotDay: DuplicateDetector.firstSnapshotDays(balanceSnapshots),
             dismissed: Set(dismissedDuplicates.map(\.key)))
+    }
+
+    private func performPendingDuplicateDelete() {
+        guard let pending = pendingDuplicateDelete else { return }
+        pendingDuplicateDelete = nil
+        guard let flagged = accounts.first(where: { $0.id == pending.flaggedID }) else { return }
+        let target = accounts.first { $0.id == pending.targetID }
+        try? AccountMerge.delete(flagged, mergingInto: target, in: context)
     }
 
     private func name(of id: String) -> String {
@@ -623,7 +634,9 @@ struct AccountDetailView: View {
         } message: {
             Text("This permanently deletes the account and its transactions.")
         }
-        .sheet(isPresented: $showDuplicateSheet) {
+        // Pop only after the sheet is fully gone; dismissing both at once is
+        // version-dependent and could leave pendingDelete set on a live page.
+        .sheet(isPresented: $showDuplicateSheet, onDismiss: { if pendingDelete { dismiss() } }) {
             DuplicateDeleteSheet(
                 account: account,
                 candidates: DuplicateDetector.candidates(for: account, among: allAccounts),
@@ -631,7 +644,6 @@ struct AccountDetailView: View {
             ) { target in
                 pendingMergeTargetID = target?.id
                 pendingDelete = true
-                dismiss()
             }
         }
         .onDisappear {

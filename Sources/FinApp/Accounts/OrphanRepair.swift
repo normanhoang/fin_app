@@ -47,7 +47,7 @@ enum OrphanRepair {
             }
             let result = try AccountMerge.mergeHistory(from: oldID, into: keptID, in: context)
             try context.save()
-            return "merged \(oldID) → \(keptID): \(result.overlapDays) overlap days, \(result.movedRows) rows moved"
+            return "merged \(oldID) → \(keptID): \(result.overlapDays) overlap days, \(result.skippedDays) skipped, \(result.movedRows) rows moved"
         } catch {
             context.rollback()
             return "error: \(error)"

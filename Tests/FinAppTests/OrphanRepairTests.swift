@@ -22,8 +22,10 @@ final class OrphanRepairTests: XCTestCase {
     /// net worth 1100 on the overlap day.
     private func seed(_ ctx: ModelContext) {
         account(ctx, "manual-kept")
+        account(ctx, "other")
         snap(ctx, "manual-gone", 12...14, 100)
         snap(ctx, "manual-kept", 14...16, 100)
+        snap(ctx, "other", 12...16, 900)
         for (d, v) in [12: 1000, 13: 1000, 14: 1100, 15: 1000, 16: 1000] as [Int: Decimal] {
             ctx.insert(NetWorthSnapshot(day: oct(d), value: v))
         }
@@ -47,7 +49,7 @@ final class OrphanRepairTests: XCTestCase {
 
         let log = OrphanRepair.run("manual-gone:manual-kept", in: ctx)
 
-        XCTAssertEqual(log, "merged manual-gone → manual-kept: 1 overlap days, 2 rows moved")
+        XCTAssertEqual(log, "merged manual-gone → manual-kept: 1 overlap days, 0 skipped, 2 rows moved")
         let total14 = try ctx.fetch(FetchDescriptor<NetWorthSnapshot>())
             .first { Calendar.current.isDate($0.day, inSameDayAs: oct(14)) }?.value
         XCTAssertEqual(total14, 1000)

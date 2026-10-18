@@ -14,7 +14,7 @@ struct DuplicateSuggestion: Equatable, Identifiable {
 /// SimpleFin sync and FinanceKit imports alike.
 enum DuplicateDetector {
     static let balanceTolerance: Decimal = 0.05
-    private static let stopwords: Set<String> = ["the", "and", "account", "auto", "manual", "old", "new"]
+    private static let stopwords: Set<String> = ["the", "and", "account", "manual", "old", "new"]
 
     /// Order-independent key for a pair, used to persist dismissals.
     static func pairKey(_ a: String, _ b: String) -> String {
