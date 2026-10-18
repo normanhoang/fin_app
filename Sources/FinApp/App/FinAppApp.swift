@@ -53,6 +53,9 @@ struct FinAppApp: App {
         if isUITest && ProcessInfo.processInfo.environment["FINAPP_DUP_DEMO"] == "1" {
             SampleData.injectDuplicateDemo(into: container.mainContext)
         }
+        if let repair = ProcessInfo.processInfo.environment["FINAPP_REPAIR_ORPHAN"] {
+            print("[OrphanRepair] \(OrphanRepair.run(repair, in: container.mainContext))")
+        }
         if isUITest {
             // The store is in-memory per launch, but UserDefaults persist across
             // UI-test launches — reset the dashboard filter flags so tests can't
