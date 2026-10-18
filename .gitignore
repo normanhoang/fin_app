@@ -20,3 +20,4 @@ exportOptions.plist
 
 # Design handoff assets (local reference only)
 design_handoff_finapp_redesign 2/
+.superpowers/
