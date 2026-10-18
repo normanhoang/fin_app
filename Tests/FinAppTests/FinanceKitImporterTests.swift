@@ -54,6 +54,7 @@ final class FinanceKitImporterTests: XCTestCase {
         let a = try XCTUnwrap(accounts().first)
         XCTAssertEqual(a.id, "financekit-\(cardID.uuidString)")
         XCTAssertEqual(a.source, .financeKit)
+        XCTAssertNotNil(a.createdAt)
         XCTAssertEqual(a.providerID, cardID.uuidString)
         XCTAssertEqual(a.accountType, .creditCard)
         XCTAssertEqual(a.org, "Apple")

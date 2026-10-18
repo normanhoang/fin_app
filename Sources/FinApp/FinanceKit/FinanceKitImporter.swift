@@ -63,6 +63,7 @@ enum FinanceKitImporter {
             )
             a.source = .financeKit
             a.providerID = dto.id.uuidString
+            a.createdAt = Date()
             context.insert(a)
             return a
         }()

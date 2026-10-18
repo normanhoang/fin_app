@@ -38,6 +38,10 @@ final class Account {
     var supersededProviderID: String? = nil
     /// Payment schedule for a manual loan whose balance the app computes
     /// (`LoanUpdater`). nil for every other account. Defaulted for migration.
+    /// When this row was first inserted. nil for accounts from before this field
+    /// existed — `DuplicateDetector` treats those as older than any dated account.
+    /// Defaulted for lightweight migration.
+    var createdAt: Date? = nil
     @Relationship(deleteRule: .cascade, inverse: \LoanSchedule.account)
     var loanSchedule: LoanSchedule? = nil
 

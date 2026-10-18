@@ -179,6 +179,7 @@ enum SyncService {
         account.providerID = dto.id
         account.providerScope = dto.providerScope
         account.lastSyncedAt = Date()
+        account.createdAt = Date()
         context.insert(account)
         return account
     }

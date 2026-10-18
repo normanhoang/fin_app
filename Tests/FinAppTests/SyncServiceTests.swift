@@ -62,6 +62,15 @@ final class SyncServiceTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(acct!.lastSyncedAt!, before!)
     }
 
+    func testNewAccountStampsCreatedAtOnce() throws {
+        let ctx = makeContext()
+        try SyncService.sync(accounts: [account(txns: [])], into: ctx)
+        let acct = try XCTUnwrap(try ctx.fetch(FetchDescriptor<Account>()).first)
+        let created = try XCTUnwrap(acct.createdAt)
+        try SyncService.sync(accounts: [account(txns: [])], into: ctx)
+        XCTAssertEqual(acct.createdAt, created)
+    }
+
     func testBalanceAndAvailableStoredAsReported() throws {
         let ctx = makeContext()
         let dto = AccountDTO(

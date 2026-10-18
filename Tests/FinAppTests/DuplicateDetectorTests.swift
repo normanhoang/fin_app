@@ -112,6 +112,70 @@ final class DuplicateDetectorTests: XCTestCase {
         XCTAssertFalse(DuplicateDetector.isLikelyDuplicate(a, b))
     }
 
+    // MARK: Review fixes
+
+    /// Accounts from before `createdAt` existed are older than any dated one,
+    /// even when the id tie-break would pick the other side.
+    func testAccountWithoutCreatedAtIsOlder() {
+        let old = acct("manual-z", "Mortgage", .loan, -412300, manual: true)
+        let new = acct("manual-a", "Mortgage (Auto)", .loan, -411950, manual: true)
+        new.createdAt = date(2026, 10, 14)
+        let s = DuplicateDetector.suggestions(accounts: [old, new], firstSnapshotDay: [:], dismissed: [])
+        XCTAssertEqual(s, [DuplicateSuggestion(flaggedID: "manual-z", matchID: "manual-a")])
+    }
+
+    func testEarlierCreatedAtWinsOverSnapshotDays() {
+        let old = acct("manual-z", "Mortgage", .loan, -412300, manual: true)
+        let new = acct("manual-a", "Mortgage (Auto)", .loan, -411950, manual: true)
+        old.createdAt = date(2026, 10, 1)
+        new.createdAt = date(2026, 10, 14)
+        let days = ["manual-z": date(2026, 10, 14), "manual-a": date(2026, 10, 14)]
+        let s = DuplicateDetector.suggestions(accounts: [old, new], firstSnapshotDay: days, dismissed: [])
+        XCTAssertEqual(s, [DuplicateSuggestion(flaggedID: "manual-z", matchID: "manual-a")])
+    }
+
+    /// A just-added manual account keeps `source == .simplefin` until the launch
+    /// migration runs; `isManual` is what marks it.
+    func testFreshManualAccountCountsAsManual() {
+        let fresh = acct("manual-a", "Mortgage (Auto)", .loan, -411950, manual: true)
+        fresh.source = .simplefin
+        let synced = acct("sf-b", "Mortgage", .loan, -412300, manual: false)
+        XCTAssertTrue(DuplicateDetector.isLikelyDuplicate(fresh, synced))
+    }
+
+    func testGenericTypeNamesDoNotMatchByName() {
+        let savings = acct("manual-a", "Savings", .cash, 500, manual: true)
+        let ally = acct("sf-b", "Ally Savings", .cash, 40000, manual: false)
+        XCTAssertFalse(DuplicateDetector.isLikelyDuplicate(savings, ally))
+        let card = acct("manual-c", "Credit Card", .creditCard, -100, manual: true)
+        let sapphire = acct("sf-d", "Chase Sapphire Credit Card", .creditCard, -5000, manual: false)
+        XCTAssertFalse(DuplicateDetector.isLikelyDuplicate(card, sapphire))
+    }
+
+    func testSpecificWordsStillMatchBesideTypeWords() {
+        let a = acct("manual-a", "Chase Checking", .cash, 100, manual: true)
+        let b = acct("sf-b", "Chase Total Checking", .cash, 9000, manual: false)
+        XCTAssertTrue(DuplicateDetector.isLikelyDuplicate(a, b))
+    }
+
+    /// Context helper: fetches snapshot days only to break ties, so views need no
+    /// @Query over the whole snapshot table.
+    func testContextSuggestionsUseSnapshotDaysForUndatedTies() throws {
+        let container = AppSchema.makeInMemoryContainer()
+        let ctx = container.mainContext
+        let a = acct("manual-a", "Mortgage", .loan, -412300, manual: true)
+        let z = acct("manual-z", "Mortgage (Auto)", .loan, -411950, manual: true)
+        ctx.insert(a)
+        ctx.insert(z)
+        ctx.insert(AccountBalanceSnapshot(accountId: "manual-z", day: date(2026, 7, 25), balance: -1))
+        ctx.insert(AccountBalanceSnapshot(accountId: "manual-z", day: date(2026, 8, 1), balance: -1))
+        ctx.insert(AccountBalanceSnapshot(accountId: "manual-a", day: date(2026, 10, 14), balance: -1))
+        try ctx.save()
+
+        XCTAssertEqual(DuplicateDetector.suggestions(accounts: [a, z], dismissed: [], in: ctx),
+                       [DuplicateSuggestion(flaggedID: "manual-z", matchID: "manual-a")])
+    }
+
     func testPairKeyIsOrderIndependent() {
         XCTAssertEqual(DuplicateDetector.pairKey("b", "a"), "a|b")
         XCTAssertEqual(DuplicateDetector.pairKey("a", "b"), "a|b")
@@ -139,13 +203,5 @@ final class DuplicateDetectorTests: XCTestCase {
         let b = acct("manual-b", "Mortgage (Auto)", .loan, -411950, manual: true)
         XCTAssertEqual(DuplicateDetector.suggestions(accounts: [a, b], firstSnapshotDay: [:],
                                                      dismissed: Set(rows.map(\.key))), [])
-    }
-
-    func testFirstSnapshotDays() {
-        let rows = [AccountBalanceSnapshot(accountId: "a", day: date(2026, 8, 2), balance: 1),
-                    AccountBalanceSnapshot(accountId: "a", day: date(2026, 7, 25), balance: 1),
-                    AccountBalanceSnapshot(accountId: "b", day: date(2026, 9, 1), balance: 1)]
-        XCTAssertEqual(DuplicateDetector.firstSnapshotDays(rows),
-                       ["a": date(2026, 7, 25), "b": date(2026, 9, 1)])
     }
 }

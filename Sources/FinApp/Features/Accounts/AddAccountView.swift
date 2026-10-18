@@ -187,6 +187,7 @@ struct AddAccountView: View {
             typeRaw: type.rawValue,
             isManual: true
         )
+        account.createdAt = Date()
         context.insert(account)
         if usesSchedule, case .success(let inputs) = draft.validate() {
             account.loanSchedule = LoanSchedule(inputs: inputs)

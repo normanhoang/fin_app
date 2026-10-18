@@ -19,7 +19,6 @@ struct AccountsView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(\.modelContext) private var context
     @Query(sort: \Account.name) private var accounts: [Account]
-    @Query private var balanceSnapshots: [AccountBalanceSnapshot]
     @Query private var dismissedDuplicates: [DismissedDuplicate]
     @State private var showingAdd = false
     /// Duplicate pair opened from the banner's Review button.
@@ -78,6 +77,9 @@ struct AccountsView: View {
     private func total(_ groups: [TypeGroup]) -> Decimal { groups.reduce(Decimal(0)) { $0 + $1.subtotal } }
 
     var body: some View {
+        // Detection runs once per render; rows only look up the flagged set.
+        let duplicates = duplicateSuggestions
+        let flaggedIDs = Set(duplicates.map(\.flaggedID))
         NavigationStack(path: $path) {
             Group {
                 if accounts.isEmpty {
@@ -95,7 +97,7 @@ struct AccountsView: View {
                 } else {
                     List {
                         if !coordinator.supersededStillLinked.isEmpty { unlinkBannerSection }
-                        ForEach(duplicateSuggestions) { duplicateBannerSection($0) }
+                        ForEach(duplicates) { duplicateBannerSection($0) }
                         netWorthSection
                         // One Section per type so the inset card rounds at each type's
                         // top and bottom. The Assets/Liabilities eyebrows get their own
@@ -104,11 +106,11 @@ struct AccountsView: View {
                         // expanded or collapsed.
                         if !assetGroups.isEmpty {
                             eyebrowSection("Assets", total: total(assetGroups))
-                            ForEach(assetGroups) { typeSection($0) }
+                            ForEach(assetGroups) { typeSection($0, flagged: flaggedIDs) }
                         }
                         if !debtGroups.isEmpty {
                             eyebrowSection("Liabilities", total: total(debtGroups))
-                            ForEach(debtGroups) { typeSection($0) }
+                            ForEach(debtGroups) { typeSection($0, flagged: flaggedIDs) }
                         }
                         syncFooterSection
                     }
@@ -216,10 +218,8 @@ struct AccountsView: View {
     }
 
     private var duplicateSuggestions: [DuplicateSuggestion] {
-        DuplicateDetector.suggestions(
-            accounts: accounts,
-            firstSnapshotDay: DuplicateDetector.firstSnapshotDays(balanceSnapshots),
-            dismissed: Set(dismissedDuplicates.map(\.key)))
+        DuplicateDetector.suggestions(accounts: accounts,
+                                      dismissed: Set(dismissedDuplicates.map(\.key)), in: context)
     }
 
     private func performPendingDuplicateDelete() {
@@ -358,12 +358,12 @@ struct AccountsView: View {
         }
     }
 
-    private func typeSection(_ group: TypeGroup) -> some View {
+    private func typeSection(_ group: TypeGroup, flagged: Set<String>) -> some View {
         Section {
             if !collapsedTypes.contains(group.type) {
                 ForEach(group.accounts) { account in
                     NavigationLink(value: account) {
-                        row(account)
+                        row(account, flagged: flagged.contains(account.id))
                     }
                     .listRowBackground(Color.surface)
                     // Separator starts after the icon column (36pt icon + 12pt gap).
@@ -416,7 +416,7 @@ struct AccountsView: View {
         }
     }
 
-    private func row(_ account: Account) -> some View {
+    private func row(_ account: Account, flagged: Bool) -> some View {
         HStack(spacing: 12) {
             ZStack {
                 Circle().fill(Self.roleColor(account.accountType).opacity(0.10))
@@ -431,7 +431,7 @@ struct AccountsView: View {
                         .font(.system(size: 15.5, weight: .medium))
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(1)
-                    if duplicateSuggestions.contains(where: { $0.flaggedID == account.id }) {
+                    if flagged {
                         Chip("Duplicate?", color: .orange)
                             .accessibilityIdentifier("duplicateBadge-\(account.id)")
                     }
@@ -499,16 +499,14 @@ struct AccountDetailView: View {
     /// Account chosen in the duplicate sheet to receive this account's history.
     @State private var pendingMergeTargetID: String?
     @Query private var allAccounts: [Account]
-    @Query private var balanceSnapshots: [AccountBalanceSnapshot]
     @Query private var dismissedDuplicates: [DismissedDuplicate]
 
     /// This account's duplicate suggestion, if it's the flagged side of a pair.
+    /// Only evaluated on Delete and when the sheet builds, not every render.
     private var duplicateSuggestion: DuplicateSuggestion? {
-        DuplicateDetector.suggestions(
-            accounts: allAccounts,
-            firstSnapshotDay: DuplicateDetector.firstSnapshotDays(balanceSnapshots),
-            dismissed: Set(dismissedDuplicates.map(\.key))
-        ).first { $0.flaggedID == account.id }
+        DuplicateDetector.suggestions(accounts: allAccounts,
+                                      dismissed: Set(dismissedDuplicates.map(\.key)), in: context)
+            .first { $0.flaggedID == account.id }
     }
 
     private var transactions: [Transaction] {

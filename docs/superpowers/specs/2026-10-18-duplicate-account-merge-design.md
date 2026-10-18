@@ -51,11 +51,15 @@ another (manual → scheduled loan, manual → SimpleFin, etc.).
 A pair of live accounts is a **likely duplicate** when all hold:
 
 1. Same `accountType`.
-2. At least one of the two has `source == .manual`. (SimpleFin dedupes itself;
+2. At least one of the two is manual (`isManual`; a just-added manual account
+   keeps the default `source` until the launch migration runs). (SimpleFin dedupes itself;
    FinanceKit ↔ SimpleFin is `FinanceKitMerge`'s job.)
 3. Either balances are within 5% of each other (compare magnitudes; both
    non-zero), or the display names clearly overlap (case-insensitive, one
    contains the other's significant words, e.g. "Mortgage" / "Mortgage (Auto)").
+   Words that only name the type ("checking", "savings", "card", "credit",
+   "loan", …) aren't significant, so a manual "Savings" doesn't match "Ally Savings"
+   on name alone.
 4. The pair hasn't been dismissed.
 
 *Our call:* detection is a pure function over the current `[Account]` plus the
@@ -67,10 +71,10 @@ constants in the detector and unit-test the cases above.
 
 **Which account is flagged (the one to delete), our call:**
 - If exactly one of the pair is manual and the other isn't, flag the manual one.
-- Otherwise (both manual), flag the **older** one. `Account` has no creation
-  date, so "older" = earliest `AccountBalanceSnapshot.day` for that id. An
-  account with no snapshots is the newer one. Tie → flag either, deterministically
-  (e.g. by id).
+- Otherwise (both manual), flag the **older** one: earlier `Account.createdAt`
+  (stamped on insert by manual add, SimpleFin sync and FinanceKit import; nil =
+  created before the field existed, so oldest). If that ties, the earliest
+  `AccountBalanceSnapshot.day` decides (no snapshots = newer), then the smaller id.
 
 An account in several likely pairs gets one suggestion: the best match (the
 closest balance) is pre-selected in the sheet; the others are listed as
@@ -134,8 +138,12 @@ Given `old` (being deleted) and `kept`:
 
 1. **Overlap days** = days on which both `old` and `kept` have an
    `AccountBalanceSnapshot`. For each overlap day:
-   - subtract `old`'s balance that day from that day's `NetWorthSnapshot.value`
-     (if a snapshot exists for that day);
+   - subtract `old`'s balance that day from that day's `NetWorthSnapshot.value`,
+     but only if a snapshot exists for that day **and** it still includes the old
+     balance (it equals the sum of that day's balance rows, old included, within
+     $0.01). Otherwise skip the day. A row left by an account deleted mid-day
+     would make an unconditional subtraction overcorrect and spike the chart.
+     Skipping never makes history worse;
    - delete `old`'s `AccountBalanceSnapshot` for that day.
 2. **Pre-existence days** = days with an `old` snapshot and no `kept` snapshot.
    Reassign those rows to `kept.id`, so `kept`'s sparkline continues back.

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// A likely duplicate pair: `flaggedID` is the account suggested for deletion
 /// (the badge goes on it), `matchID` the one it duplicates.
@@ -14,7 +15,13 @@ struct DuplicateSuggestion: Equatable, Identifiable {
 /// SimpleFin sync and FinanceKit imports alike.
 enum DuplicateDetector {
     static let balanceTolerance: Decimal = 0.05
-    private static let stopwords: Set<String> = ["the", "and", "account", "manual", "old", "new"]
+    /// Filler plus words that only name the account type: a manual "Savings" says
+    /// nothing about which savings account it is, so it shouldn't match "Ally Savings".
+    private static let stopwords: Set<String> = [
+        "the", "and", "account", "manual", "old", "new",
+        "checking", "savings", "saving", "card", "credit", "debit", "loan", "loans",
+        "cash", "brokerage", "investment", "investments",
+    ]
 
     /// Order-independent key for a pair, used to persist dismissals.
     static func pairKey(_ a: String, _ b: String) -> String {
@@ -23,17 +30,12 @@ enum DuplicateDetector {
 
     /// Same type, at least one manual (SimpleFin dedupes itself; FinanceKit ↔
     /// SimpleFin is `FinanceKitMerge`'s job), and close balances or overlapping names.
+    /// Uses `isManual`, not `source`: a just-added manual account keeps the default
+    /// source until the launch migration (`AccountSource.migrateManual`) runs.
     static func isLikelyDuplicate(_ a: Account, _ b: Account) -> Bool {
         guard a.id != b.id, a.accountType == b.accountType,
-              a.source == .manual || b.source == .manual else { return false }
+              a.isManual || b.isManual else { return false }
         return balancesClose(a.balance, b.balance) || namesOverlap(a.displayName, b.displayName)
-    }
-
-    static func firstSnapshotDays(_ snapshots: [AccountBalanceSnapshot]) -> [String: Date] {
-        snapshots.reduce(into: [:]) { days, s in
-            if let d = days[s.accountId], d <= s.day { return }
-            days[s.accountId] = s.day
-        }
     }
 
     /// At most one suggestion per flagged account (closest-balance match),
@@ -53,6 +55,29 @@ enum DuplicateDetector {
         }
         return best.map { DuplicateSuggestion(flaggedID: $0.key, matchID: $0.value.match.id) }
             .sorted { $0.flaggedID < $1.flaggedID }
+    }
+
+    /// `suggestions` for views: fetches earliest snapshot days only for undated
+    /// accounts in a likely pair (the only ones whose age needs them), so callers
+    /// don't hold a @Query over the whole snapshot table.
+    @MainActor
+    static func suggestions(accounts: [Account], dismissed: Set<String>,
+                            in context: ModelContext) -> [DuplicateSuggestion] {
+        var undated: Set<String> = []
+        for (i, a) in accounts.enumerated() {
+            for b in accounts[(i + 1)...] where isLikelyDuplicate(a, b) {
+                if a.createdAt == nil { undated.insert(a.id) }
+                if b.createdAt == nil { undated.insert(b.id) }
+            }
+        }
+        var days: [String: Date] = [:]
+        for id in undated {
+            var descriptor = FetchDescriptor<AccountBalanceSnapshot>(
+                predicate: #Predicate { $0.accountId == id }, sortBy: [SortDescriptor(\.day)])
+            descriptor.fetchLimit = 1
+            days[id] = (try? context.fetch(descriptor))?.first?.day
+        }
+        return suggestions(accounts: accounts, firstSnapshotDay: days, dismissed: dismissed)
     }
 
     /// Other accounts of the same type, closest balance first (the sheet's list).
@@ -85,13 +110,16 @@ enum DuplicateDetector {
         (a.balance.magnitude - b.balance.magnitude).magnitude
     }
 
-    /// Manual over non-manual; otherwise the older (earliest snapshot; none =
-    /// newest); tie → smaller id.
+    /// Manual over non-manual; otherwise the older: earlier `createdAt` (nil =
+    /// predates the field, so oldest), then earliest snapshot (none = newest);
+    /// tie → smaller id.
     private static func flaggedFirst(_ a: Account, _ b: Account,
                                      _ firstDay: [String: Date]) -> (Account, Account) {
-        if (a.source == .manual) != (b.source == .manual) {
-            return a.source == .manual ? (a, b) : (b, a)
+        if a.isManual != b.isManual {
+            return a.isManual ? (a, b) : (b, a)
         }
+        let ca = a.createdAt ?? .distantPast, cb = b.createdAt ?? .distantPast
+        if ca != cb { return ca < cb ? (a, b) : (b, a) }
         let da = firstDay[a.id] ?? .distantFuture, db = firstDay[b.id] ?? .distantFuture
         if da != db { return da < db ? (a, b) : (b, a) }
         return a.id < b.id ? (a, b) : (b, a)
