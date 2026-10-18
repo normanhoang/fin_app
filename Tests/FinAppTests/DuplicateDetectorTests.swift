@@ -120,6 +120,21 @@ final class DuplicateDetectorTests: XCTestCase {
                        ["manual-auto", "manual-h"])
     }
 
+    func testDismissPersistsOnceAndSuppresses() throws {
+        let container = AppSchema.makeInMemoryContainer()
+        let ctx = container.mainContext
+        DismissedDuplicate.dismiss("manual-a", "manual-b", in: ctx)
+        DismissedDuplicate.dismiss("manual-a", "manual-b", in: ctx)
+        DismissedDuplicate.dismiss("manual-b", "manual-a", in: ctx)
+        let rows = try ctx.fetch(FetchDescriptor<DismissedDuplicate>())
+        XCTAssertEqual(rows.count, 1)
+
+        let a = acct("manual-a", "Mortgage", .loan, -412300, manual: true)
+        let b = acct("manual-b", "Mortgage (Auto)", .loan, -411950, manual: true)
+        XCTAssertEqual(DuplicateDetector.suggestions(accounts: [a, b], firstSnapshotDay: [:],
+                                                     dismissed: Set(rows.map(\.key))), [])
+    }
+
     func testFirstSnapshotDays() {
         let rows = [AccountBalanceSnapshot(accountId: "a", day: date(2026, 8, 2), balance: 1),
                     AccountBalanceSnapshot(accountId: "a", day: date(2026, 7, 25), balance: 1),

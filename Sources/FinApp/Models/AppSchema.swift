@@ -13,6 +13,7 @@ enum AppSchema {
         NetWorthSnapshot.self,
         AccountBalanceSnapshot.self,
         LoanSchedule.self,
+        DismissedDuplicate.self,
     ]
 
     /// Shared on-disk container for the app.

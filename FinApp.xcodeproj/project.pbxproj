@@ -27,6 +27,7 @@
 		257AC74687622D85814FE9E4 /* SyncCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D899EDC21943564A15DE70DA /* SyncCoordinatorTests.swift */; };
 		25C869028D421169D1EFBB66 /* RecurringDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE2F05A0132E181B8820225 /* RecurringDetectorTests.swift */; };
 		278F6B84F7328471FEF4DEF7 /* CategorySeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A02E4F5FB7209934460770A /* CategorySeed.swift */; };
+		29C7BBB445021B0A1D3F862C /* DismissedDuplicate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12A23A0470052ACEAD0B90E1 /* DismissedDuplicate.swift */; };
 		2A73F855C162217F8ACB1A60 /* LockScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD3887B0E6FB5C2952021520 /* LockScreen.swift */; };
 		2C62D8485E862D95B240C057 /* FinAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 804A8BB060B86F185BD38825 /* FinAppApp.swift */; };
 		2C6ACAA2776EDC4B380970C6 /* CategorizationEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */; };
@@ -132,6 +133,7 @@
 		0A02E4F5FB7209934460770A /* CategorySeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySeed.swift; sourceTree = "<group>"; };
 		0AF50253EE05EB506D6F973D /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
 		0FD3302D272E1A7425811FCC /* CategorySeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySeedTests.swift; sourceTree = "<group>"; };
+		12A23A0470052ACEAD0B90E1 /* DismissedDuplicate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DismissedDuplicate.swift; sourceTree = "<group>"; };
 		1FA2A0E0D769B3FBF63B2BCF /* CategorizationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorizationEngine.swift; sourceTree = "<group>"; };
 		260C10DC85D4E6BD9F2BBB2C /* BudgetsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetsView.swift; sourceTree = "<group>"; };
 		26949CEEC52D26F3B5A22468 /* AccountSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSource.swift; sourceTree = "<group>"; };
@@ -398,6 +400,7 @@
 				3E67EDF458CCCD9D09B72E62 /* Budget.swift */,
 				FEDF8413499DFC8E1F525137 /* Category.swift */,
 				768E0A9F851B31523F3F4359 /* CategoryRule.swift */,
+				12A23A0470052ACEAD0B90E1 /* DismissedDuplicate.swift */,
 				CFCB4ED40D97779DC40E65F5 /* LoanSchedule.swift */,
 				EDE8665D0ABC06FA8113E1A5 /* NetWorthSnapshot.swift */,
 				D1B02795D854EE1341B5F06F /* RecurringBill.swift */,
@@ -670,6 +673,7 @@
 				D383F2C993554376E55683F5 /* CredentialStore.swift in Sources */,
 				363AE5A71223E2463A2D784F /* DashboardView.swift in Sources */,
 				BCCB90EF53F6A68F106DD4F6 /* DesignComponents.swift in Sources */,
+				29C7BBB445021B0A1D3F862C /* DismissedDuplicate.swift in Sources */,
 				078DBAE09483E66A9E701582 /* DuplicateDetector.swift in Sources */,
 				2C62D8485E862D95B240C057 /* FinAppApp.swift in Sources */,
 				C7AEF56E2F147D6AACD85239 /* FinanceKitClient.swift in Sources */,
