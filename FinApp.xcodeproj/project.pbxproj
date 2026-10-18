@@ -45,6 +45,7 @@
 		4D554D04D7D4E8A66DCEB543 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D171F3181843038DBE7044F6 /* PrivacyInfo.xcprivacy */; };
 		531BB4226E43E45C16C2FDAF /* RecurringDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B14848472272349DA38AAE1 /* RecurringDetector.swift */; };
 		53215D2270FEE9E28013DF19 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 365C671522FDEAC79598B554 /* Assets.xcassets */; };
+		53807D8D7D68FE328CFE3D0B /* AccountMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04965FF11C8521E82CBC2A72 /* AccountMerge.swift */; };
 		5B7E6EC48358FD482F958C16 /* Amortization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455456E023D3991552A8A239 /* Amortization.swift */; };
 		5F8B9BAAF55498B3FD5F413E /* FinanceKitDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B772DC79FB912241AF4C516 /* FinanceKitDTO.swift */; };
 		602C0A360DECC64397B3AA09 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEEA896C1D6F87E3DD1DCC4 /* RootView.swift */; };
@@ -77,6 +78,7 @@
 		BCEEE9C5BF5256E595BEC834 /* Transaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979D1A4CE8D86953E1BDB0E0 /* Transaction.swift */; };
 		BD65E5D5CF02AE7229D86B50 /* SimpleFinClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA1EA7DFE6B5F3DEF338F8ED /* SimpleFinClient.swift */; };
 		BE167BDDEAF20F4B2A0DFFDC /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4CE39E1069B5053BE5996A8 /* AppRouter.swift */; };
+		BEB324D8E10709073E92B73B /* AccountMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F265BF06F94DA3F1502739 /* AccountMergeTests.swift */; };
 		BFE2D3C383F28128F6C8E447 /* AccountBalanceSnapshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA44FA28D29CCE70D2B95DD /* AccountBalanceSnapshotService.swift */; };
 		C0524CFB0B460C393E230C81 /* LoanDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F740C548C14D75BB27533A /* LoanDraftTests.swift */; };
 		C1B282377FB42D75D41228B1 /* CategorizationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA2A0E0D769B3FBF63B2BCF /* CategorizationEngine.swift */; };
@@ -122,6 +124,7 @@
 /* Begin PBXFileReference section */
 		027C6051FE9F3E15969CBF30 /* SimpleFinDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleFinDecodingTests.swift; sourceTree = "<group>"; };
 		02FD57A94B9D56BECE387F99 /* FinanceKitImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitImporter.swift; sourceTree = "<group>"; };
+		04965FF11C8521E82CBC2A72 /* AccountMerge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountMerge.swift; sourceTree = "<group>"; };
 		04CFF926E2C328B1955CA002 /* CategorizationEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorizationEngineTests.swift; sourceTree = "<group>"; };
 		064BF2355930485CECCB1254 /* SyncServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncServiceTests.swift; sourceTree = "<group>"; };
 		0802EE3EA3B1BAFFC4C1911C /* DuplicateDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateDetector.swift; sourceTree = "<group>"; };
@@ -155,6 +158,7 @@
 		606FC94FD2F4B2285B430C29 /* NetWorthDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthDetailView.swift; sourceTree = "<group>"; };
 		679C5CE470E0A8FB16D007C2 /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		67D9D282FA26B1CA7C500013 /* DesignComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignComponents.swift; sourceTree = "<group>"; };
+		67F265BF06F94DA3F1502739 /* AccountMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountMergeTests.swift; sourceTree = "<group>"; };
 		69F740C548C14D75BB27533A /* LoanDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanDraftTests.swift; sourceTree = "<group>"; };
 		69FB5E2E6FCC4A8E31ACF7E0 /* TriageStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriageStateTests.swift; sourceTree = "<group>"; };
 		6A388E2B621B9D772F9E879D /* AmortizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmortizationTests.swift; sourceTree = "<group>"; };
@@ -260,6 +264,7 @@
 		2E7BC1919F779FCA80636BD7 /* Accounts */ = {
 			isa = PBXGroup;
 			children = (
+				04965FF11C8521E82CBC2A72 /* AccountMerge.swift */,
 				0802EE3EA3B1BAFFC4C1911C /* DuplicateDetector.swift */,
 			);
 			path = Accounts;
@@ -462,6 +467,7 @@
 		EB16F9255958BE7D8AA5731E /* FinAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				67F265BF06F94DA3F1502739 /* AccountMergeTests.swift */,
 				5C7F62176553BE384EB410D3 /* AccountSourceTests.swift */,
 				319E9A1D1C9E08D0E5AF2009 /* AccountTypeDetectorTests.swift */,
 				E6D38CD2FF8633665A297ED9 /* AccountTypeTests.swift */,
@@ -643,6 +649,7 @@
 				A6563AF342837A74756942C2 /* Account.swift in Sources */,
 				0314E0C64C1CDE194C3419CD /* AccountBalanceSnapshot.swift in Sources */,
 				BFE2D3C383F28128F6C8E447 /* AccountBalanceSnapshotService.swift in Sources */,
+				53807D8D7D68FE328CFE3D0B /* AccountMerge.swift in Sources */,
 				099CA3C1C47B3A22580D0AE8 /* AccountSource.swift in Sources */,
 				9C6DB0B1771AA72FDF3D81E1 /* AccountType.swift in Sources */,
 				FDE219EA4D93D15D5B41BC69 /* AccountTypeDetector.swift in Sources */,
@@ -711,6 +718,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BEB324D8E10709073E92B73B /* AccountMergeTests.swift in Sources */,
 				00802AFA8CF1013EE35682BD /* AccountSourceTests.swift in Sources */,
 				39F7EBE8E47BE369BADA07A5 /* AccountTypeDetectorTests.swift in Sources */,
 				BCCA5A19074DDAE079DF0E1A /* AccountTypeTests.swift in Sources */,
