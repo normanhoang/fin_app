@@ -162,7 +162,7 @@ The owner already deleted the old manual mortgage, so its history is stranded:
 `AccountBalanceSnapshot` rows with an `accountId` matching no live account.
 
 *Our call:* a **DEBUG-only**, env-gated repair, matching the existing DEBUG
-launch-variable convention: `FINAPP_REPAIR_ORPHAN=<orphanAccountId>:<keptAccountId>`.
+launch-variable convention: `FINAPP_REPAIR_ORPHAN=<orphanAccountId>=><keptAccountId>`.
 It runs the same merge semantics (steps 1–2 above) with the orphan id as `old`,
 then logs what changed. It isn't compiled into Release, and no user-facing UI.
 Run on device via

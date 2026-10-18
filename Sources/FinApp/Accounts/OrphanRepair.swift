@@ -5,7 +5,8 @@ import SwiftData
 /// One-off repair for history stranded by accounts deleted before
 /// `AccountMerge` existed: their `AccountBalanceSnapshot` rows outlive them.
 /// Driven by the DEBUG launch variable `FINAPP_REPAIR_ORPHAN` — `list` prints
-/// the orphans, `<orphanID>:<keptID>` merges one into a live account.
+/// the orphans, `<orphanID>=><keptID>` merges one into a live account (`=>`,
+/// since SimpleFin ids contain colons).
 enum OrphanRepair {
     struct Orphan: Equatable {
         let id: String
@@ -36,8 +37,8 @@ enum OrphanRepair {
                 return orphans.map { "orphan \($0.id): \($0.rows) rows, \($0.first) … \($0.last)" }
                     .joined(separator: "\n")
             }
-            let parts = env.split(separator: ":").map(String.init)
-            guard parts.count == 2 else { return "error: expected list or <orphanID>:<keptID>" }
+            let parts = env.components(separatedBy: "=>")
+            guard parts.count == 2 else { return "error: expected list or <orphanID>=><keptID>" }
             let (oldID, keptID) = (parts[0], parts[1])
             guard orphans.contains(where: { $0.id == oldID }) else {
                 return "error: \(oldID) is not an orphan"

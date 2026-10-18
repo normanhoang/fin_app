@@ -47,7 +47,7 @@ final class OrphanRepairTests: XCTestCase {
         let ctx = container.mainContext
         seed(ctx)
 
-        let log = OrphanRepair.run("manual-gone:manual-kept", in: ctx)
+        let log = OrphanRepair.run("manual-gone=>manual-kept", in: ctx)
 
         XCTAssertEqual(log, "merged manual-gone → manual-kept: 1 overlap days, 0 skipped, 2 rows moved")
         let total14 = try ctx.fetch(FetchDescriptor<NetWorthSnapshot>())
@@ -56,13 +56,28 @@ final class OrphanRepairTests: XCTestCase {
         XCTAssertEqual(try OrphanRepair.orphans(in: ctx), [])
     }
 
+    /// SimpleFin ids contain colons (`simplefin-account:43:https://…`).
+    func testRepairAcceptsIDsWithColons() throws {
+        let container = AppSchema.makeInMemoryContainer()
+        let ctx = container.mainContext
+        let gone = "simplefin-account:43:https://bridge/ACT-1"
+        account(ctx, "manual-kept")
+        snap(ctx, gone, 13...14, 100)
+        snap(ctx, "manual-kept", 14...14, 100)
+        try ctx.save()
+
+        let log = OrphanRepair.run("\(gone)=>manual-kept", in: ctx)
+
+        XCTAssertTrue(log.hasPrefix("merged \(gone) → manual-kept"), log)
+    }
+
     func testRepairRefusesLiveOldOrMissingKept() throws {
         let container = AppSchema.makeInMemoryContainer()
         let ctx = container.mainContext
         seed(ctx)
 
-        let live = OrphanRepair.run("manual-kept:manual-kept", in: ctx)
-        let missing = OrphanRepair.run("manual-gone:manual-nope", in: ctx)
+        let live = OrphanRepair.run("manual-kept=>manual-kept", in: ctx)
+        let missing = OrphanRepair.run("manual-gone=>manual-nope", in: ctx)
 
         XCTAssertTrue(live.hasPrefix("error"), live)
         XCTAssertTrue(missing.hasPrefix("error"), missing)
