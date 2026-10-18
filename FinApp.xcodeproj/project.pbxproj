@@ -83,6 +83,7 @@
 		BFE2D3C383F28128F6C8E447 /* AccountBalanceSnapshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA44FA28D29CCE70D2B95DD /* AccountBalanceSnapshotService.swift */; };
 		C0524CFB0B460C393E230C81 /* LoanDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F740C548C14D75BB27533A /* LoanDraftTests.swift */; };
 		C1B282377FB42D75D41228B1 /* CategorizationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA2A0E0D769B3FBF63B2BCF /* CategorizationEngine.swift */; };
+		C35FCB4369557B2AEDF1720F /* DuplicateDeleteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4830982719C94FE195D17A0 /* DuplicateDeleteSheet.swift */; };
 		C7AEF56E2F147D6AACD85239 /* FinanceKitClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4BD8C403D91FC94E489400F /* FinanceKitClient.swift */; };
 		C8539872CC9290420E7AF5D7 /* TransactionFilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9E60995D4AEE6C0438B237 /* TransactionFilterSheet.swift */; };
 		CB70F4D8DA06EF5DC0BED403 /* SchemaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5AC54257EA7A1991C56AC50 /* SchemaTests.swift */; };
@@ -181,6 +182,7 @@
 		979D1A4CE8D86953E1BDB0E0 /* Transaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transaction.swift; sourceTree = "<group>"; };
 		9B602EA010AAD4A66F375696 /* SimpleFinDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleFinDTO.swift; sourceTree = "<group>"; };
 		A21F51E19EB538A061219812 /* FinAppUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = FinAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A4830982719C94FE195D17A0 /* DuplicateDeleteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateDeleteSheet.swift; sourceTree = "<group>"; };
 		AB70D4CE933C581B0369E8DE /* KeyboardDismiss.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDismiss.swift; sourceTree = "<group>"; };
 		B065D7DB87B085AA8F6AAF62 /* FinanceKitImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceKitImporterTests.swift; sourceTree = "<group>"; };
 		B1C75C948F17AE43933BE430 /* NavBarRelayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavBarRelayout.swift; sourceTree = "<group>"; };
@@ -249,6 +251,7 @@
 			children = (
 				DCCB76803E218E918FE6943F /* AccountsView.swift */,
 				402A245B5633BA51B2CF4853 /* AddAccountView.swift */,
+				A4830982719C94FE195D17A0 /* DuplicateDeleteSheet.swift */,
 				4C8FA0DFEF6BDA10D6577F41 /* LoanScheduleFields.swift */,
 				2C6112E9641ED6FD8C651C9E /* LoanScheduleSection.swift */,
 			);
@@ -674,6 +677,7 @@
 				363AE5A71223E2463A2D784F /* DashboardView.swift in Sources */,
 				BCCB90EF53F6A68F106DD4F6 /* DesignComponents.swift in Sources */,
 				29C7BBB445021B0A1D3F862C /* DismissedDuplicate.swift in Sources */,
+				C35FCB4369557B2AEDF1720F /* DuplicateDeleteSheet.swift in Sources */,
 				078DBAE09483E66A9E701582 /* DuplicateDetector.swift in Sources */,
 				2C62D8485E862D95B240C057 /* FinAppApp.swift in Sources */,
 				C7AEF56E2F147D6AACD85239 /* FinanceKitClient.swift in Sources */,

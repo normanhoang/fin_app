@@ -19,7 +19,11 @@ struct AccountsView: View {
     @Environment(SyncCoordinator.self) private var coordinator
     @Environment(\.modelContext) private var context
     @Query(sort: \Account.name) private var accounts: [Account]
+    @Query private var balanceSnapshots: [AccountBalanceSnapshot]
+    @Query private var dismissedDuplicates: [DismissedDuplicate]
     @State private var showingAdd = false
+    /// Duplicate pair opened from the banner's Review button.
+    @State private var reviewing: DuplicateSuggestion?
     @State private var path = NavigationPath()
     /// Bumped on tab arrival to rebuild the List at the very top.
     @State private var topReset = 0
@@ -88,6 +92,7 @@ struct AccountsView: View {
                 } else {
                     List {
                         if !coordinator.supersededStillLinked.isEmpty { unlinkBannerSection }
+                        ForEach(duplicateSuggestions) { duplicateBannerSection($0) }
                         netWorthSection
                         // One Section per type so the inset card rounds at each type's
                         // top and bottom. The Assets/Liabilities eyebrows get their own
@@ -163,6 +168,17 @@ struct AccountsView: View {
                 }
             }
             .sheet(isPresented: $showingAdd) { AddAccountView() }
+            .sheet(item: $reviewing) { suggestion in
+                if let flagged = accounts.first(where: { $0.id == suggestion.flaggedID }) {
+                    DuplicateDeleteSheet(
+                        account: flagged,
+                        candidates: DuplicateDetector.candidates(for: flagged, among: accounts),
+                        suggestedID: suggestion.matchID
+                    ) { target in
+                        try? AccountMerge.delete(flagged, mergingInto: target, in: context)
+                    }
+                }
+            }
         }
         .onChange(of: router.selectedTab) {
             if router.selectedTab == AppTab.accounts.rawValue {
@@ -193,6 +209,47 @@ struct AccountsView: View {
             .padding(.vertical, 4)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("unlinkBridgeBanner")
+        }
+    }
+
+    private var duplicateSuggestions: [DuplicateSuggestion] {
+        DuplicateDetector.suggestions(
+            accounts: accounts,
+            firstSnapshotDay: DuplicateDetector.firstSnapshotDays(balanceSnapshots),
+            dismissed: Set(dismissedDuplicates.map(\.key)))
+    }
+
+    private func name(of id: String) -> String {
+        accounts.first { $0.id == id }?.displayName ?? ""
+    }
+
+    /// A likely duplicate pair. Review opens the Delete Duplicate Account sheet;
+    /// "Not a duplicate" dismisses the pair for good.
+    private func duplicateBannerSection(_ suggestion: DuplicateSuggestion) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Possible duplicate. \u{201C}\(name(of: suggestion.flaggedID))\u{201D} looks like the same account as \u{201C}\(name(of: suggestion.matchID))\u{201D}.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textPrimary)
+                HStack(spacing: 16) {
+                    // Borderless so each button gets its own tap target inside the row.
+                    Button("Review") { reviewing = suggestion }
+                        .buttonStyle(.borderless)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.brand)
+                        .accessibilityIdentifier("duplicateReviewButton")
+                    Button("Not a duplicate") {
+                        DismissedDuplicate.dismiss(suggestion.flaggedID, suggestion.matchID, in: context)
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.textSecondary)
+                    .accessibilityIdentifier("duplicateDismissButton")
+                }
+            }
+            .padding(.vertical, 4)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("duplicateAccountBanner")
         }
     }
 
@@ -358,10 +415,16 @@ struct AccountsView: View {
             }
             .frame(width: 36, height: 36)
             VStack(alignment: .leading, spacing: 2) {
-                Text(account.displayName)
-                    .font(.system(size: 15.5, weight: .medium))
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(account.displayName)
+                        .font(.system(size: 15.5, weight: .medium))
+                        .foregroundStyle(Color.textPrimary)
+                        .lineLimit(1)
+                    if duplicateSuggestions.contains(where: { $0.flaggedID == account.id }) {
+                        Chip("Duplicate?", color: .orange)
+                            .accessibilityIdentifier("duplicateBadge-\(account.id)")
+                    }
+                }
                 Text(account.listMeta)
                     .font(.system(size: 12))
                     .foregroundStyle(Color.textSecondary)
@@ -421,6 +484,21 @@ struct AccountDetailView: View {
     @State private var balanceText = ""
     @State private var pendingDelete = false
     @State private var showDeleteConfirmation = false
+    @State private var showDuplicateSheet = false
+    /// Account chosen in the duplicate sheet to receive this account's history.
+    @State private var pendingMergeTargetID: String?
+    @Query private var allAccounts: [Account]
+    @Query private var balanceSnapshots: [AccountBalanceSnapshot]
+    @Query private var dismissedDuplicates: [DismissedDuplicate]
+
+    /// This account's duplicate suggestion, if it's the flagged side of a pair.
+    private var duplicateSuggestion: DuplicateSuggestion? {
+        DuplicateDetector.suggestions(
+            accounts: allAccounts,
+            firstSnapshotDay: DuplicateDetector.firstSnapshotDays(balanceSnapshots),
+            dismissed: Set(dismissedDuplicates.map(\.key))
+        ).first { $0.flaggedID == account.id }
+    }
 
     private var transactions: [Transaction] {
         account.transactions.sorted { $0.posted > $1.posted }
@@ -478,7 +556,11 @@ struct AccountDetailView: View {
             }
             Section {
                 Button(role: .destructive) {
-                    showDeleteConfirmation = true
+                    if duplicateSuggestion != nil {
+                        showDuplicateSheet = true
+                    } else {
+                        showDeleteConfirmation = true
+                    }
                 } label: {
                     Label("Delete Account", systemImage: "trash")
                 }
@@ -541,10 +623,21 @@ struct AccountDetailView: View {
         } message: {
             Text("This permanently deletes the account and its transactions.")
         }
+        .sheet(isPresented: $showDuplicateSheet) {
+            DuplicateDeleteSheet(
+                account: account,
+                candidates: DuplicateDetector.candidates(for: account, among: allAccounts),
+                suggestedID: duplicateSuggestion?.matchID
+            ) { target in
+                pendingMergeTargetID = target?.id
+                pendingDelete = true
+                dismiss()
+            }
+        }
         .onDisappear {
             if pendingDelete {
-                context.delete(account)
-                try? context.save()
+                let target = allAccounts.first { $0.id == pendingMergeTargetID }
+                try? AccountMerge.delete(account, mergingInto: target, in: context)
             }
         }
     }

@@ -14,10 +14,13 @@ final class FinAppUITests: XCTestCase {
     /// Recurring 3 · Settings 4. Must move with any app page reorder.
     private static let tabTitles = ["Accounts", "Transactions", "Dashboard", "Recurring", "Settings"]
 
-    private func launch(tab: Int = 0, lockOnBackground: Bool = false) -> XCUIApplication {
+    private func launch(tab: Int = 0, lockOnBackground: Bool = false, dupDemo: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["FINAPP_UITEST"] = "1"
         app.launchEnvironment["FINAPP_TAB"] = String(tab)
+        if dupDemo {
+            app.launchEnvironment["FINAPP_DUP_DEMO"] = "1"
+        }
         if lockOnBackground {
             app.launchEnvironment["FINAPP_UI_LOCK_ON_BACKGROUND"] = "1"
         }
@@ -450,6 +453,74 @@ final class FinAppUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap() // back to list
         XCTAssertTrue(app.staticTexts[newName].waitForExistence(timeout: 5),
                       "Renamed account not shown in list")
+    }
+
+    // Duplicate accounts: a manual "Old Checking" next to the synced "Checking"
+    // is flagged with a banner + row badge; Review → merge-and-delete removes it.
+    func testDuplicateBannerReviewMergesAndDeletes() {
+        let app = launch(tab: 0, dupDemo: true)
+        let banner = app.descendants(matching: .any)["duplicateAccountBanner"]
+        XCTAssertTrue(banner.waitForExistence(timeout: 8), "Duplicate banner missing")
+        XCTAssertTrue(app.descendants(matching: .any)["duplicateBadge-manual-s-dup"].exists,
+                      "Duplicate badge missing")
+
+        app.buttons["duplicateReviewButton"].tap()
+        XCTAssertTrue(app.navigationBars["Delete Duplicate Account"].waitForExistence(timeout: 5),
+                      "Delete Duplicate Account sheet missing")
+        XCTAssertTrue(app.buttons["duplicateTarget-s-checking"].isSelected,
+                      "Suggested match not pre-selected")
+        snap(app, "duplicate-sheet")
+
+        app.buttons["duplicateMergeDeleteButton"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["accountRow-manual-s-dup"]
+            .waitForNonExistence(timeout: 5), "Duplicate account not deleted")
+        XCTAssertFalse(banner.exists, "Banner still shown after merge")
+    }
+
+    // Deleting the flagged account from its detail page shows the duplicate
+    // sheet instead of the plain dialog, then pops back with the account gone.
+    func testFlaggedDetailDeleteUsesDuplicateSheet() {
+        let app = launch(tab: 0, dupDemo: true)
+        let row = app.descendants(matching: .any)["accountRow-manual-s-dup"]
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "Duplicate row missing")
+        row.tap()
+
+        let delete = app.buttons["deleteAccountButton"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5), "Delete button missing")
+        delete.tap()
+        XCTAssertTrue(app.navigationBars["Delete Duplicate Account"].waitForExistence(timeout: 5),
+                      "Duplicate sheet not shown for flagged account")
+        app.buttons["duplicateMergeDeleteButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["Accounts"].waitForExistence(timeout: 5),
+                      "Did not return to Accounts")
+        XCTAssertTrue(row.waitForNonExistence(timeout: 5), "Duplicate account not deleted")
+    }
+
+    func testDuplicateDismissHidesBannerAndBadge() {
+        let app = launch(tab: 0, dupDemo: true)
+        let banner = app.descendants(matching: .any)["duplicateAccountBanner"]
+        XCTAssertTrue(banner.waitForExistence(timeout: 8), "Duplicate banner missing")
+
+        app.buttons["duplicateDismissButton"].tap()
+        XCTAssertTrue(banner.waitForNonExistence(timeout: 5), "Banner still shown after dismiss")
+        XCTAssertFalse(app.descendants(matching: .any)["duplicateBadge-manual-s-dup"].exists,
+                       "Badge still shown after dismiss")
+    }
+
+    func testUnflaggedDeleteKeepsDialog() {
+        let app = launch(tab: 0)
+        let row = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'accountRow-'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "No account rows")
+        row.tap()
+
+        let delete = app.buttons["deleteAccountButton"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5), "Delete button missing")
+        delete.tap()
+        XCTAssertTrue(app.buttons["Confirm Delete"].waitForExistence(timeout: 5),
+                      "Plain delete confirmation missing")
+        XCTAssertFalse(app.navigationBars["Delete Duplicate Account"].exists)
     }
 
     // 6c. Adding a note in the transaction detail persists across a back-navigate

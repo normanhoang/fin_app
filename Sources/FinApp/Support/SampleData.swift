@@ -183,6 +183,18 @@ enum SampleData {
         try? context.save()
     }
 
+    /// A manual "Old Checking" that duplicates the sample "Checking", so UI tests
+    /// can drive the duplicate banner and merge-on-delete sheet (FINAPP_DUP_DEMO).
+    @MainActor
+    static func injectDuplicateDemo(into context: ModelContext) {
+        let dup = Account(id: "manual-s-dup", org: "Manual", name: "Old Checking", currency: "USD",
+                          balance: 4300, balanceDate: Date(), typeRaw: AccountType.cash.rawValue,
+                          isManual: true)
+        dup.source = .manual
+        context.insert(dup)
+        try? context.save()
+    }
+
     /// Deletes every persisted object, so a user (or App Review) can remove
     /// sample data or wipe all local financial data.
     @MainActor
