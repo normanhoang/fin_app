@@ -78,7 +78,7 @@ https://normanhoang.github.io/fin_app/simplefin-setup
 `https://normanhoang.github.io/fin_app/privacy`
 
 ## What's New (version 1.11.0)
-`Apple Wallet and self-updating loans:
+`Apple Wallet, self-updating loans, and duplicate cleanup:
 
 • Apple Card, Apple Cash, and Savings now import straight from Apple Wallet on
   your iPhone — no bank login, no reconnecting. Connect it in Settings.
@@ -86,7 +86,10 @@ https://normanhoang.github.io/fin_app/simplefin-setup
   keeping your history, renames, and categories.
 • Loans can keep their own balance current: add your rate, monthly payment, and
   escrow, and the balance steps down on each payment date. Log extra principal
-  payments whenever you make them.`
+  payments whenever you make them.
+• Added an account you were already tracking? FinApp spots likely duplicates
+  and, when you delete the old one, merges its history so your net worth
+  doesn't dip.`
 
 ## What's New (version 1.10.0)
 `A couple of small fixes to manual accounts:
